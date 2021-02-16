@@ -260,13 +260,13 @@ extension KeyedDecodingContainer: KeyedDecodingContainerCustomTypeConversion {
 [Swift Package Manager](https://github.com/apple/swift-package-manager):
 
 ```swift
-.package(url: "https://github.com/iwill/ExCodable", from: "0.0")
+.package(url: "https://github.com/iwill/ExCodable", from: "0.1")
 ```
 
 [CocoaPods](http://cocoapods.org):
 
 ```ruby
-pod 'ExCodable', '~> 0.0'
+pod 'ExCodable', '~> 0.1'
 ```
 
 ## Credits

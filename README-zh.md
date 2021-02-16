@@ -1,6 +1,6 @@
 # ExCodable
 
-[En](./) | 中文
+[En](./README.md) | 中文
 
 **ExCodable** - Swift `Codable` 扩展。
 

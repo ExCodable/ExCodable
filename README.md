@@ -263,6 +263,12 @@ extension KeyedDecodingContainer: KeyedDecodingContainerCustomTypeConversion {
 .package(url: "https://github.com/iwill/ExCodable", from: "0.0")
 ```
 
+[CocoaPods](http://cocoapods.org):
+
+```ruby
+pod 'ExCodable', '~> 0.0'
+```
+
 ## Credits
 
 Mr. Ming ([@minglq](https://twitter.com/minglq/))

@@ -15,7 +15,7 @@ En | [中文](./README-zh.md)
 
 ## Features
 
-Supports key-mapping with KeyPath` and `CodingKey`:
+Supports `key-mapping` with KeyPath` and `CodingKey`:
 - No need to read/write memory via `UnsafePointer`.
 - No need to encode/decode properties one by one.
 - Just requires using `var` to declare properties and provide default values.
@@ -23,28 +23,18 @@ Supports key-mapping with KeyPath` and `CodingKey`:
 
 Encode/Decode:
 - Supports encode/decode via subscripts.
-- Supports multiple alternative-keys via `Array` for decoding.
-- Supports nested-keys via `String` with dot syntax.
+- Supports multiple `alternative-keys` via `Array` for decoding.
+- Supports `nested-keys` via `String` with dot syntax.
 - Supports custom encode/decode-handler via closures.
-- Supports type-conversion and custom type-conversion.
+- Supports builtin and custom `type-conversion`.
 
 Simple and flexible Encodable/Decodable API:
 - **Part of the API draws on the design of an awesome framework - [Codextended](https://github.com/JohnSundell/Codextended).**
 - Uses JSON Encoder/Decoder by default.
-- Uses type-inference.
+- Uses `type-inference`.
 - Returns `Optional` values instead of throwing errors.
 
 ## Usage
-
-```swift
-TODO:
-// ExCodable, keyMapping, init + decode, encode + encode
-// KeyPath + subscript
-// alternative-keys
-// nested-keys
-// customized encode/decode handler
-// customized type-conversion
-```
 
 ### 1. `key-mapping` for `struct`:
 
@@ -211,7 +201,7 @@ extension TestSubscript: Encodable, Decodable {
 }
 ```
 
-### 8. Custom type-adaption:
+### 8. Custom `type-conversion`:
 
 > Extends `KeyedDecodingContainer` with protocol `KeyedDecodingContainerCustomTypeConversion` and implement its method, decode values in alternative types and convert to target type.
 

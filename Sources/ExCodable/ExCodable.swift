@@ -63,9 +63,8 @@ public extension KeyMap {
                                        encode: ((Encoder, [String], Root, WritableKeyPath<Root, Value>) -> Void)? = nil,
                                        decode: ((inout Root, WritableKeyPath<Root, Value>, Decoder, [String]) -> Void)? = nil) {
         self.init(encode: { (root, encoder) in
-            let codingKey = codingKeys.first!
             if encode != nil { encode!(encoder, codingKeys, root, keyPath) }
-            else { encoder[codingKey] = root[keyPath: keyPath] }
+            else { encoder[codingKeys.first!] = root[keyPath: keyPath] }
         }, decode: { (root, decoder) in
             if decode != nil { decode!(&root, keyPath, decoder, codingKeys)  }
             else if let value: Value = decoder[codingKeys] { root[keyPath: keyPath] = value }
@@ -78,9 +77,8 @@ public extension KeyMap {
                                                        encode: ((Encoder, [Key], Root, WritableKeyPath<Root, Value>) -> Void)? = nil,
                                                        decode: ((inout Root, WritableKeyPath<Root, Value>, Decoder, [Key]) -> Void)? = nil) {
         self.init(encode: { (root, encoder) in
-            let codingKey = codingKeys.first!
             if encode != nil { encode!(encoder, codingKeys, root, keyPath) }
-            else { encoder[codingKey] = root[keyPath: keyPath] }
+            else { encoder[codingKeys.first!] = root[keyPath: keyPath] }
         }, decode: { (root, decoder) in
             if decode != nil { decode!(&root, keyPath, decoder, codingKeys)  }
             else if let value: Value = decoder[codingKeys] { root[keyPath: keyPath] = value }
@@ -93,9 +91,8 @@ public extension KeyMap {
                                        encode: ((Encoder, [String], Root, ReferenceWritableKeyPath<Root, Value>) -> Void)? = nil,
                                        decode: ((Root, ReferenceWritableKeyPath<Root, Value>, Decoder, [String]) -> Void)? = nil) {
         self.init(encode: { (root, encoder) in
-            let codingKey = codingKeys.first!
             if encode != nil { encode!(encoder, codingKeys, root, keyPath) }
-            else { encoder[codingKey] = root[keyPath: keyPath] }
+            else { encoder[codingKeys.first!] = root[keyPath: keyPath] }
         }, decode: nil, decodeReference: { (root, decoder) in
             if decode != nil { decode!(root, keyPath, decoder, codingKeys)  }
             else if let value: Value = decoder[codingKeys] { root[keyPath: keyPath] = value }
@@ -108,9 +105,8 @@ public extension KeyMap {
                                                        encode: ((Encoder, [Key], Root, ReferenceWritableKeyPath<Root, Value>) -> Void)? = nil,
                                                        decode: ((Root, ReferenceWritableKeyPath<Root, Value>, Decoder, [Key]) -> Void)? = nil) {
         self.init(encode: { (root, encoder) in
-            let codingKey = codingKeys.first!
             if encode != nil { encode!(encoder, codingKeys, root, keyPath) }
-            else { encoder[codingKey] = root[keyPath: keyPath] }
+            else { encoder[codingKeys.first!] = root[keyPath: keyPath] }
         }, decode: nil, decodeReference: { (root, decoder) in
             if decode != nil { decode!(root, keyPath, decoder, codingKeys)  }
             else if let value: Value = decoder[codingKeys] { root[keyPath: keyPath] = value }
@@ -183,9 +179,8 @@ private extension Encoder {
             try container.encodeIfPresent(value, forKey: codingKey)
             return true
         }
-        catch {
-            return false
-        }
+        catch {}
+        return false
     }
     
 }
@@ -212,7 +207,6 @@ private extension Decoder {
 // MARK: alternative-keys
 
 private extension KeyedDecodingContainer {
-    
     func decodeIfPresent<T: Decodable>(_ codingKeys: [Self.Key], as type: T.Type = T.self) -> T? {
         guard let codingKey = codingKeys.first else {
             return nil
@@ -222,13 +216,11 @@ private extension KeyedDecodingContainer {
         }
         return decodeIfPresent(Array(codingKeys.dropFirst()), as: type)
     }
-    
 }
 
 // MARK: nested-keys
 
 private extension KeyedDecodingContainer {
-    
     func decodeIfPresent<T: Decodable>(_ codingKey: Self.Key, as type: T.Type = T.self) -> T? {
         if let value = decodeIfTypeConvertible(codingKey, as: type) {
             return value
@@ -247,7 +239,6 @@ private extension KeyedDecodingContainer {
         }
         return nil
     }
-    
 }
 
 // MARK: type-conversion
@@ -339,8 +330,8 @@ private extension KeyedDecodingContainer {
             else if let double = try? decodeIfPresent(Double.self, forKey: codingKey) { return String(describing: double) as? T } // include Float
         }
         
-        if let customTypeConversion = self as? KeyedDecodingContainerCustomTypeConversion {
-            return customTypeConversion.decodeForTypeConversion(self, codingKey: codingKey, as: type)
+        if let custom = self as? KeyedDecodingContainerCustomTypeConversion {
+            return custom.decodeForTypeConversion(self, codingKey: codingKey, as: type)
         }
         
         return nil

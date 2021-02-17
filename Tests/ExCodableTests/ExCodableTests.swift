@@ -14,8 +14,8 @@ import ExCodable
 // MARK: struct
 
 struct TestStruct: Equatable {
-    var int: Int = 0
-    var string: String = ""
+    private(set) var int: Int = 0
+    private(set) var string: String = ""
 }
 
 extension TestStruct: ExCodable {

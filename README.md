@@ -1,6 +1,6 @@
 # ExCodable
 
-En | [中文](./README-zh.md)
+En | [中文](./README-zh.md#excodable)
 
 **ExCodable** - Extensions for Swift `Codable`.
 

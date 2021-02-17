@@ -16,8 +16,8 @@ En | [中文](./README-zh.md)
 ## Features
 
 Supports `key-mapping` with `KeyPath` and `CodingKey`:
-- No need to read/write memory via `UnsafePointer`.
 - No need to encode/decode properties one by one.
+- No need to read/write memory via `UnsafePointer`.
 - Just requires using `var` to declare properties and provide default values.
 - In most cases, `CodingKey` is no longer necessary, because it will only be used once, `String` literals may be better.
 
@@ -42,8 +42,8 @@ Simple and flexible Encodable/Decodable API:
 
 ```swift
 struct TestStruct: Equatable {
-    var int: Int = 0
-    var string: String = ""
+    private(set) var int: Int = 0
+    private(set) var string: String = ""
 }
 ```
 
@@ -133,42 +133,42 @@ class TestSubclass: TestClass {
 ### 4. `alternative-keys`:
 
 ```swift
-    static var keyMapping: [KeyMap<Self>] = [
-        KeyMap(\.int, to: "int", "i"),
-        KeyMap(\.string, to: "string", "str", "s")
-    ]
+static var keyMapping: [KeyMap<Self>] = [
+    KeyMap(\.int, to: "int", "i"),
+    KeyMap(\.string, to: "string", "str", "s")
+]
 ```
 
 ### 5. `nested-keys`:
 
 ```swift
-    static var keyMapping: [KeyMap<Self>] = [
-        KeyMap(\.int, to: "nested.int"),
-        KeyMap(\.string, to: "nested.nested.string")
-    ]
+static var keyMapping: [KeyMap<Self>] = [
+    KeyMap(\.int, to: "nested.int"),
+    KeyMap(\.string, to: "nested.nested.string")
+]
 ```
 
 ### 6. Custom encode/decode-handler
 
 ```swift
-    static var keyMapping: [KeyMap<Self>] = [
-        KeyMap(\.int, to: "int"),
-        KeyMap(\.string, to: "string", encode: { (encoder, stringKeys, test, keyPath) in
-            encoder[stringKeys.first!] = "dddd" 
-        }, decode: { (test, keyPath, decoder, stringKeys) in
-            switch test.int {
-            case 100: test.string = "Continue"
-            case 200: test.string = "OK"
-            case 304: test.string = "Not Modified"
-            case 403: test.string = "Forbidden"
-            case 404: test.string = "Not Found"
-            case 418: test.string = "I'm a teapot"
-            case 500: test.string = "Internal Server Error"
-            case 200..<400: test.string = "success"
-            default: test.string = "failure"
-            }
-        })
-    ]
+static var keyMapping: [KeyMap<Self>] = [
+    KeyMap(\.int, to: "int"),
+    KeyMap(\.string, to: "string", encode: { (encoder, stringKeys, test, keyPath) in
+        encoder[stringKeys.first!] = "dddd" 
+    }, decode: { (test, keyPath, decoder, stringKeys) in
+        switch test.int {
+        case 100: test.string = "Continue"
+        case 200: test.string = "OK"
+        case 304: test.string = "Not Modified"
+        case 403: test.string = "Forbidden"
+        case 404: test.string = "Not Found"
+        case 418: test.string = "I'm a teapot"
+        case 500: test.string = "Internal Server Error"
+        case 200..<400: test.string = "success"
+        default: test.string = "failure"
+        }
+    })
+]
 ```
 
 ### 7. Encode/Decode with subscripts:
@@ -229,14 +229,14 @@ extension KeyedDecodingContainer: KeyedDecodingContainerCustomTypeConversion {
 ### 9. Encodable/Decodable:
 
 ```swift
-        let test = TestStruct(int: 100, string: "Continue")
-        if let data = test.encoded() as Data?,
-           let copy = data.decoded() as TestStruct? {
-            XCTAssertEqual(copy, test)
-        }
-        else {
-            XCTFail()
-        }
+let test = TestStruct(int: 100, string: "Continue")
+if let data = test.encoded() as Data?,
+   let copy = data.decoded() as TestStruct? {
+    XCTAssertEqual(copy, test)
+}
+else {
+    XCTFail()
+}
 ```
 
 ## Requirements
@@ -261,7 +261,9 @@ pod 'ExCodable', '~> 0.1'
 
 ## Credits
 
-Mr. Ming ([@minglq](https://twitter.com/minglq/))
+- John Sundell ([@JohnSundell](https://github.com/JohnSundell)) and the ideas from his [Codextended](https://github.com/JohnSundell/Codextended)
+- ibireme ([@ibireme](https://github.com/ibireme)) and the features from his [YYModel](https://github.com/ibireme/YYModel)
+- Mr. Ming ([@iwill](https://github.com/iwill))
 
 ## License
 

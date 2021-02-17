@@ -15,7 +15,7 @@ En | [中文](./README-zh.md)
 
 ## Features
 
-Supports `key-mapping` with KeyPath` and `CodingKey`:
+Supports `key-mapping` with `KeyPath` and `CodingKey`:
 - No need to read/write memory via `UnsafePointer`.
 - No need to encode/decode properties one by one.
 - Just requires using `var` to declare properties and provide default values.

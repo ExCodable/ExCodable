@@ -2,9 +2,9 @@ Pod::Spec.new do |s|
     
     # ―――  Spec Metadata  ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――― #
     s.name          = "ExCodable"
-    s.version       = "0.1.0"
-    s.summary       = "Extensions for Swift Codable"
-    # s.description   = "Extensions for Swift."
+    s.version       = "0.2.0"
+    s.summary       = "Key-Mapping Extensions for Swift Codable"
+    # s.description   = "Key-Mapping Extensions for Swift Codable."
     s.homepage      = "https://github.com/iwill/ExCodable"
     
     # ―――  Spec License  ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――― #
@@ -40,6 +40,6 @@ Pod::Spec.new do |s|
     
     # ――― Project Settings ――――――――――――――――――――――――――――――――――――――――――――――――――――――――― #
     # s.xcconfig      = { "HEADER_SEARCH_PATHS" => "$(SDKROOT)/usr/include/libxml2" }
-    # s.dependency "JSONKit", "~> 1.4"
+    # s.dependency "Alamofire", "~> 5.4.1"
     
 end

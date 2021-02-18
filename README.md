@@ -29,8 +29,8 @@ Encode/Decode:
 - Supports builtin and custom `type-conversion`.
 
 Simple and flexible Encodable/Decodable API:
-- **Part of the API draws on the design of an awesome framework - [Codextended](https://github.com/JohnSundell/Codextended).**
-- Uses JSON Encoder/Decoder by default.
+- **Part of the API borrows from an awesome framework - [Codextended](https://github.com/JohnSundell/Codextended).**
+- Uses JSON Encoder/Decoder by default, and supports PList.
 - Uses `type-inference`.
 - Returns `Optional` values instead of throwing errors.
 
@@ -56,10 +56,10 @@ extension TestStruct: ExCodable {
     ]
     
     init(from decoder: Decoder) throws {
-        Self.keyMapping.decode(&self, using: decoder)
+        decode(with: Self.keyMapping, using: decoder)
     }
     func encode(to encoder: Encoder) throws {
-        Self.keyMapping.encode(self, using: encoder)
+        encode(with: Self.keyMapping, using: encoder)
     }
     
 }
@@ -85,10 +85,10 @@ class TestClass: ExCodable, Equatable {
     ]
     
     required init(from decoder: Decoder) throws {
-        Self.keyMapping.decode(self, using: decoder)
+        decodeReference(with: Self.keyMapping, using: decoder)
     }
     func encode(to encoder: Encoder) throws {
-        Self.keyMapping.encode(self, using: encoder)
+        encode(with: Self.keyMapping, using: encoder)
     }
     
     static func == (lhs: TestClass, rhs: TestClass) -> Bool {
@@ -115,11 +115,11 @@ class TestSubclass: TestClass {
     
     required init(from decoder: Decoder) throws {
         try super.init(from: decoder)
-        Self.keyMappingForTestSubclass.decode(self, using: decoder)
+        decodeReference(with: Self.keyMappingForTestSubclass, using: decoder)
     }
     override func encode(to encoder: Encoder) throws {
         try super.encode(to: encoder)
-        Self.keyMappingForTestSubclass.encode(self, using: encoder)
+        encode(with: Self.keyMappingForTestSubclass, using: encoder)
     }
     
     static func == (lhs: TestSubclass, rhs: TestSubclass) -> Bool {
@@ -250,13 +250,13 @@ else {
 [Swift Package Manager](https://github.com/apple/swift-package-manager):
 
 ```swift
-.package(url: "https://github.com/iwill/ExCodable", from: "0.1")
+.package(url: "https://github.com/iwill/ExCodable", from: "0.2")
 ```
 
 [CocoaPods](http://cocoapods.org):
 
 ```ruby
-pod 'ExCodable', '~> 0.1'
+pod 'ExCodable', '~> 0.2'
 ```
 
 ## Credits

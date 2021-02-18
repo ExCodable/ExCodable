@@ -383,21 +383,21 @@ public extension Encodable {
         return try? encoder.encode(self)
     }
     
-    func encoded(using encoder: DataEncoder = JSONEncoder()) -> [String: Any]? {
+    func encoded(using encoder: JSONEncoder = JSONEncoder()) -> [String: Any]? {
         if let data = encoded(using: encoder) as Data? {
             return try? JSONSerialization.jsonObject(with: data, options: .fragmentsAllowed) as? [String: Any]
         }
         return nil
     }
     
-    func encoded(using encoder: DataEncoder = JSONEncoder()) -> [Any]? {
+    func encoded(using encoder: JSONEncoder = JSONEncoder()) -> [Any]? {
         if let data = encoded(using: encoder) as Data? {
             return try? JSONSerialization.jsonObject(with: data, options: .fragmentsAllowed) as? [Any]
         }
         return nil
     }
     
-    func encoded(using encoder: DataEncoder = JSONEncoder()) -> String? {
+    func encoded(using encoder: JSONEncoder = JSONEncoder()) -> String? {
         if let data = encoded(using: encoder) as Data? {
             return String(data: data, encoding: .utf8)
         }
@@ -414,7 +414,7 @@ public extension Decodable {
         return try? decoder.decode(type, from: data)
     }
     
-    static func decoded(from json: [String: Any], using decoder: DataDecoder = JSONDecoder(), as type: Self.Type = Self.self) -> Self? {
+    static func decoded(from json: [String: Any], using decoder: JSONDecoder = JSONDecoder(), as type: Self.Type = Self.self) -> Self? {
         if JSONSerialization.isValidJSONObject(json),
            let data = try? JSONSerialization.data(withJSONObject: json, options: .fragmentsAllowed) {
             return try? decoder.decode(type, from: data)
@@ -422,7 +422,7 @@ public extension Decodable {
         return nil
     }
     
-    static func decoded(from jsonArray: [Any], using decoder: DataDecoder = JSONDecoder(), as type: Self.Type = Self.self) -> Self? {
+    static func decoded(from jsonArray: [Any], using decoder: JSONDecoder = JSONDecoder(), as type: Self.Type = Self.self) -> Self? {
         if JSONSerialization.isValidJSONObject(jsonArray),
            let data = try? JSONSerialization.data(withJSONObject: jsonArray, options: .fragmentsAllowed) {
             return try? decoder.decode(type, from: data)
@@ -430,7 +430,7 @@ public extension Decodable {
         return nil
     }
     
-    static func decoded(from string: String, using decoder: DataDecoder = JSONDecoder(), as type: Self.Type = Self.self) -> Self? {
+    static func decoded(from string: String, using decoder: JSONDecoder = JSONDecoder(), as type: Self.Type = Self.self) -> Self? {
         let data = Data(string.utf8)
         return try? decoder.decode(type, from: data)
     }
@@ -446,7 +446,7 @@ public extension Data {
 }
 
 public extension Dictionary {
-    func decoded<T: Decodable>(using decoder: DataDecoder = JSONDecoder(), as type: T.Type = T.self) -> T? {
+    func decoded<T: Decodable>(using decoder: JSONDecoder = JSONDecoder(), as type: T.Type = T.self) -> T? {
         guard JSONSerialization.isValidJSONObject(self),
               let data = try? JSONSerialization.data(withJSONObject: self, options: .fragmentsAllowed) else {
             return nil
@@ -456,7 +456,7 @@ public extension Dictionary {
 }
 
 public extension Array {
-    func decoded<T: Decodable>(using decoder: DataDecoder = JSONDecoder(), as type: T.Type = T.self) -> T? {
+    func decoded<T: Decodable>(using decoder: JSONDecoder = JSONDecoder(), as type: T.Type = T.self) -> T? {
         guard JSONSerialization.isValidJSONObject(self),
               let data = try? JSONSerialization.data(withJSONObject: self, options: .fragmentsAllowed) else {
             return nil
@@ -466,7 +466,7 @@ public extension Array {
 }
 
 public extension String {
-    func decoded<T: Decodable>(using decoder: DataDecoder = JSONDecoder(), as type: T.Type = T.self) -> T? {
+    func decoded<T: Decodable>(using decoder: JSONDecoder = JSONDecoder(), as type: T.Type = T.self) -> T? {
         return Data(self.utf8).decoded(using: decoder, as: type)
     }
 }

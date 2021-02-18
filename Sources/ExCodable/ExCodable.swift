@@ -26,28 +26,22 @@ public protocol ExCodable: Encodable, Decodable {
     static var keyMapping: [KeyMap<Root>] { get }
 }
 
-// MARK: - key-mapping
-
-public typealias KeyMapping<Root: Encodable & Decodable> = [KeyMap<Root>]
-
-public extension KeyMapping {
-    
+public extension ExCodable {
     /// Encode both value-type and ref-type
-    func encode<Root>(_ root: Root, using encoder: Encoder) where Element == KeyMap<Root> {
-        forEach { $0.encode(root, encoder) }
+    func encode(with keyMapping: [KeyMap<Self>], using encoder: Encoder) {
+        keyMapping.forEach { $0.encode(self, encoder) }
     }
-    
     /// Decode value-type
-    func decode<Root>(_ root: inout Root, using decoder: Decoder) where Element == KeyMap<Root> {
-        forEach { $0.decode?(&root, decoder) }
+    mutating func decode(with keyMapping: [KeyMap<Self>], using decoder: Decoder) {
+        keyMapping.forEach { $0.decode?(&self, decoder) }
     }
-    
     /// Decode ref-type
-    func decode<Root>(_ root: Root, using decoder: Decoder) where Element == KeyMap<Root> {
-        forEach { $0.decodeReference?(root, decoder) }
+    func decodeReference(with keyMapping: [KeyMap<Self>], using decoder: Decoder) {
+        keyMapping.forEach { $0.decodeReference?(self, decoder) }
     }
-    
 }
+
+// MARK: - key-mapping
 
 public struct KeyMap<Root: Encodable & Decodable> {
     fileprivate let encode: (_ root: Root, _ encoder: Encoder) -> Void

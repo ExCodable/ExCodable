@@ -26,10 +26,10 @@ extension TestStruct: ExCodable {
     ]
     
     init(from decoder: Decoder) throws {
-        Self.keyMapping.decode(&self, using: decoder)
+        decode(with: Self.keyMapping, using: decoder)
     }
     func encode(to encoder: Encoder) throws {
-        Self.keyMapping.encode(self, using: encoder)
+        encode(with: Self.keyMapping, using: encoder)
     }
     
 }
@@ -51,10 +51,10 @@ class TestClass: ExCodable, Equatable {
     ]
     
     required init(from decoder: Decoder) throws {
-        Self.keyMapping.decode(self, using: decoder)
+        decodeReference(with: Self.keyMapping, using: decoder)
     }
     func encode(to encoder: Encoder) throws {
-        Self.keyMapping.encode(self, using: encoder)
+        encode(with: Self.keyMapping, using: encoder)
     }
     
     static func == (lhs: TestClass, rhs: TestClass) -> Bool {
@@ -77,11 +77,11 @@ class TestSubclass: TestClass {
     
     required init(from decoder: Decoder) throws {
         try super.init(from: decoder)
-        Self.keyMappingForTestSubclass.decode(self, using: decoder)
+        decodeReference(with: Self.keyMappingForTestSubclass, using: decoder)
     }
     override func encode(to encoder: Encoder) throws {
         try super.encode(to: encoder)
-        Self.keyMappingForTestSubclass.encode(self, using: encoder)
+        encode(with: Self.keyMappingForTestSubclass, using: encoder)
     }
     
     static func == (lhs: TestSubclass, rhs: TestSubclass) -> Bool {
@@ -130,10 +130,10 @@ extension TestAlternativeKeys: ExCodable {
     ]
     
     init(from decoder: Decoder) throws {
-        Self.keyMapping.decode(&self, using: decoder)
+        decode(with: Self.keyMapping, using: decoder)
     }
     func encode(to encoder: Encoder) throws {
-        Self.keyMapping.encode(self, using: encoder)
+        encode(with: Self.keyMapping, using: encoder)
     }
     
 }
@@ -153,10 +153,10 @@ extension TestNestedKeys: ExCodable {
     ]
     
     init(from decoder: Decoder) throws {
-        Self.keyMapping.decode(&self, using: decoder)
+        decode(with: Self.keyMapping, using: decoder)
     }
     func encode(to encoder: Encoder) throws {
-        Self.keyMapping.encode(self, using: encoder)
+        encode(with: Self.keyMapping, using: encoder)
     }
     
 }
@@ -251,10 +251,10 @@ extension TestCustomTypeAdaption: ExCodable {
     ]
     
     init(from decoder: Decoder) throws {
-        Self.keyMapping.decode(&self, using: decoder)
+        decode(with: Self.keyMapping, using: decoder)
     }
     func encode(to encoder: Encoder) throws {
-        Self.keyMapping.encode(self, using: encoder)
+        encode(with: Self.keyMapping, using: encoder)
     }
     
 }
@@ -288,10 +288,10 @@ extension TestHandlers: ExCodable {
     ]
     
     init(from decoder: Decoder) throws {
-        Self.keyMapping.decode(&self, using: decoder)
+        decode(with: Self.keyMapping, using: decoder)
     }
     func encode(to encoder: Encoder) throws {
-        Self.keyMapping.encode(self, using: encoder)
+        encode(with: Self.keyMapping, using: encoder)
     }
     
 }

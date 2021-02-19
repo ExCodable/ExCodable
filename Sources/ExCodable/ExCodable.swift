@@ -26,17 +26,17 @@ public protocol ExCodable: Encodable, Decodable {
     static var keyMapping: [KeyMap<Root>] { get }
 }
 
-public extension ExCodable {
+public extension ExCodable where Root == Self {
     /// Encode both value-type and ref-type
-    func encode(with keyMapping: [KeyMap<Self>], using encoder: Encoder) {
+    func encode(with keyMapping: [KeyMap<Root>], using encoder: Encoder) {
         keyMapping.forEach { $0.encode(self, encoder) }
     }
     /// Decode value-type
-    mutating func decode(with keyMapping: [KeyMap<Self>], using decoder: Decoder) {
+    mutating func decode(with keyMapping: [KeyMap<Root>], using decoder: Decoder) {
         keyMapping.forEach { $0.decode?(&self, decoder) }
     }
     /// Decode ref-type
-    func decodeReference(with keyMapping: [KeyMap<Self>], using decoder: Decoder) {
+    func decodeReference(with keyMapping: [KeyMap<Root>], using decoder: Decoder) {
         keyMapping.forEach { $0.decodeReference?(self, decoder) }
     }
 }

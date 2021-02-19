@@ -40,6 +40,6 @@ Pod::Spec.new do |s|
     
     # ――― Project Settings ――――――――――――――――――――――――――――――――――――――――――――――――――――――――― #
     # s.xcconfig      = { "HEADER_SEARCH_PATHS" => "$(SDKROOT)/usr/include/libxml2" }
-    # s.dependency "Alamofire", "~> 5.4.1"
+    # s.dependency "pod", "~> 1.0.0"
     
 end

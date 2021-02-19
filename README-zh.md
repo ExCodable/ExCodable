@@ -1,6 +1,6 @@
 # ExCodable
 
-[En](https://github.com/iwill/ExCodable#excodable) | 中文
+[En](https://github.com/iwill/ExCodable#readme) | 中文
 
 **ExCodable** - Swift `Codable` 扩展。
 

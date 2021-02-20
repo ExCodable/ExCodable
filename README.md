@@ -1,5 +1,14 @@
 # ExCodable
 
+[![Swift 5.0](https://img.shields.io/badge/Swift-5.0-orange.svg)](https://swift.org/)
+[![Swift Package Manager](https://img.shields.io/badge/spm-compatible-brightgreen.svg?style=flat)](https://swift.org/package-manager/)
+[![Build and Test](https://github.com/iwill/ExCodable/actions/workflows/build-and-test.yml/badge.svg)](https://github.com/iwill/ExCodable/actions/workflows/build-and-test.yml)
+[![GitHub release (latest SemVer)](https://img.shields.io/github/v/release/iwill/ExCodable.svg?sort=semver)](https://github.com/iwill/ExCodable/releases)
+[![Deploy to CocoaPods](https://github.com/iwill/ExCodable/actions/workflows/deploy_to_cocoapods.yml/badge.svg)](https://github.com/iwill/ExCodable/actions/workflows/deploy_to_cocoapods.yml)
+[![Cocoapods](https://img.shields.io/cocoapods/v/ExCodable.svg)](https://cocoapods.org/pods/ExCodable)
+[![GitHub](https://img.shields.io/github/license/iwill/ExCodable.svg)](./LICENSE)
+[![@minglq](https://img.shields.io/twitter/url?url=https%3A%2F%2Fgithub.com%2Fiwill%2FExCodable)](https://twitter.com/minglq)
+
 En | [中文](./README-zh.md#excodable)
 
 **ExCodable** - Extensions for Swift `Codable`.
@@ -247,7 +256,7 @@ else {
 
 ## Installation
 
-[Swift Package Manager](https://swift.org/getting-started/#using-the-package-manager):
+[Swift Package Manager](https://swift.org/package-manager/):
 
 ```swift
 .package(url: "https://github.com/iwill/ExCodable", from: "0.2")

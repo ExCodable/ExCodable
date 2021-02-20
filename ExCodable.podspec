@@ -2,7 +2,8 @@ Pod::Spec.new do |s|
     
     # ―――  Spec Metadata  ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――― #
     s.name          = "ExCodable"
-    s.version       = "0.2.0"
+    # export LIB_VERSION=$(git describe --tags `git rev-list --tags --max-count=1`)
+    s.version       = ENV["LIB_VERSION"] || "0.2.0"
     s.summary       = "Key-Mapping Extensions for Swift Codable"
     # s.description   = "Key-Mapping Extensions for Swift Codable."
     s.homepage      = "https://github.com/iwill/ExCodable"

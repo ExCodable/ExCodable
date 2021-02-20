@@ -77,10 +77,10 @@ XCTAssertEqual(copy2, test)
 
 另外可以将下面代码片段添加到 Xcode，只要记住 `ExCodable` 就可以了：
 
-> Language: Swift
-> Platform: All
-> Completion: excodable
-> Availability: Top Level
+> Language: Swift  
+> Platform: All  
+> Completion: ExCodable  
+> Availability: Top Level  
 
 ```swift
 <#extension/struct/class#> <#Type#>: ExCodable {

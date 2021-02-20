@@ -29,7 +29,7 @@ Encode/Decode:
 - Supports builtin and custom `type-conversion`.
 
 Simple and flexible Encodable/Decodable API:
-- **Part of the API borrows from an awesome framework - [Codextended](https://github.com/JohnSundell/Codextended).**
+- **Some ideas were borrowed from an awesome framework - [Codextended](https://github.com/JohnSundell/Codextended).**
 - Uses JSON Encoder/Decoder by default, and supports PList.
 - Uses `type-inference`.
 - Returns `Optional` values instead of throwing errors.
@@ -247,7 +247,7 @@ else {
 
 ## Installation
 
-[Swift Package Manager](https://github.com/apple/swift-package-manager):
+[Swift Package Manager](https://swift.org/getting-started/#using-the-package-manager):
 
 ```swift
 .package(url: "https://github.com/iwill/ExCodable", from: "0.2")
@@ -257,6 +257,31 @@ else {
 
 ```ruby
 pod 'ExCodable', '~> 0.2'
+```
+
+Code Snippets:
+
+> Language: Swift
+> Platform: All
+> Completion: excodable
+> Availability: Top Level
+
+```swift
+<#extension/struct/class#> <#Type#>: ExCodable {
+    
+    static var <#keyMapping#>: [KeyMap<<#Type#>>] = [
+        KeyMap(\.<#property#>, to: <#"key"#>),
+        <#...#>
+    ]
+    
+    init(from decoder: Decoder) throws {
+        decode(with: Self.<#keyMapping#>, using: decoder)
+    }
+    func encode(to encoder: Encoder) throws {
+        encode(with: Self.<#keyMapping#>, using: encoder)
+    }
+    
+}
 ```
 
 ## Credits

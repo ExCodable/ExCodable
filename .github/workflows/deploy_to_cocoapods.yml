@@ -4,24 +4,28 @@ on:
   push:
     tags:
       - '*'
+  workflow_dispatch:	
 
 jobs:
   build:
-
     runs-on: macOS-latest
-
     steps:
     - uses: actions/checkout@v1
-    
     - name: Install Cocoapods
       run: gem install cocoapods
-      
+    ## jq is already installed and up-to-date
+    # - name: Install jq
+    #   run: |
+    #     brew install jq
     - name: Deploy to Cocoapods
       run: |
         set -eo pipefail
-        export LIB_VERSION=$(git describe --tags `git rev-list --tags --max-count=1`)
+        podspec=`find . -type f -iname *.podspec | xargs basename`
+        json=`pod ipc spec $podspec`
+        last_version=`echo $json | jq -rc .version`
+        git_version=$(git describe --tags `git rev-list --tags --max-count=1`)
+        export LIB_VERSION=${git_version:-$last_version}
         pod lib lint --allow-warnings
         pod trunk push --allow-warnings
       env:
         COCOAPODS_TRUNK_TOKEN: ${{ secrets.COCOAPODS_TRUNK_TOKEN }}
-

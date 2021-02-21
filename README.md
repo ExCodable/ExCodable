@@ -246,30 +246,30 @@ else {
 
 ## Requirements
 
-- iOS 10.0+ | macOS X 11.0+ | tvOS 10.0+
+- iOS 8.0+ | tvOS 9.0+ | macOS X 10.10+ | watchOS 2.0+
 - Xcode 12.0+
 - Swift 5.0+
 
 ## Installation
 
-[Swift Package Manager](https://swift.org/package-manager/):
+- [Swift Package Manager](https://swift.org/package-manager/):
 
 ```swift
 .package(url: "https://github.com/iwill/ExCodable", from: "0.2")
 ```
 
-[CocoaPods](http://cocoapods.org):
+- [CocoaPods](http://cocoapods.org):
 
 ```ruby
 pod 'ExCodable', '~> 0.2'
 ```
 
-Code Snippets:
+- Code Snippets:
 
-> Language: Swift
-> Platform: All
-> Completion: excodable
-> Availability: Top Level
+> Language: Swift  
+> Platform: All  
+> Completion: excodable  
+> Availability: Top Level  
 
 ```swift
 <#extension/struct/class#> <#Type#>: ExCodable {

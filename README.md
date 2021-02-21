@@ -177,7 +177,7 @@ static var keyMapping: [KeyMap<Self>] = [
 ]
 ```
 
-### 7. Encode/Decode with subscripts:
+### 7. Encode/decode constant properties with subscripts:
 
 > Using `let` to declare properties without default values.
 
@@ -232,17 +232,15 @@ extension KeyedDecodingContainer: KeyedDecodingContainerCustomTypeConversion {
 }
 ```
 
-### 9. Encodable/Decodable:
+### 9. Encode/decode with Type-Inference:
 
 ```swift
 let test = TestStruct(int: 100, string: "Continue")
-if let data = test.encoded() as Data?,
-   let copy = data.decoded() as TestStruct? {
-    XCTAssertEqual(copy, test)
-}
-else {
-    XCTFail()
-}
+let data = test.encoded() as Data?
+let copy1 = data?.decoded() as TestStruct?
+let copy2 = TestStruct.decoded(from: data)
+XCTAssertEqual(copy1, test)
+XCTAssertEqual(copy2, test)
 ```
 
 ## Requirements

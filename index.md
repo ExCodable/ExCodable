@@ -20,15 +20,15 @@ GitHub 上 Star 比较多的有几种类型：
 Codextended 最欠缺的是 Key-Mapping，经过各种摸索、尝试，确定 `KeyPath` 方式可行。解决掉关键问题后面就简单了，很快差不多实现了 YYModel 的所有特性。
 
 主要特性：
-- 使用 `KeyPath` 映射到 `CodingKey`/`String` 类型的 JSON-Key，实现 Key-Mapping；
+- 使用 `KeyPath` 映射到 JSON-Key，实现 Key-Mapping；
 - 支持多个候选 Key；
 - 支持 Key 嵌套；
 - 支持自定义 Encode/Decode Handler；
 - 支持使用 Subscript 进行 Encode/Decode；
 - 支持类型自动转换以及自定义转换；
-- 支持 `struct`、`class`、`subclass`；
-- 支持 JSON、PList 以及自定义 Encoder/Decoder，默认使用 JSON，支持读写 `Data`、`String`、`Object` 类型 JSON 数据；
-- 使用类型推断；
+- 支持 `struct`、`class`、subclass；
+- 支持 JSON、PList 以及自定义 Encoder/Decoder，默认使用 JSON；
+- 使用类型推断，支持 `Data`、`String`、`Object` 类型 JSON 数据；
 - 使用 `Optional` 类型取代抛出没什么用的错误，避免到处写 `try?`，有时还要套上括号。
 
 示例：

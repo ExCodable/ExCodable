@@ -11,7 +11,7 @@
 
 En | [中文](https://iwill.im/ExCodable/)
 
-**ExCodable** - Extensions for Swift Codable, supports Key-Mapping with `KeyPath` and JSON-Key.
+**ExCodable** - Key-Mapping Extensions for Swift Codable.
 
 ## Contents
 

@@ -6,11 +6,11 @@
 - 应该实现了所有常用的特性；
 - 1 个文件、500 行代码。
 
-我当然不是一开始就决定要造轮子的。近期我们团队准备开始使用 Swift，节前开始寻找一些开源框架，站上巨人的肩膀。比如网络请求用 [Alamofire](https://github.com/Alamofire/Alamofire)、自动布局用 [SnapKit](https://github.com/SnapKit/SnapKit)，这都毫无悬念，但是 JSON-Model 转换并没有找到合适的。
+我当然不是一开始就决定要造轮子的。近期我们团队准备开始使用 Swift，节前开始寻找一些开源框架，准备站上巨人的肩膀。网络请求用 [Alamofire](https://github.com/Alamofire/Alamofire)、自动布局用 [SnapKit](https://github.com/SnapKit/SnapKit)，这都毫无悬念，但是 JSON-Model 转换并没有找到合适的。
 
 GitHub 上 Star 比较多的有几种类型：
-- 刀耕火种型：这种框架用于读写 JSON，至于 Model 是不管的，比如 [SwiftyJSON](https://github.com/SwiftyJSON/SwiftyJSON) —— 适用于少量使用 JSON 或者 Model 很简单的情况。
-- 优雅绅士型：Swift 内置的 Codable 是可以满足刚需的，但也有官方框架的通病 —— 繁琐，[Codextended](https://github.com/JohnSundell/Codextended) 对其做了大量的简化，但还是要逐个属性 Encode/Decode —— 适用于 Model 相对简单的场景。
+- 刀耕火种型：[SwiftyJSON](https://github.com/SwiftyJSON/SwiftyJSON) 仅用于读写 JSON，至于 Model 是不管的 —— 适用于少量使用 JSON 或者 Model 很简单的情况。
+- 优雅绅士型：Swift 内置的 Codable 可以满足刚需，但也有官方框架的通病 —— 繁琐，[Codextended](https://github.com/JohnSundell/Codextended) 对其做了大量的简化，但还是要逐个属性 Encode/Decode —— 适用于 Model 相对简单的场景。
 - 八仙过海型：[ObjectMapper](https://github.com/tristanhimmelman/ObjectMapper)、[HandyJSON](https://github.com/alibaba/HandyJSON)、[KakaJSON](https://github.com/kakaopensource/KakaJSON) 等各有所长，他们都各自构建了整套的序列化、反序列化机制，略复杂，甚至还有直接读写内存的（“依赖于从 Swift Runtime 源码中推断的内存规则，任何变动我们将随时跟进”），这就不大好了，至少不够优雅。
 
 写 Objective-C 时一直享受着 [YYModel](https://github.com/ibireme/YYModel) 带来的便利，相比之下以上多少都欠了点。调研一番之后倾向于用 Codextended，因为抱上官方 Codable 的大腿。

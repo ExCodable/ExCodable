@@ -9,9 +9,9 @@
 [![GitHub](https://img.shields.io/github/license/iwill/ExCodable.svg)](./LICENSE)
 [![@minglq](https://img.shields.io/twitter/url?url=https%3A%2F%2Fgithub.com%2Fiwill%2FExCodable)](https://twitter.com/minglq)
 
-En | [中文](./README-zh.md#excodable)
+En | [中文](https://iwill.im/ExCodable/)
 
-**ExCodable** - Extensions for Swift `Codable`.
+**ExCodable** - Extensions for Swift Codable, supports Key-Mapping with `KeyPath` and JSON-Key.
 
 ## Contents
 
@@ -24,28 +24,24 @@ En | [中文](./README-zh.md#excodable)
 
 ## Features
 
-Supports `key-mapping` with `KeyPath` and `CodingKey`:
-- No need to encode/decode properties one by one.
-- No need to read/write memory via `UnsafePointer`.
-- Just requires using `var` to declare properties and provide default values.
-- In most cases, `CodingKey` is no longer necessary, because it will only be used once, `String` literals may be better.
-
-Encode/Decode:
-- Supports encode/decode via subscripts.
-- Supports multiple `alternative-keys` via `Array` for decoding.
-- Supports `nested-keys` via `String` with dot syntax.
-- Supports custom encode/decode-handler via closures.
-- Supports builtin and custom `type-conversion`.
-
-Simple and flexible Encodable/Decodable API:
-- **Some ideas were borrowed from an awesome framework - [Codextended](https://github.com/JohnSundell/Codextended).**
-- Uses JSON Encoder/Decoder by default, and supports PList.
-- Uses `type-inference`.
-- Returns `Optional` values instead of throwing errors.
+- Supports Key-Mapping with `KeyPath` and JSON-Key:
+    - ExCodable did not read/write memory via unsafe pointers;
+    - No need to encode/decode properties one by one;
+    - Just requires using `var` to declare properties and provide default values;
+    - In most cases, the `CodingKey` type is no longer necessary, because it will only be used once, `String` literals may be better.
+- Supports multiple Alternative-Keys via `Array` for decoding;
+- Supports Nested-Keys via `String` with dot syntax;
+- Supports custom encode/decode handlers via closures;
+- Supports encode/decode via subscripts;
+- Supports builtin and custom Type-Conversions;
+- Supports `struct`, `class` and subclass;
+- Uses JSON encoder/decoder by default, and supports PList;
+- Uses Type-Inference, supports JSON `Data`, `String` and `Object`;
+- Returns `Optional` values instead of throwing errors, to avoid frequent use of `try?`.
 
 ## Usage
 
-### 1. `key-mapping` for `struct`:
+### 1. Key-Mapping for `struct`:
 
 > Requires using `var` to declare properties and provide default values.
 
@@ -74,7 +70,7 @@ extension TestStruct: ExCodable {
 }
 ```
 
-### 2. `key-mapping` for `class`:
+### 2. Key-Mapping for `class`:
 
 > Cannot adopt `ExCodable` in extension of classes.
 
@@ -106,9 +102,9 @@ class TestClass: ExCodable, Equatable {
 }
 ```
 
-### 3. `key-mapping` for `subclass`:
+### 3. Key-Mapping for subclass:
 
-> Requires declaring another static key-mapping for subclass.
+> Requires declaring another static Key-Mapping for subclass.
 
 ```swift
 class TestSubclass: TestClass {
@@ -139,7 +135,7 @@ class TestSubclass: TestClass {
 }
 ```
 
-### 4. `alternative-keys`:
+### 4. Alternative-Keys:
 
 ```swift
 static var keyMapping: [KeyMap<Self>] = [
@@ -148,7 +144,7 @@ static var keyMapping: [KeyMap<Self>] = [
 ]
 ```
 
-### 5. `nested-keys`:
+### 5. Nested-Keys:
 
 ```swift
 static var keyMapping: [KeyMap<Self>] = [
@@ -157,7 +153,7 @@ static var keyMapping: [KeyMap<Self>] = [
 ]
 ```
 
-### 6. Custom encode/decode-handler
+### 6. Custom encode/decode handlers
 
 ```swift
 static var keyMapping: [KeyMap<Self>] = [
@@ -210,7 +206,7 @@ extension TestSubscript: Encodable, Decodable {
 }
 ```
 
-### 8. Custom `type-conversion`:
+### 8. Custom Type-Conversions:
 
 > Extends `KeyedDecodingContainer` with protocol `KeyedDecodingContainerCustomTypeConversion` and implement its method, decode values in alternative types and convert to target type.
 

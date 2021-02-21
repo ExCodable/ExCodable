@@ -3,7 +3,7 @@ Pod::Spec.new do |s|
     # ―――  Spec Metadata  ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――― #
     s.name          = "ExCodable"
     # export LIB_VERSION=$(git describe --tags `git rev-list --tags --max-count=1`)
-    s.version       = ENV["LIB_VERSION"] || "0.2.0"
+    s.version       = ENV["LIB_VERSION"] || "0.3.0"
     s.summary       = "Key-Mapping Extensions for Swift Codable"
     # s.description   = "Key-Mapping Extensions for Swift Codable."
     s.homepage      = "https://github.com/iwill/ExCodable"
@@ -14,10 +14,10 @@ Pod::Spec.new do |s|
     s.social_media_url = "https://iwill.im/about/"
     
     # ――― Platform Specifics ――――――――――――――――――――――――――――――――――――――――――――――――――――――― #
-    s.ios.deployment_target = "10.0"
-    s.osx.deployment_target = "11.0"
-    # s.tvos.deployment_target = "10.0"
-    # s.watchos.deployment_target = "2.0"
+    s.ios.deployment_target = "8.0"
+    s.tvos.deployment_target = "9.0"
+    s.osx.deployment_target = "10.10"
+    s.watchos.deployment_target = "2.0"
     s.swift_version = "5.0"
     
     # ――― Source Location ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――― #

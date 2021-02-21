@@ -4,6 +4,12 @@ import PackageDescription
 
 let package = Package(
     name: "ExCodable",
+    platforms: [
+        .iOS(.v8),
+        .tvOS(.v9),
+        .macOS(.v10_10),
+        .watchOS(.v2)
+    ],
     products: [
         .library(
             name: "ExCodable",

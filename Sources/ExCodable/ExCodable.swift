@@ -22,7 +22,7 @@ import Foundation
 /// - seealso: [Usage](https://github.com/iwill/ExCodable#usage) from GitGub
 /// - seealso: `ExCodableTests.swift` form the source code
 public protocol ExCodable: Encodable, Decodable {
-    associatedtype Root: Encodable, Decodable // Root should be Self, or the Type of Self
+    associatedtype Root = Self where Root: ExCodable
     static var keyMapping: [KeyMap<Root>] { get }
 }
 

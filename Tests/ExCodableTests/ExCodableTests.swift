@@ -125,15 +125,26 @@ struct TestAlternativeKeys: Equatable {
 extension TestAlternativeKeys: ExCodable {
     
     static var keyMapping: [KeyMap<Self>] = [
-        KeyMap(\.int, to: "int", "a", "b", "i"),
+        KeyMap(\.int, to: "int"),
         KeyMap(\.string, to: "string")
     ]
     
+    static var keyMappingFromServer: [KeyMap<Self>] = [
+        KeyMap(\.int, to: "int", "i"),
+        KeyMap(\.string, to: "string", "str", "s")
+    ]
+    
+    enum LocalKeys: String {
+        case isLocal = "_is_local_"
+    }
+    
     init(from decoder: Decoder) throws {
-        decode(with: Self.keyMapping, using: decoder)
+        let isLocal = decoder[LocalKeys.isLocal.rawValue] ?? false
+        decode(with: isLocal ? Self.keyMapping : Self.keyMappingFromServer, using: decoder)
     }
     func encode(to encoder: Encoder) throws {
         encode(with: Self.keyMapping, using: encoder)
+        encoder[LocalKeys.isLocal.rawValue] = true
     }
     
 }
@@ -345,12 +356,15 @@ final class ExCodableTests: XCTestCase {
     }
     
     func testAlternativeKeys() {
-        let data = Data(#"{"i":404,"string":"Not Found"}"#.utf8)
-        if let test = data.decoded() as TestAlternativeKeys?,
-           let copy = test.encoded() as Data? {
+        let serverData = Data(#"{"i":404,"s":"Not Found"}"#.utf8)
+        if let test = serverData.decoded() as TestAlternativeKeys?,
+           let localData = test.encoded() as Data?,
+           let copy = localData.decoded() as TestAlternativeKeys? {
             XCTAssertEqual(test, TestAlternativeKeys(int: 404, string: "Not Found"))
-            let json: [String: Any] = (try? JSONSerialization.jsonObject(with: copy, options: .fragmentsAllowed)) as? [String : Any] ?? [:]
-            XCTAssertEqual(NSDictionary(dictionary: json), [
+            XCTAssertEqual(copy, test)
+            let localJSON: [String: Any] = (try? JSONSerialization.jsonObject(with: localData, options: .fragmentsAllowed)) as? [String : Any] ?? [:]
+            XCTAssertEqual(NSDictionary(dictionary: localJSON), [
+                "_is_local_": true,
                 "int": 404,
                 "string": "Not Found"
             ])

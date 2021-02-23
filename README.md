@@ -30,6 +30,7 @@ En | [中文](https://iwill.im/ExCodable/)
     - No need to encode/decode properties one by one;
     - Just requires using `var` to declare properties and provide default values;
     - In most cases, the `CodingKey` type is no longer necessary, because it will only be used once, `String` literals may be better.
+- Supports setting Key-Mapping separately for different JSON data sources;
 - Supports multiple Alternative-Keys via `Array` for decoding;
 - Supports Nested-Keys via `String` with dot syntax;
 - Supports custom encode/decode handlers via closures;

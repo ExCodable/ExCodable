@@ -41,8 +41,7 @@ class TestClass: ExCodable, Equatable {
     var int: Int = 0
     var string: String? = nil
     init(int: Int, string: String?) {
-        self.int = int
-        self.string = string
+        (self.int, self.string) = (int, string)
     }
     
     static var keyMapping: [KeyMap<TestClass>] = [
@@ -233,7 +232,7 @@ extension TestTypeAdaption: Encodable, Decodable {
 // MARK: custom type-adaption
 
 extension KeyedDecodingContainer: KeyedDecodingContainerCustomTypeConversion {
-    public func decodeForTypeConversion<T, K>(_ container: KeyedDecodingContainer<K>, codingKey: K, as type: T.Type) -> T? where T : Decodable, K : CodingKey {
+    public func decodeForTypeConversion<T, K>(_ container: KeyedDecodingContainer<K>, codingKey: K, as type: T.Type) -> T? where T: Decodable, K: CodingKey {
         
         if type is Double.Type || type is Double?.Type {
             if let bool = try? decodeIfPresent(Bool.self, forKey: codingKey as! Self.Key) {
@@ -285,15 +284,15 @@ extension TestHandlers: ExCodable {
             encoder[stringKeys.first!] = "dddd" 
         }, decode: { (test, keyPath, decoder, stringKeys) in
             switch test.int {
-            case 100: test.string = "Continue"
-            case 200: test.string = "OK"
-            case 304: test.string = "Not Modified"
-            case 403: test.string = "Forbidden"
-            case 404: test.string = "Not Found"
-            case 418: test.string = "I'm a teapot"
-            case 500: test.string = "Internal Server Error"
-            case 200..<400: test.string = "success"
-            default: test.string = "failure"
+                case 100: test.string = "Continue"
+                case 200: test.string = "OK"
+                case 304: test.string = "Not Modified"
+                case 403: test.string = "Forbidden"
+                case 404: test.string = "Not Found"
+                case 418: test.string = "I'm a teapot"
+                case 500: test.string = "Internal Server Error"
+                case 200..<400: test.string = "success"
+                default: test.string = "failure"
             }
         })
     ]
@@ -362,7 +361,7 @@ final class ExCodableTests: XCTestCase {
            let copy = localData.decoded() as TestAlternativeKeys? {
             XCTAssertEqual(test, TestAlternativeKeys(int: 404, string: "Not Found"))
             XCTAssertEqual(copy, test)
-            let localJSON: [String: Any] = (try? JSONSerialization.jsonObject(with: localData, options: .fragmentsAllowed)) as? [String : Any] ?? [:]
+            let localJSON: [String: Any] = (try? JSONSerialization.jsonObject(with: localData, options: .fragmentsAllowed)) as? [String: Any] ?? [:]
             XCTAssertEqual(NSDictionary(dictionary: localJSON), [
                 "_is_local_": true,
                 "int": 404,
@@ -379,7 +378,7 @@ final class ExCodableTests: XCTestCase {
         if let data = test.encoded() as Data?,
            let copy = data.decoded() as TestNestedKeys? {
             XCTAssertEqual(copy, test)
-            let json: [String: Any] = (try? JSONSerialization.jsonObject(with: data, options: .fragmentsAllowed)) as? [String : Any] ?? [:]
+            let json: [String: Any] = (try? JSONSerialization.jsonObject(with: data, options: .fragmentsAllowed)) as? [String: Any] ?? [:]
             debugPrint(json)
             XCTAssertEqual(NSDictionary(dictionary: json), [
                 "int": 418,
@@ -492,7 +491,7 @@ final class ExCodableTests: XCTestCase {
         if let data = test.encoded() as Data?,
            let copy = data.decoded() as TestHandlers? {
             XCTAssertEqual(copy, test)
-            let json: [String: Any] = (try? JSONSerialization.jsonObject(with: data, options: .fragmentsAllowed)) as? [String : Any] ?? [:]
+            let json: [String: Any] = (try? JSONSerialization.jsonObject(with: data, options: .fragmentsAllowed)) as? [String: Any] ?? [:]
             debugPrint(json)
             XCTAssertEqual(NSDictionary(dictionary: json), [
                 "int": 500,

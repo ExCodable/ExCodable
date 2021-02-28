@@ -112,12 +112,12 @@ public extension KeyMap {
 
 public extension Encoder {
     
-    subscript<T>(_ stringKey: String) -> T? where T : Encodable {
+    subscript<T>(_ stringKey: String) -> T? where T: Encodable {
         get { return nil }
         nonmutating set { encode(newValue, for: stringKey) }
     }
     
-    subscript<T, K>(_ codingKey: K) -> T? where T : Encodable, K : CodingKey {
+    subscript<T, K>(_ codingKey: K) -> T? where T: Encodable, K: CodingKey {
         get { return nil }
         nonmutating set { encode(newValue, for: codingKey) }
     }
@@ -126,17 +126,17 @@ public extension Encoder {
 
 public extension Decoder {
     
-    subscript<T>(_ stringKeys: [String]) -> T? where T : Decodable {
+    subscript<T>(_ stringKeys: [String]) -> T? where T: Decodable {
         return decode(stringKeys, as: T.self)
     }
-    subscript<T>(_ stringKeys: String ...) -> T? where T : Decodable {
+    subscript<T>(_ stringKeys: String ...) -> T? where T: Decodable {
         return decode(stringKeys, as: T.self)
     }
     
-    subscript<T, K>(_ codingKeys: [K]) -> T? where T : Decodable, K : CodingKey {
+    subscript<T, K>(_ codingKeys: [K]) -> T? where T: Decodable, K: CodingKey {
         return decode(codingKeys, as: T.self)
     }
-    subscript<T, K>(_ codingKeys: K ...) -> T? where T : Decodable, K : CodingKey {
+    subscript<T, K>(_ codingKeys: K ...) -> T? where T: Decodable, K: CodingKey {
         return decode(codingKeys, as: T.self)
     }
     
@@ -144,7 +144,7 @@ public extension Decoder {
 
 // MARK: - Encoder/Decoder
 
-private extension Encoder {
+fileprivate extension Encoder {
     
     @discardableResult
     func encode<T: Encodable>(_ value: T?, for stringKey: String) -> Bool {
@@ -179,7 +179,7 @@ private extension Encoder {
     
 }
 
-private extension Decoder {
+fileprivate extension Decoder {
     
     func decode<T: Decodable>(_ stringKeys: String ..., as type: T.Type = T.self) -> T? {
         return decode(stringKeys, as: type)
@@ -200,7 +200,7 @@ private extension Decoder {
 
 // MARK: alternative-keys
 
-private extension KeyedDecodingContainer {
+fileprivate extension KeyedDecodingContainer {
     func decodeIfPresent<T: Decodable>(_ codingKeys: [Self.Key], as type: T.Type = T.self) -> T? {
         guard let codingKey = codingKeys.first else {
             return nil
@@ -214,7 +214,7 @@ private extension KeyedDecodingContainer {
 
 // MARK: nested-keys
 
-private extension KeyedDecodingContainer {
+fileprivate extension KeyedDecodingContainer {
     func decodeIfPresent<T: Decodable>(_ codingKey: Self.Key, as type: T.Type = T.self) -> T? {
         if let value = decodeIfTypeConvertible(codingKey, as: type) {
             return value
@@ -237,7 +237,7 @@ private extension KeyedDecodingContainer {
 
 // MARK: type-conversion
 
-private extension KeyedDecodingContainer {
+fileprivate extension KeyedDecodingContainer {
     
     func decodeIfTypeConvertible<T: Decodable>(_ codingKey: Self.Key, as type: T.Type = T.self) -> T? {
         if let value = try? decodeIfPresent(type, forKey: codingKey) {
@@ -250,15 +250,15 @@ private extension KeyedDecodingContainer {
             }
             else if let string = try? decodeIfPresent(String.self, forKey: codingKey) {
                 switch string.lowercased() {
-                case "true", "t", "yes", "y":
-                    return true as? T
-                case "false", "f", "no", "n", "":
-                    return false as? T
-                default:
-                    if let int = Int(string) {
-                        return (int != 0) as? T
-                    }
-                    return nil
+                    case "true", "t", "yes", "y":
+                        return true as? T
+                    case "false", "f", "no", "n", "":
+                        return false as? T
+                    default:
+                        if let int = Int(string) {
+                            return (int != 0) as? T
+                        }
+                        return nil
                 }
             }
         }
@@ -339,27 +339,27 @@ public protocol KeyedDecodingContainerCustomTypeConversion {
 
 // MARK: ExCodingKey
 
-private struct ExCodingKey: CodingKey {
+fileprivate struct ExCodingKey: CodingKey {
     
-    public let stringValue: String
-    public let intValue: Int?
+    let stringValue: String
+    let intValue: Int?
     
-    public init(_ stringValue: String) {
+    init(_ stringValue: String) {
         self.stringValue = stringValue
         self.intValue = nil
     }
-    public init(_ stringValue: Substring) {
+    init(_ stringValue: Substring) {
         self.init(String(stringValue))
     }
-    public init?(stringValue: String) {
+    init?(stringValue: String) {
         self.init(stringValue)
     }
     
-    public init(_ intValue: Int) {
+    init(_ intValue: Int) {
         self.intValue = intValue
         self.stringValue = String(intValue)
     }
-    public init?(intValue: Int) {
+    init?(intValue: Int) {
         self.init(intValue)
     }
     

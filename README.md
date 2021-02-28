@@ -155,7 +155,7 @@ static var keyMapping: [KeyMap<Self>] = [
 ]
 ```
 
-### 6. Custom encode/decode handlers
+### 6. Custom encode/decode handlers:
 
 ```swift
 static var keyMapping: [KeyMap<Self>] = [
@@ -164,15 +164,15 @@ static var keyMapping: [KeyMap<Self>] = [
         encoder[stringKeys.first!] = "dddd" 
     }, decode: { (test, keyPath, decoder, stringKeys) in
         switch test.int {
-        case 100: test.string = "Continue"
-        case 200: test.string = "OK"
-        case 304: test.string = "Not Modified"
-        case 403: test.string = "Forbidden"
-        case 404: test.string = "Not Found"
-        case 418: test.string = "I'm a teapot"
-        case 500: test.string = "Internal Server Error"
-        case 200..<400: test.string = "success"
-        default: test.string = "failure"
+            case 100: test.string = "Continue"
+            case 200: test.string = "OK"
+            case 304: test.string = "Not Modified"
+            case 403: test.string = "Forbidden"
+            case 404: test.string = "Not Found"
+            case 418: test.string = "I'm a teapot"
+            case 500: test.string = "Internal Server Error"
+            case 200..<400: test.string = "success"
+            default: test.string = "failure"
         }
     })
 ]
@@ -214,7 +214,7 @@ extension TestSubscript: Encodable, Decodable {
 
 ```swift
 extension KeyedDecodingContainer: KeyedDecodingContainerCustomTypeConversion {
-    public func decodeForTypeConversion<T, K>(_ container: KeyedDecodingContainer<K>, codingKey: K, as type: T.Type) -> T? where T : Decodable, K : CodingKey {
+    public func decodeForTypeConversion<T, K>(_ container: KeyedDecodingContainer<K>, codingKey: K, as type: T.Type) -> T? where T: Decodable, K: CodingKey {
         
         if type is Double.Type || type is Double?.Type {
             if let bool = try? decodeIfPresent(Bool.self, forKey: codingKey as! Self.Key) {

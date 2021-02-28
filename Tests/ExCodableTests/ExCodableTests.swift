@@ -325,7 +325,7 @@ final class ExCodableTests: XCTestCase {
         let test = TestClass(int: 200, string: "OK")
         if let data = test.encoded() as Data?,
            let copy = data.decoded() as TestClass? {
-            XCTAssert(copy == test)
+            XCTAssertEqual(copy, test)
         }
         else {
             XCTFail()
@@ -336,7 +336,7 @@ final class ExCodableTests: XCTestCase {
         let test = TestSubclass(int: 304, string: "Not Modified", bool: true)
         if let data = test.encoded() as Data?,
            let copy = data.decoded() as TestSubclass? {
-            XCTAssert(copy == test)
+            XCTAssertEqual(copy, test)
         }
         else {
             XCTFail()

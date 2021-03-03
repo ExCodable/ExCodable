@@ -1,7 +1,7 @@
 [ExCodable](https://github.com/iwill/ExCodable) 是我在春节期间、带娃之余、用了几个晚上完成的一个 Swift 版的 JSON-Model 转换工具。
 
 别走！看到前面的介绍大家心里可能想“嗷，又一个轮子”，但是 ExCodable 真的有点不一样：
-- 它是在 Swift Codable 基础上的扩展；
+- 它是在 Swift Codable 基础上的扩展，可以与 Alamofire 无缝对接；
 - 基于 `KeyPath` 实现 Key-Mapping；
 - 支持丰富的特性；
 - 1 个文件、500 行代码。

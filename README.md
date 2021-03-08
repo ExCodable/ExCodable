@@ -190,7 +190,7 @@ struct TestSubscript: Equatable {
 ```
 
 ```swift
-extension TestSubscript: Encodable, Decodable {
+extension TestSubscript: Codable {
     
     enum Keys: CodingKey {
         case int, string

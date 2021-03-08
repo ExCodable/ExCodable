@@ -21,7 +21,7 @@ import Foundation
 /// A protocol extends `Encodable` & `Decodable` with `keyMapping`
 /// - seealso: [Usage](https://github.com/iwill/ExCodable#usage) from GitGub
 /// - seealso: `ExCodableTests.swift` form the source code
-public protocol ExCodable: Encodable, Decodable {
+public protocol ExCodable: Codable {
     associatedtype Root = Self where Root: ExCodable
     static var keyMapping: [KeyMap<Root>] { get }
 }
@@ -43,7 +43,7 @@ public extension ExCodable {
 
 // MARK: - key-mapping
 
-public struct KeyMap<Root: Encodable & Decodable> {
+public struct KeyMap<Root: Codable> {
     fileprivate let encode: (_ root: Root, _ encoder: Encoder) -> Void
     fileprivate let decode: ((_ root: inout Root, _ decoder: Decoder) -> Void)?
     fileprivate let decodeReference: ((_ root: Root, _ decoder: Decoder) -> Void)?
@@ -52,10 +52,10 @@ public struct KeyMap<Root: Encodable & Decodable> {
 public extension KeyMap {
     
     /// Constructor for value-type with `String` type codingKeys
-    init<Value: Encodable & Decodable>(_ keyPath: WritableKeyPath<Root, Value>,
-                                       to codingKeys: String ...,
-                                       encode: ((Encoder, [String], Root, WritableKeyPath<Root, Value>) -> Void)? = nil,
-                                       decode: ((inout Root, WritableKeyPath<Root, Value>, Decoder, [String]) -> Void)? = nil) {
+    init<Value: Codable>(_ keyPath: WritableKeyPath<Root, Value>,
+                         to codingKeys: String ...,
+                         encode: ((Encoder, [String], Root, WritableKeyPath<Root, Value>) -> Void)? = nil,
+                         decode: ((inout Root, WritableKeyPath<Root, Value>, Decoder, [String]) -> Void)? = nil) {
         self.init(encode: { (root, encoder) in
             if encode != nil { encode!(encoder, codingKeys, root, keyPath) }
             else { encoder[codingKeys.first!] = root[keyPath: keyPath] }
@@ -66,10 +66,10 @@ public extension KeyMap {
     }
     
     /// Constructor for value-type with `CodingKey` type codingKeys
-    init<Value: Encodable & Decodable, Key: CodingKey>(_ keyPath: WritableKeyPath<Root, Value>,
-                                                       to codingKeys: Key ...,
-                                                       encode: ((Encoder, [Key], Root, WritableKeyPath<Root, Value>) -> Void)? = nil,
-                                                       decode: ((inout Root, WritableKeyPath<Root, Value>, Decoder, [Key]) -> Void)? = nil) {
+    init<Value: Codable, Key: CodingKey>(_ keyPath: WritableKeyPath<Root, Value>,
+                                         to codingKeys: Key ...,
+                                         encode: ((Encoder, [Key], Root, WritableKeyPath<Root, Value>) -> Void)? = nil,
+                                         decode: ((inout Root, WritableKeyPath<Root, Value>, Decoder, [Key]) -> Void)? = nil) {
         self.init(encode: { (root, encoder) in
             if encode != nil { encode!(encoder, codingKeys, root, keyPath) }
             else { encoder[codingKeys.first!] = root[keyPath: keyPath] }
@@ -80,10 +80,10 @@ public extension KeyMap {
     }
     
     /// Constructor for ref-type with `String` type codingKeys
-    init<Value: Encodable & Decodable>(ref keyPath: ReferenceWritableKeyPath<Root, Value>,
-                                       to codingKeys: String ...,
-                                       encode: ((Encoder, [String], Root, ReferenceWritableKeyPath<Root, Value>) -> Void)? = nil,
-                                       decode: ((Root, ReferenceWritableKeyPath<Root, Value>, Decoder, [String]) -> Void)? = nil) {
+    init<Value: Codable>(ref keyPath: ReferenceWritableKeyPath<Root, Value>,
+                         to codingKeys: String ...,
+                         encode: ((Encoder, [String], Root, ReferenceWritableKeyPath<Root, Value>) -> Void)? = nil,
+                         decode: ((Root, ReferenceWritableKeyPath<Root, Value>, Decoder, [String]) -> Void)? = nil) {
         self.init(encode: { (root, encoder) in
             if encode != nil { encode!(encoder, codingKeys, root, keyPath) }
             else { encoder[codingKeys.first!] = root[keyPath: keyPath] }
@@ -94,10 +94,10 @@ public extension KeyMap {
     }
     
     /// Constructor for ref-type with `CodingKey` type codingKeys
-    init<Value: Encodable & Decodable, Key: CodingKey>(ref keyPath: ReferenceWritableKeyPath<Root, Value>,
-                                                       to codingKeys: Key ...,
-                                                       encode: ((Encoder, [Key], Root, ReferenceWritableKeyPath<Root, Value>) -> Void)? = nil,
-                                                       decode: ((Root, ReferenceWritableKeyPath<Root, Value>, Decoder, [Key]) -> Void)? = nil) {
+    init<Value: Codable, Key: CodingKey>(ref keyPath: ReferenceWritableKeyPath<Root, Value>,
+                                         to codingKeys: Key ...,
+                                         encode: ((Encoder, [Key], Root, ReferenceWritableKeyPath<Root, Value>) -> Void)? = nil,
+                                         decode: ((Root, ReferenceWritableKeyPath<Root, Value>, Decoder, [Key]) -> Void)? = nil) {
         self.init(encode: { (root, encoder) in
             if encode != nil { encode!(encoder, codingKeys, root, keyPath) }
             else { encoder[codingKeys.first!] = root[keyPath: keyPath] }

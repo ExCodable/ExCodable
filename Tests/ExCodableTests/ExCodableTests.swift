@@ -8,7 +8,7 @@
 
 import XCTest
 
-@testable
+// @testable
 import ExCodable
 
 // MARK: struct

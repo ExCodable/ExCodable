@@ -12,7 +12,7 @@
 
 En | [中文](https://iwill.im/ExCodable/)
 
-**ExCodable** - Key-Mapping Extensions for Swift Codable.
+**ExCodable** - Key-Mapping Extensions for Swift `Codable`.
 
 ## Contents
 
@@ -25,16 +25,16 @@ En | [中文](https://iwill.im/ExCodable/)
 
 ## Features
 
-- Supports Key-Mapping with `KeyPath` and JSON-Key:
+- Extends Swift `Codable` - `Encodable & Decodable`;
+- Supports Key-Mapping via `KeyPath` and Coding-Key:
     - ExCodable did not read/write memory via unsafe pointers;
     - No need to encode/decode properties one by one;
     - Just requires using `var` to declare properties and provide default values;
     - In most cases, the `CodingKey` type is no longer necessary, because it will only be used once, `String` literals may be better.
-- Supports setting Key-Mapping separately for different JSON data sources;
+- Supports multiple Key-Mappings for different data sources;
 - Supports multiple Alternative-Keys via `Array` for decoding;
 - Supports Nested-Keys via `String` with dot syntax;
-- Supports custom encode/decode handlers via closures;
-- Supports encode/decode via subscripts;
+- Supports customized encode/decode via subscripts;
 - Supports builtin and custom Type-Conversions;
 - Supports `struct`, `class` and subclass;
 - Uses JSON encoder/decoder by default, and supports PList;

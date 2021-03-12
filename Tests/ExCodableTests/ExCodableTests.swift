@@ -273,35 +273,40 @@ extension TestCustomTypeAdaption: ExCodable {
 
 struct TestHandlers: Equatable {
     var int: Int = 0
-    var string: String = ""
+    var string: String?
 }
 
 extension TestHandlers: ExCodable {
     
+    private enum Keys: String, CodingKey {
+        case int, string
+    }
+    private static let dddd = "dddd"
+    
     static var keyMapping: [KeyMap<Self>] = [
-        KeyMap(\.int, to: "int"),
-        KeyMap(\.string, to: "string", encode: { (encoder, stringKeys, test, keyPath) in
-            encoder[stringKeys.first!] = "dddd" 
-        }, decode: { (test, keyPath, decoder, stringKeys) in
-            switch test.int {
-                case 100: test.string = "Continue"
-                case 200: test.string = "OK"
-                case 304: test.string = "Not Modified"
-                case 403: test.string = "Forbidden"
-                case 404: test.string = "Not Found"
-                case 418: test.string = "I'm a teapot"
-                case 500: test.string = "Internal Server Error"
-                case 200..<400: test.string = "success"
-                default: test.string = "failure"
-            }
-        })
+        KeyMap(\.int, to: Keys.int),
+        KeyMap(\.string, to: Keys.string)
     ]
     
     init(from decoder: Decoder) throws {
         decode(with: Self.keyMapping, using: decoder)
+        if string == nil || string == Self.dddd {
+            switch int {
+                case 100: string = "Continue"
+                case 200: string = "OK"
+                case 304: string = "Not Modified"
+                case 403: string = "Forbidden"
+                case 404: string = "Not Found"
+                case 418: string = "I'm a teapot"
+                case 500: string = "Internal Server Error"
+                case 200..<400: string = "success"
+                default: string = "failure"
+            }
+        }
     }
     func encode(to encoder: Encoder) throws {
         encode(with: Self.keyMapping, using: encoder)
+        encoder[Keys.string] = Self.dddd
     }
     
 }

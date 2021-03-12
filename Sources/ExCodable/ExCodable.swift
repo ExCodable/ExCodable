@@ -52,58 +52,38 @@ public struct KeyMap<Root: Codable> {
 public extension KeyMap {
     
     /// Constructor for value-type with `String` type codingKeys
-    init<Value: Codable>(_ keyPath: WritableKeyPath<Root, Value>,
-                         to codingKeys: String ...,
-                         encode: ((Encoder, [String], Root, WritableKeyPath<Root, Value>) -> Void)? = nil,
-                         decode: ((inout Root, WritableKeyPath<Root, Value>, Decoder, [String]) -> Void)? = nil) {
+    init<Value: Codable>(_ keyPath: WritableKeyPath<Root, Value>, to codingKeys: String ...) {
         self.init(encode: { (root, encoder) in
-            if encode != nil { encode!(encoder, codingKeys, root, keyPath) }
-            else { encoder[codingKeys.first!] = root[keyPath: keyPath] }
+            encoder[codingKeys.first!] = root[keyPath: keyPath]
         }, decode: { (root, decoder) in
-            if decode != nil { decode!(&root, keyPath, decoder, codingKeys)  }
-            else if let value: Value = decoder[codingKeys] { root[keyPath: keyPath] = value }
+            if let value: Value = decoder[codingKeys] { root[keyPath: keyPath] = value }
         }, decodeReference: nil)
     }
     
     /// Constructor for value-type with `CodingKey` type codingKeys
-    init<Value: Codable, Key: CodingKey>(_ keyPath: WritableKeyPath<Root, Value>,
-                                         to codingKeys: Key ...,
-                                         encode: ((Encoder, [Key], Root, WritableKeyPath<Root, Value>) -> Void)? = nil,
-                                         decode: ((inout Root, WritableKeyPath<Root, Value>, Decoder, [Key]) -> Void)? = nil) {
+    init<Value: Codable, Key: CodingKey>(_ keyPath: WritableKeyPath<Root, Value>, to codingKeys: Key ...) {
         self.init(encode: { (root, encoder) in
-            if encode != nil { encode!(encoder, codingKeys, root, keyPath) }
-            else { encoder[codingKeys.first!] = root[keyPath: keyPath] }
+            encoder[codingKeys.first!] = root[keyPath: keyPath]
         }, decode: { (root, decoder) in
-            if decode != nil { decode!(&root, keyPath, decoder, codingKeys)  }
-            else if let value: Value = decoder[codingKeys] { root[keyPath: keyPath] = value }
+            if let value: Value = decoder[codingKeys] { root[keyPath: keyPath] = value }
         }, decodeReference: nil)
     }
     
     /// Constructor for ref-type with `String` type codingKeys
-    init<Value: Codable>(ref keyPath: ReferenceWritableKeyPath<Root, Value>,
-                         to codingKeys: String ...,
-                         encode: ((Encoder, [String], Root, ReferenceWritableKeyPath<Root, Value>) -> Void)? = nil,
-                         decode: ((Root, ReferenceWritableKeyPath<Root, Value>, Decoder, [String]) -> Void)? = nil) {
+    init<Value: Codable>(ref keyPath: ReferenceWritableKeyPath<Root, Value>, to codingKeys: String ...) {
         self.init(encode: { (root, encoder) in
-            if encode != nil { encode!(encoder, codingKeys, root, keyPath) }
-            else { encoder[codingKeys.first!] = root[keyPath: keyPath] }
+            encoder[codingKeys.first!] = root[keyPath: keyPath]
         }, decode: nil, decodeReference: { (root, decoder) in
-            if decode != nil { decode!(root, keyPath, decoder, codingKeys)  }
-            else if let value: Value = decoder[codingKeys] { root[keyPath: keyPath] = value }
+            if let value: Value = decoder[codingKeys] { root[keyPath: keyPath] = value }
         })
     }
     
     /// Constructor for ref-type with `CodingKey` type codingKeys
-    init<Value: Codable, Key: CodingKey>(ref keyPath: ReferenceWritableKeyPath<Root, Value>,
-                                         to codingKeys: Key ...,
-                                         encode: ((Encoder, [Key], Root, ReferenceWritableKeyPath<Root, Value>) -> Void)? = nil,
-                                         decode: ((Root, ReferenceWritableKeyPath<Root, Value>, Decoder, [Key]) -> Void)? = nil) {
+    init<Value: Codable, Key: CodingKey>(ref keyPath: ReferenceWritableKeyPath<Root, Value>, to codingKeys: Key ...) {
         self.init(encode: { (root, encoder) in
-            if encode != nil { encode!(encoder, codingKeys, root, keyPath) }
-            else { encoder[codingKeys.first!] = root[keyPath: keyPath] }
+            encoder[codingKeys.first!] = root[keyPath: keyPath]
         }, decode: nil, decodeReference: { (root, decoder) in
-            if decode != nil { decode!(root, keyPath, decoder, codingKeys)  }
-            else if let value: Value = decoder[codingKeys] { root[keyPath: keyPath] = value }
+            if let value: Value = decoder[codingKeys] { root[keyPath: keyPath] = value }
         })
     }
 }

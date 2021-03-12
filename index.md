@@ -23,8 +23,7 @@ Codextended 最欠缺的是 Key-Mapping，经过各种摸索、尝试，确定 `
 - 使用 `KeyPath` 映射到 JSON-Key，实现 Key-Mapping；
 - 支持多个候选 Key；
 - 支持 Key 嵌套；
-- 支持自定义 Encode/Decode Handler；
-- 支持使用 Subscript 进行 Encode/Decode；
+- 支持使用 Subscript 进行自定义 Encode/Decode；
 - 支持类型自动转换以及自定义转换；
 - 支持 `struct`、`class`、subclass；
 - 支持 JSON、PList 以及自定义 Encoder/Decoder，默认使用 JSON；

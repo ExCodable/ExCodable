@@ -92,12 +92,12 @@ public extension KeyMap {
 
 public extension Encoder {
     
-    subscript<T>(_ stringKey: String) -> T? where T: Encodable {
+    subscript<T: Encodable>(_ stringKey: String) -> T? {
         get { return nil }
         nonmutating set { encode(newValue, for: stringKey) }
     }
     
-    subscript<T, K>(_ codingKey: K) -> T? where T: Encodable, K: CodingKey {
+    subscript<T: Encodable, K: CodingKey>(_ codingKey: K) -> T? {
         get { return nil }
         nonmutating set { encode(newValue, for: codingKey) }
     }
@@ -106,17 +106,17 @@ public extension Encoder {
 
 public extension Decoder {
     
-    subscript<T>(_ stringKeys: [String]) -> T? where T: Decodable {
+    subscript<T: Decodable>(_ stringKeys: [String]) -> T? {
         return decode(stringKeys, as: T.self)
     }
-    subscript<T>(_ stringKeys: String ...) -> T? where T: Decodable {
+    subscript<T: Decodable>(_ stringKeys: String ...) -> T? {
         return decode(stringKeys, as: T.self)
     }
     
-    subscript<T, K>(_ codingKeys: [K]) -> T? where T: Decodable, K: CodingKey {
+    subscript<T: Decodable, K: CodingKey>(_ codingKeys: [K]) -> T? {
         return decode(codingKeys, as: T.self)
     }
-    subscript<T, K>(_ codingKeys: K ...) -> T? where T: Decodable, K: CodingKey {
+    subscript<T: Decodable, K: CodingKey>(_ codingKeys: K ...) -> T? {
         return decode(codingKeys, as: T.self)
     }
     

@@ -3,7 +3,7 @@
 别走！你心里可能想“嗷，又一个轮子”，但是这个真的有点不一样：
 - `ExCodable` 是在 Swift `Codable` 基础上的扩展，可以享受到诸多遍历，比如与 [Alamofire](https://github.com/Alamofire/Alamofire) 无缝对接，参考 [Response Decodable Handler](https://github.com/Alamofire/Alamofire/blob/master/Documentation/Usage.md#response-decodable-handler)；
 - 基于 `KeyPath` 实现 Key-Mapping，无需逐个属性 Encode/Decode；
-- 支持丰富的特性，基本可以替代 Objective-C 版的 [YYModel](https://github.com/ibireme/YYModel)；
+- 支持丰富的特性，差不多实现了 Objective-C 版的 [YYModel](https://github.com/ibireme/YYModel) 的所有特性；
 - 轻量，1 个文件、不到 500 行代码。
 
 当然我不是一开始就决定要造轮子的。近期我们团队准备开始使用 Swift，节前开始寻找一些开源框架。网络请求用 [Alamofire](https://github.com/Alamofire/Alamofire)、自动布局用 [SnapKit](https://github.com/SnapKit/SnapKit)，这都毫无悬念，但是 JSON-Model 转换并没有找到合适的。

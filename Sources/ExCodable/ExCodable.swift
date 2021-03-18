@@ -56,7 +56,9 @@ public extension KeyMap {
         self.init(encode: { (root, encoder) in
             encoder[codingKeys.first!] = root[keyPath: keyPath]
         }, decode: { (root, decoder) in
-            if let value: Value = decoder[codingKeys] { root[keyPath: keyPath] = value }
+            if let value: Value = decoder[codingKeys] {
+                root[keyPath: keyPath] = value
+            }
         }, decodeReference: nil)
     }
     
@@ -65,7 +67,9 @@ public extension KeyMap {
         self.init(encode: { (root, encoder) in
             encoder[codingKeys.first!] = root[keyPath: keyPath]
         }, decode: { (root, decoder) in
-            if let value: Value = decoder[codingKeys] { root[keyPath: keyPath] = value }
+            if let value: Value = decoder[codingKeys] {
+                root[keyPath: keyPath] = value
+            }
         }, decodeReference: nil)
     }
     
@@ -74,7 +78,9 @@ public extension KeyMap {
         self.init(encode: { (root, encoder) in
             encoder[codingKeys.first!] = root[keyPath: keyPath]
         }, decode: nil, decodeReference: { (root, decoder) in
-            if let value: Value = decoder[codingKeys] { root[keyPath: keyPath] = value }
+            if let value: Value = decoder[codingKeys] {
+                root[keyPath: keyPath] = value
+            }
         })
     }
     
@@ -83,7 +89,9 @@ public extension KeyMap {
         self.init(encode: { (root, encoder) in
             encoder[codingKeys.first!] = root[keyPath: keyPath]
         }, decode: nil, decodeReference: { (root, decoder) in
-            if let value: Value = decoder[codingKeys] { root[keyPath: keyPath] = value }
+            if let value: Value = decoder[codingKeys] {
+                root[keyPath: keyPath] = value
+            }
         })
     }
 }

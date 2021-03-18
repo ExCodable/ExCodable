@@ -27,7 +27,7 @@ En | [中文](https://iwill.im/ExCodable/)
 
 - Extends Swift `Codable` - `Encodable & Decodable`;
 - Supports Key-Mapping via `KeyPath` and Coding-Key:
-    - ExCodable did not read/write memory via unsafe pointers;
+    - `ExCodable` did not read/write memory via unsafe pointers;
     - No need to encode/decode properties one by one;
     - Just requires using `var` to declare properties and provide default values;
     - In most cases, the `CodingKey` type is no longer necessary, because it will only be used once, `String` literals may be better.
@@ -155,27 +155,50 @@ static var keyMapping: [KeyMap<Self>] = [
 ]
 ```
 
-### 6. Custom encode/decode handlers:
+### 6. Custom encode/decode:
 
 ```swift
-static var keyMapping: [KeyMap<Self>] = [
-    KeyMap(\.int, to: "int"),
-    KeyMap(\.string, to: "string", encode: { (encoder, stringKeys, test, keyPath) in
-        encoder[stringKeys.first!] = "dddd" 
-    }, decode: { (test, keyPath, decoder, stringKeys) in
-        switch test.int {
-            case 100: test.string = "Continue"
-            case 200: test.string = "OK"
-            case 304: test.string = "Not Modified"
-            case 403: test.string = "Forbidden"
-            case 404: test.string = "Not Found"
-            case 418: test.string = "I'm a teapot"
-            case 500: test.string = "Internal Server Error"
-            case 200..<400: test.string = "success"
-            default: test.string = "failure"
+struct TestHandlers: Equatable {
+    var int: Int = 0
+    var string: String?
+}
+```
+
+```swift
+extension TestHandlers: ExCodable {
+    
+    private enum Keys: String, CodingKey {
+        case int, string
+    }
+    private static let dddd = "dddd"
+    
+    static var keyMapping: [KeyMap<Self>] = [
+        KeyMap(\.int, to: Keys.int),
+        KeyMap(\.string, to: Keys.string)
+    ]
+    
+    init(from decoder: Decoder) throws {
+        decode(with: Self.keyMapping, using: decoder)
+        if string == nil || string == Self.dddd {
+            switch int {
+                case 100: string = "Continue"
+                case 200: string = "OK"
+                case 304: string = "Not Modified"
+                case 403: string = "Forbidden"
+                case 404: string = "Not Found"
+                case 418: string = "I'm a teapot"
+                case 500: string = "Internal Server Error"
+                case 200..<400: string = "success"
+                default: string = "failure"
+            }
         }
-    })
-]
+    }
+    func encode(to encoder: Encoder) throws {
+        encode(with: Self.keyMapping, using: encoder)
+        encoder[Keys.string] = Self.dddd
+    }
+    
+}
 ```
 
 ### 7. Encode/decode constant properties with subscripts:
@@ -255,37 +278,36 @@ XCTAssertEqual(copy2, test)
 - [Swift Package Manager](https://swift.org/package-manager/):
 
 ```swift
-.package(url: "https://github.com/iwill/ExCodable", from: "0.2")
+.package(url: "https://github.com/iwill/ExCodable", from: "0.4.0")
 ```
 
 - [CocoaPods](http://cocoapods.org):
 
 ```ruby
-pod 'ExCodable', '~> 0.2'
+pod 'ExCodable', '~> 0.4.0'
 ```
 
 - Code Snippets:
 
+> Title: ExCodable
+> Summary: Adopte to ExCodable protocol
 > Language: Swift  
 > Platform: All  
-> Completion: excodable  
+> Completion: ExCodable  
 > Availability: Top Level  
 
 ```swift
 <#extension/struct/class#> <#Type#>: ExCodable {
-    
-    static var <#keyMapping#>: [KeyMap<<#Type#>>] = [
+    static var <#keyMapping#>: [KeyMap<<#SelfType#>>] = [
         KeyMap(\.<#property#>, to: <#"key"#>),
         <#...#>
     ]
-    
     init(from decoder: Decoder) throws {
-        decode(with: Self.<#keyMapping#>, using: decoder)
+        decode<#Reference#>(with: Self.<#keyMapping#>, using: decoder)
     }
     func encode(to encoder: Encoder) throws {
         encode(with: Self.<#keyMapping#>, using: encoder)
     }
-    
 }
 ```
 

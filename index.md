@@ -15,7 +15,7 @@ GitHub 上 Star 比较多的有几种类型：
 
 写 Objective-C 时一直享受着 [YYModel](https://github.com/ibireme/YYModel) 带来的便利，相比之下以上多少都欠了点意思。调研一番之后倾向于用 Codextended，因为抱上官方 `Codable` 的大腿。
 
-起初有考虑直接基于它做扩展来实现 Key-Mapping，但是后来发现受到限制较多，只能自己动手了。Codextended 最欠缺的是 Key-Mapping，经过各种摸索、尝试，确定 `KeyPath` 方式可行。解决掉关键问题后面就简单了，很快差不多实现了 YYModel 的所有特性；同时借鉴了 Codextended，重新写了关键部分的实现，有些调整、也有些舍弃。
+起初有考虑直接基于它做扩展来实现 Key-Mapping，但是受到限制较多，只能自己动手了。Codextended 最欠缺的是 Key-Mapping，经过各种摸索、尝试，确定 `KeyPath` 方式可行。解决掉关键问题后面就简单了，很快差不多实现了 YYModel 的所有特性；同时借鉴了 Codextended，重新写了关键部分的实现，有些调整、也有些舍弃。
 
 主要特性：
 - 使用 `KeyPath` 映射到 Coding-Key，实现 Key-Mapping；

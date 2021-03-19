@@ -61,7 +61,7 @@ extension TestStruct: ExCodable {
 }
 ```
 
-Encode、Decode；
+Encode、Decode 也很方便；
 
 ```swift
 let test = TestStruct(int: 100, string: "Continue")

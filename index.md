@@ -46,6 +46,8 @@ struct TestStruct: Equatable {
 
 实现 `ExCodable` 协议，通过 `keyMapping` 设置 `KeyPath` 到 Coding-Key 的映射，`init` 和 `encode` 方法都只要一行代码；
 
+> 当 `encode` 方法只有这一行代码时它也是可以省略的，`ExCodable` 提供了默认实现。但是受 Swift 对初始化过程的严格限制，`init` 方法不能省略。
+
 ```swift
 extension TestStruct: ExCodable {
     static var keyMapping: [KeyMap<Self>] = [
@@ -55,9 +57,9 @@ extension TestStruct: ExCodable {
     init(from decoder: Decoder) throws {
         decode(with: Self.keyMapping, using: decoder)
     }
-    func encode(to encoder: Encoder) throws {
-        encode(with: Self.keyMapping, using: encoder)
-    }
+    // func encode(to encoder: Encoder) throws {
+    //     encode(with: Self.keyMapping, using: encoder)
+    // }
 }
 ```
 

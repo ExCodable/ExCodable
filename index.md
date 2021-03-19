@@ -61,13 +61,15 @@ extension TestStruct: ExCodable {
 }
 ```
 
-Encode、Decode 方法使用类型推断，使代码更具可读性；
+Encode、Decode；
 
 ```swift
 let test = TestStruct(int: 100, string: "Continue")
 let data = test.encoded() as Data? // Model encode to JSON
+
 let copy1 = data?.decoded() as TestStruct? // decode JSON to Model
 let copy2 = TestStruct.decoded(from: data) // or Model decode from JSON
+
 XCTAssertEqual(copy1, test)
 XCTAssertEqual(copy2, test)
 ```

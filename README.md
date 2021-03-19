@@ -12,8 +12,6 @@
 
 En | [中文](https://iwill.im/ExCodable/)
 
-**ExCodable** - Key-Mapping Extensions for Swift `Codable`.
-
 ## Contents
 
 - [Features](#features)

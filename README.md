@@ -41,14 +41,57 @@ En | [中文](https://iwill.im/ExCodable/)
 
 ## Usage
 
+### 0. `Codable`:
+
+With `Codable`, if all the property names are exactly the same as the Coding-Keys, it is sufficient to adopt the `Codable` protocol without implementing any method. Of course, no extension is needed.
+
+```swift
+struct TestAutoCodable: Codable, Equatable {
+    private(set) var int: Int = 0
+    private(set) var string: String?
+}
+```
+
+But if the property names are different from the Coding-Keys, then you are in trouble.
+
+```swift
+struct TestManualCodable: Equatable {
+    private(set) var int: Int = 0
+    private(set) var string: String?
+}
+
+extension TestManualCodable: Codable {
+    
+    enum Keys: CodingKey {
+        case int, string
+    }
+    
+    init(from decoder: Decoder) throws {
+        let container = try? decoder.container(keyedBy: Keys.self)
+        if let int = try? container?.decodeIfPresent(Int.self, forKey: Keys.int) {
+            self.int = int
+        }
+        if let string = try? container?.decodeIfPresent(String.self, forKey: Keys.string) {
+            self.string = string
+        }
+    }
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: Keys.self)
+        try? container.encodeIfPresent(int, forKey: Keys.int)
+        try? container.encodeIfPresent(string, forKey: Keys.string)
+    }
+    
+}
+```
+
 ### 1. Key-Mapping for `struct`:
 
-> Requires using `var` to declare properties and provide default values.
+With `ExCodable`, it needs to to declare properties with `var` and provide default values.
 
 ```swift
 struct TestStruct: Equatable {
     private(set) var int: Int = 0
-    private(set) var string: String = ""
+    private(set) var string: String?
 }
 ```
 
@@ -70,72 +113,7 @@ extension TestStruct: ExCodable {
 }
 ```
 
-### 2. Key-Mapping for `class`:
-
-> Cannot adopt `ExCodable` in extension of classes.
-
-```swift
-class TestClass: ExCodable, Equatable {
-    
-    var int: Int = 0
-    var string: String? = nil
-    init(int: Int, string: String?) {
-        self.int = int
-        self.string = string
-    }
-    
-    static var keyMapping: [KeyMap<TestClass>] = [
-        KeyMap(ref: \.int, to: "int"),
-        KeyMap(ref: \.string, to: "string")
-    ]
-    
-    required init(from decoder: Decoder) throws {
-        decodeReference(with: Self.keyMapping, using: decoder)
-    }
-    func encode(to encoder: Encoder) throws {
-        encode(with: Self.keyMapping, using: encoder)
-    }
-    
-    static func == (lhs: TestClass, rhs: TestClass) -> Bool {
-        return lhs.int == rhs.int && lhs.string == rhs.string
-    }
-}
-```
-
-### 3. Key-Mapping for subclass:
-
-> Requires declaring another static Key-Mapping for subclass.
-
-```swift
-class TestSubclass: TestClass {
-    var bool: Bool = false
-    required init(int: Int, string: String, bool: Bool) {
-        self.bool = bool
-        super.init(int: int, string: string)
-    }
-    
-    static var keyMappingForTestSubclass: [KeyMap<TestSubclass>] = [
-        KeyMap(ref: \.bool, to: "bool")
-    ]
-    
-    required init(from decoder: Decoder) throws {
-        try super.init(from: decoder)
-        decodeReference(with: Self.keyMappingForTestSubclass, using: decoder)
-    }
-    override func encode(to encoder: Encoder) throws {
-        try super.encode(to: encoder)
-        encode(with: Self.keyMappingForTestSubclass, using: encoder)
-    }
-    
-    static func == (lhs: TestSubclass, rhs: TestSubclass) -> Bool {
-        return lhs.int == rhs.int
-            && lhs.string == rhs.string
-            && lhs.bool == rhs.bool
-    }
-}
-```
-
-### 4. Alternative-Keys:
+### 2. Alternative-Keys:
 
 ```swift
 static var keyMapping: [KeyMap<Self>] = [
@@ -144,7 +122,7 @@ static var keyMapping: [KeyMap<Self>] = [
 ]
 ```
 
-### 5. Nested-Keys:
+### 3. Nested-Keys:
 
 ```swift
 static var keyMapping: [KeyMap<Self>] = [
@@ -153,17 +131,17 @@ static var keyMapping: [KeyMap<Self>] = [
 ]
 ```
 
-### 6. Custom encode/decode:
+### 4. Custom encode/decode:
 
 ```swift
-struct TestHandlers: Equatable {
+struct TestCustomEncodeDecode: Equatable {
     var int: Int = 0
     var string: String?
 }
 ```
 
 ```swift
-extension TestHandlers: ExCodable {
+extension TestCustomEncodeDecode: ExCodable {
     
     private enum Keys: String, CodingKey {
         case int, string
@@ -199,9 +177,9 @@ extension TestHandlers: ExCodable {
 }
 ```
 
-### 7. Encode/decode constant properties with subscripts:
+### 5. Encode/decode constant properties with subscripts:
 
-> Using `let` to declare properties without default values.
+Using `let` to declare properties without default values.
 
 ```swift
 struct TestSubscript: Equatable {
@@ -229,9 +207,9 @@ extension TestSubscript: Codable {
 }
 ```
 
-### 8. Custom Type-Conversions:
+### 6. Custom Type-Conversions:
 
-> Extends `KeyedDecodingContainer` with protocol `KeyedDecodingContainerCustomTypeConversion` and implement its method, decode values in alternative types and convert to target type.
+Extends `KeyedDecodingContainer` with protocol `KeyedDecodingContainerCustomTypeConversion` and implement its method, decode values in alternative types and convert to target type.
 
 ```swift
 extension KeyedDecodingContainer: KeyedDecodingContainerCustomTypeConversion {
@@ -254,10 +232,75 @@ extension KeyedDecodingContainer: KeyedDecodingContainerCustomTypeConversion {
 }
 ```
 
+### 7. Key-Mapping for `class`:
+
+Cannot adopt `ExCodable` in extension of classes.
+
+```swift
+class TestClass: ExCodable, Equatable {
+    
+    var int: Int = 0
+    var string: String? = nil
+    init(int: Int, string: String?) {
+        self.int = int
+        self.string = string
+    }
+    
+    static var keyMapping: [KeyMap<TestClass>] = [
+        KeyMap(ref: \.int, to: "int"),
+        KeyMap(ref: \.string, to: "string")
+    ]
+    
+    required init(from decoder: Decoder) throws {
+        decodeReference(with: Self.keyMapping, using: decoder)
+    }
+    func encode(to encoder: Encoder) throws {
+        encode(with: Self.keyMapping, using: encoder)
+    }
+    
+    static func == (lhs: TestClass, rhs: TestClass) -> Bool {
+        return lhs.int == rhs.int && lhs.string == rhs.string
+    }
+}
+```
+
+### 8. Key-Mapping for subclass:
+
+Requires declaring another static Key-Mapping for subclass.
+
+```swift
+class TestSubclass: TestClass {
+    var bool: Bool = false
+    required init(int: Int, string: String, bool: Bool) {
+        self.bool = bool
+        super.init(int: int, string: string)
+    }
+    
+    static var keyMappingForTestSubclass: [KeyMap<TestSubclass>] = [
+        KeyMap(ref: \.bool, to: "bool")
+    ]
+    
+    required init(from decoder: Decoder) throws {
+        try super.init(from: decoder)
+        decodeReference(with: Self.keyMappingForTestSubclass, using: decoder)
+    }
+    override func encode(to encoder: Encoder) throws {
+        try super.encode(to: encoder)
+        encode(with: Self.keyMappingForTestSubclass, using: encoder)
+    }
+    
+    static func == (lhs: TestSubclass, rhs: TestSubclass) -> Bool {
+        return lhs.int == rhs.int
+            && lhs.string == rhs.string
+            && lhs.bool == rhs.bool
+    }
+}
+```
+
 ### 9. Encode/decode with Type-Inference:
 
 ```swift
-let test = TestStruct(int: 100, string: "Continue")
+let test = TestStruct(int: 304, string: "Not Modified")
 let data = test.encoded() as Data?
 let copy1 = data?.decoded() as TestStruct?
 let copy2 = TestStruct.decoded(from: data)

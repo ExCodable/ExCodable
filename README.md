@@ -43,7 +43,7 @@ En | [中文](https://iwill.im/ExCodable/)
 
 ### 0. `Codable`:
 
-With `Codable`, if all the property names are exactly the same as the Coding-Keys, it is sufficient to adopt the `Codable` protocol without implementing any method. Of course, no extension is needed.
+With `Codable`, if all the property names are exactly the same as the Coding-Keys, it just needs to adop the `Codable` protocol without implementing any method of it.
 
 ```swift
 struct TestAutoCodable: Codable, Equatable {
@@ -52,14 +52,16 @@ struct TestAutoCodable: Codable, Equatable {
 }
 ```
 
-But if the property names are different from the Coding-Keys, then you are in trouble.
+But if the property names are different from the Coding-Keys ...
 
 ```swift
 struct TestManualCodable: Equatable {
     private(set) var int: Int = 0
     private(set) var string: String?
 }
+```
 
+```swift
 extension TestManualCodable: Codable {
     
     enum Keys: CodingKey {

@@ -65,9 +65,9 @@ extension TestStruct: ExCodable {
     init(from decoder: Decoder) throws {
         decode(with: Self.keyMapping, using: decoder)
     }
-    func encode(to encoder: Encoder) throws {
-        encode(with: Self.keyMapping, using: encoder)
-    }
+    // func encode(to encoder: Encoder) throws {
+    //     encode(with: Self.keyMapping, using: encoder)
+    // }
     
 }
 
@@ -122,9 +122,9 @@ extension TestNestedKeys: ExCodable {
     init(from decoder: Decoder) throws {
         decode(with: Self.keyMapping, using: decoder)
     }
-    func encode(to encoder: Encoder) throws {
-        encode(with: Self.keyMapping, using: encoder)
-    }
+    // func encode(to encoder: Encoder) throws {
+    //     encode(with: Self.keyMapping, using: encoder)
+    // }
     
 }
 
@@ -141,6 +141,19 @@ extension TestCustomEncodeDecode: ExCodable {
         case int, string
     }
     private static let dddd = "dddd"
+    private func string(for int: Int) -> String {
+        switch int {
+            case 100: return "Continue"
+            case 200: return "OK"
+            case 304: return "Not Modified"
+            case 403: return "Forbidden"
+            case 404: return "Not Found"
+            case 418: return "I'm a teapot"
+            case 500: return "Internal Server Error"
+            case 200..<400: return "success"
+            default: return "failure"
+        }
+    }
     
     static var keyMapping: [KeyMap<Self>] = [
         KeyMap(\.int, to: Keys.int),
@@ -150,17 +163,7 @@ extension TestCustomEncodeDecode: ExCodable {
     init(from decoder: Decoder) throws {
         decode(with: Self.keyMapping, using: decoder)
         if string == nil || string == Self.dddd {
-            switch int {
-                case 100: string = "Continue"
-                case 200: string = "OK"
-                case 304: string = "Not Modified"
-                case 403: string = "Forbidden"
-                case 404: string = "Not Found"
-                case 418: string = "I'm a teapot"
-                case 500: string = "Internal Server Error"
-                case 200..<400: string = "success"
-                default: string = "failure"
-            }
+            string = string(for: int)
         }
     }
     func encode(to encoder: Encoder) throws {
@@ -286,9 +289,9 @@ extension TestCustomTypeConversions: ExCodable {
     init(from decoder: Decoder) throws {
         decode(with: Self.keyMapping, using: decoder)
     }
-    func encode(to encoder: Encoder) throws {
-        encode(with: Self.keyMapping, using: encoder)
-    }
+    // func encode(to encoder: Encoder) throws {
+    //     encode(with: Self.keyMapping, using: encoder)
+    // }
     
 }
 
@@ -310,9 +313,9 @@ class TestClass: ExCodable, Equatable {
     required init(from decoder: Decoder) throws {
         decodeReference(with: Self.keyMapping, using: decoder)
     }
-    func encode(to encoder: Encoder) throws {
-        encode(with: Self.keyMapping, using: encoder)
-    }
+    // func encode(to encoder: Encoder) throws {
+    //     encode(with: Self.keyMapping, using: encoder)
+    // }
     
     static func == (lhs: TestClass, rhs: TestClass) -> Bool {
         return lhs.int == rhs.int && lhs.string == rhs.string

@@ -1,6 +1,6 @@
 [ExCodable](https://github.com/iwill/ExCodable) 是我在春节期间、带娃之余、用了几个晚上完成的一个 Swift 版的 JSON-Model 转换工具。
 
-别走！你心里可能想“嗷，又一个轮子”，但是这个真的有点不一样：
+别走！你可能会想“嗷，又一个轮子”，但是这个真的有点不一样：
 - `ExCodable` 是在 Swift `Codable` 基础上的扩展，可以享受到诸多遍历，比如与 [Alamofire](https://github.com/Alamofire/Alamofire) 无缝对接，参考 [Response Decodable Handler](https://github.com/Alamofire/Alamofire/blob/master/Documentation/Usage.md#response-decodable-handler)；
 - 基于 `KeyPath` 实现 Key-Mapping，无需逐个属性 Encode/Decode；
 - 支持丰富的特性，差不多实现了 Objective-C 版的 [YYModel](https://github.com/ibireme/YYModel) 的所有特性；

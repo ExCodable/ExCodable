@@ -40,6 +40,11 @@ public extension ExCodable {
         keyMapping.forEach { $0.decodeReference?(self, decoder) }
     }
 }
+public extension ExCodable where Root == Self {
+    func encode(to encoder: Encoder) throws {
+        encode(with: Self.keyMapping, using: encoder)
+    }
+}
 
 // MARK: - key-mapping
 

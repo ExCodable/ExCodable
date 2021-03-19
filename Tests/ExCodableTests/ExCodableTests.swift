@@ -15,7 +15,7 @@ import ExCodable
 
 struct TestStruct: Equatable {
     private(set) var int: Int = 0
-    private(set) var string: String = ""
+    private(set) var string: String?
 }
 
 extension TestStruct: ExCodable {

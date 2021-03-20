@@ -16,6 +16,9 @@ import ExCodable
 struct TestAutoCodable: Codable, Equatable {
     private(set) var int: Int = 0
     private(set) var string: String?
+    enum CodingKeys: String, CodingKey {
+        case int = "i", string = "s"
+    }
 }
 
 // MARK: manual codable
@@ -137,7 +140,7 @@ struct TestCustomEncodeDecode: Equatable {
 
 extension TestCustomEncodeDecode: ExCodable {
     
-    private enum Keys: String, CodingKey {
+    private enum Keys: CodingKey {
         case int, string
     }
     private static let dddd = "dddd"
@@ -210,7 +213,7 @@ struct TestTypeConversions: Equatable {
 
 extension TestTypeConversions: Encodable, Decodable {
     
-    enum Keys: String, CodingKey {
+    enum Keys: CodingKey {
         case boolFromInt, boolFromString
         case intFromBool, intFromDouble, intFromString
         case uIntFromBool, uIntFromString
@@ -358,8 +361,10 @@ final class ExCodableTests: XCTestCase {
     func testAutoCodable() {
         let test = TestAutoCodable(int: 100, string: "Continue")
         if let data = test.encoded() as Data?,
-           let copy = data.decoded() as TestAutoCodable? {
+           let copy = data.decoded() as TestAutoCodable?,
+           let json: [String: Any] = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
             XCTAssertEqual(copy, test)
+            XCTAssertEqual(NSDictionary(dictionary: json), ["i": 100, "s": "Continue"])
         }
         else {
             XCTFail()
@@ -395,7 +400,7 @@ final class ExCodableTests: XCTestCase {
            let copy = localData.decoded() as TestAlternativeKeys? {
             XCTAssertEqual(test, TestAlternativeKeys(int: 403, string: "Forbidden"))
             XCTAssertEqual(copy, test)
-            let localJSON: [String: Any] = (try? JSONSerialization.jsonObject(with: localData, options: .fragmentsAllowed)) as? [String: Any] ?? [:]
+            let localJSON: [String: Any] = (try? JSONSerialization.jsonObject(with: localData)) as? [String: Any] ?? [:]
             XCTAssertEqual(NSDictionary(dictionary: localJSON), [
                 "_is_local_": true,
                 "int": 403,
@@ -412,7 +417,7 @@ final class ExCodableTests: XCTestCase {
         if let data = test.encoded() as Data?,
            let copy = data.decoded() as TestNestedKeys? {
             XCTAssertEqual(copy, test)
-            let json: [String: Any] = (try? JSONSerialization.jsonObject(with: data, options: .fragmentsAllowed)) as? [String: Any] ?? [:]
+            let json: [String: Any] = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] ?? [:]
             debugPrint(json)
             XCTAssertEqual(NSDictionary(dictionary: json), [
                 "int": 404,
@@ -431,7 +436,7 @@ final class ExCodableTests: XCTestCase {
         if let data = test.encoded() as Data?,
            let copy = data.decoded() as TestCustomEncodeDecode? {
             XCTAssertEqual(copy, test)
-            let json: [String: Any] = (try? JSONSerialization.jsonObject(with: data, options: .fragmentsAllowed)) as? [String: Any] ?? [:]
+            let json: [String: Any] = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] ?? [:]
             debugPrint(json)
             XCTAssertEqual(NSDictionary(dictionary: json), [
                 "int": 418,

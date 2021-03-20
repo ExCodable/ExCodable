@@ -49,10 +49,13 @@ With `Codable`, it just needs to adop the `Codable` protocol without implementin
 struct TestAutoCodable: Codable, Equatable {
     private(set) var int: Int = 0
     private(set) var string: String?
+    enum CodingKeys: String, CodingKey {
+        case int = "i", string = "s"
+    }
 }
 ```
 
-But if you need encode/decode manually ...
+But, if you have to encode/decode manually for some reason ...
 
 ```swift
 struct TestManualCodable: Equatable {

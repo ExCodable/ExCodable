@@ -53,6 +53,7 @@ struct TestAutoCodable: Codable, Equatable {
         case int = "i", string = "s"
     }
 }
+
 ```
 
 But, if you have to encode/decode manually for some reason ...
@@ -62,9 +63,7 @@ struct TestManualCodable: Equatable {
     private(set) var int: Int = 0
     private(set) var string: String?
 }
-```
 
-```swift
 extension TestManualCodable: Codable {
     
     enum Keys: CodingKey {
@@ -92,6 +91,30 @@ extension TestManualCodable: Codable {
     }
     
 }
+
+```
+
+With `ExCodable`:
+
+```swift
+struct TestExCodable: Equatable {
+    private(set) var int: Int = 0
+    private(set) var string: String?
+}
+
+extension TestExCodable: ExCodable {
+    
+    static var keyMapping: [KeyMap<Self>] = [
+        KeyMap(\.int, to: "int", "i"),
+        KeyMap(\.string, to: "nested.string")
+    ]
+    
+    init(from decoder: Decoder) throws {
+        decode(with: Self.keyMapping, using: decoder)
+    }
+    
+}
+
 ```
 
 ### 1. Key-Mapping for `struct`:
@@ -103,6 +126,7 @@ struct TestStruct: Equatable {
     private(set) var int: Int = 0
     private(set) var string: String?
 }
+
 ```
 
 ```swift
@@ -121,6 +145,7 @@ extension TestStruct: ExCodable {
     }
     
 }
+
 ```
 
 ### 2. Alternative-Keys:
@@ -130,6 +155,7 @@ static var keyMapping: [KeyMap<Self>] = [
     KeyMap(\.int, to: "int", "i"),
     KeyMap(\.string, to: "string", "str", "s")
 ]
+
 ```
 
 ### 3. Nested-Keys:
@@ -139,6 +165,7 @@ static var keyMapping: [KeyMap<Self>] = [
     KeyMap(\.int, to: "nested.int"),
     KeyMap(\.string, to: "nested.nested.string")
 ]
+
 ```
 
 ### 4. Custom encode/decode:
@@ -148,6 +175,7 @@ struct TestCustomEncodeDecode: Equatable {
     var int: Int = 0
     var string: String?
 }
+
 ```
 
 ```swift
@@ -188,6 +216,7 @@ extension TestCustomEncodeDecode: ExCodable {
     }
     
 }
+
 ```
 
 ### 5. Encode/decode constant properties with subscripts:
@@ -199,6 +228,7 @@ struct TestSubscript: Equatable {
     let int: Int
     let string: String
 }
+
 ```
 
 ```swift
@@ -218,6 +248,7 @@ extension TestSubscript: Codable {
     }
     
 }
+
 ```
 
 ### 6. Custom Type-Conversions:
@@ -243,6 +274,7 @@ extension KeyedDecodingContainer: KeyedDecodingContainerCustomTypeConversion {
         return nil
     }
 }
+
 ```
 
 ### 7. Key-Mapping for `class`:
@@ -275,6 +307,7 @@ class TestClass: ExCodable, Equatable {
         return lhs.int == rhs.int && lhs.string == rhs.string
     }
 }
+
 ```
 
 ### 8. Key-Mapping for subclass:
@@ -308,6 +341,7 @@ class TestSubclass: TestClass {
             && lhs.bool == rhs.bool
     }
 }
+
 ```
 
 ### 9. Encode/decode with Type-Inference:
@@ -319,6 +353,7 @@ let copy1 = data?.decoded() as TestStruct?
 let copy2 = TestStruct.decoded(from: data)
 XCTAssertEqual(copy1, test)
 XCTAssertEqual(copy2, test)
+
 ```
 
 ## Requirements
@@ -333,12 +368,14 @@ XCTAssertEqual(copy2, test)
 
 ```swift
 .package(url: "https://github.com/iwill/ExCodable", from: "0.4.0")
+
 ```
 
 - [CocoaPods](http://cocoapods.org):
 
 ```ruby
 pod 'ExCodable', '~> 0.4.0'
+
 ```
 
 - Code Snippets:
@@ -363,6 +400,7 @@ pod 'ExCodable', '~> 0.4.0'
         encode(with: Self.<#keyMapping#>, using: encoder)
     }
 }
+
 ```
 
 ## Credits

@@ -68,18 +68,23 @@ struct TestManualCodable: Equatable {
 extension TestManualCodable: Codable {
     
     enum Keys: CodingKey {
-        case int, string
+        case int, i
+        case nested, string
     }
     
     init(from decoder: Decoder) throws {
-        let container = try? decoder.container(keyedBy: Keys.self)
-        if let int = try? container?.decodeIfPresent(Int.self, forKey: Keys.int) {
-            self.int = int
-        }
-        if let string = try? container?.decodeIfPresent(String.self, forKey: Keys.string) {
-            self.string = string
+        if let container = try? decoder.container(keyedBy: Keys.self) {
+            if let int = (try? container.decodeIfPresent(Int.self, forKey: Keys.int))
+                ?? (try? container.decodeIfPresent(Int.self, forKey: Keys.i)) {
+                self.int = int
+            }
+            if let nestedContainer = try? container.nestedContainer(keyedBy: Keys.self, forKey: Keys.nested),
+               let string = try? nestedContainer.decodeIfPresent(String.self, forKey: Keys.string) {
+                self.string = string
+            }
         }
     }
+    
     func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: Keys.self)
         try? container.encodeIfPresent(int, forKey: Keys.int)

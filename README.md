@@ -84,11 +84,11 @@ extension TestManualCodable: Codable {
             }
         }
     }
-    
     func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: Keys.self)
         try? container.encodeIfPresent(int, forKey: Keys.int)
-        try? container.encodeIfPresent(string, forKey: Keys.string)
+        var nestedContainer = container.nestedContainer(keyedBy: Keys.self, forKey: Keys.nested)
+        try? nestedContainer.encodeIfPresent(string, forKey: Keys.string)
     }
     
 }

@@ -31,22 +31,27 @@ struct TestManualCodable: Equatable {
 extension TestManualCodable: Codable {
     
     enum Keys: CodingKey {
-        case int, string
+        case int, i
+        case nested, string
     }
     
     init(from decoder: Decoder) throws {
-        let container = try? decoder.container(keyedBy: Keys.self)
-        if let int = try? container?.decodeIfPresent(Int.self, forKey: Keys.int) {
-            self.int = int
-        }
-        if let string = try? container?.decodeIfPresent(String.self, forKey: Keys.string) {
-            self.string = string
+        if let container = try? decoder.container(keyedBy: Keys.self) {
+            if let int = (try? container.decodeIfPresent(Int.self, forKey: Keys.int))
+                ?? (try? container.decodeIfPresent(Int.self, forKey: Keys.i)) {
+                self.int = int
+            }
+            if let nestedContainer = try? container.nestedContainer(keyedBy: Keys.self, forKey: Keys.nested),
+               let string = try? nestedContainer.decodeIfPresent(String.self, forKey: Keys.string) {
+                self.string = string
+            }
         }
     }
     func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: Keys.self)
         try? container.encodeIfPresent(int, forKey: Keys.int)
-        try? container.encodeIfPresent(string, forKey: Keys.string)
+        var nestedContainer = container.nestedContainer(keyedBy: Keys.self, forKey: Keys.nested)
+        try? nestedContainer.encodeIfPresent(string, forKey: Keys.string)
     }
     
 }
@@ -372,10 +377,12 @@ final class ExCodableTests: XCTestCase {
     }
     
     func testManualCodable() {
-        let test = TestManualCodable(int: 200, string: "OK")
-        if let data = test.encoded() as Data?,
+        let json = Data(#"{"i":200,"nested":{"string":"OK"}}"#.utf8)
+        if let test = json.decoded() as TestManualCodable?,
+           let data = test.encoded() as Data?,
            let copy = data.decoded() as TestManualCodable? {
             XCTAssertEqual(copy, test)
+            XCTAssertEqual(data, Data(#"{"int":200,"nested":{"string":"OK"}}"#.utf8))
         }
         else {
             XCTFail()
@@ -394,13 +401,13 @@ final class ExCodableTests: XCTestCase {
     }
     
     func testAlternativeKeys() {
-        let serverData = Data(#"{"i":403,"s":"Forbidden"}"#.utf8)
-        if let test = serverData.decoded() as TestAlternativeKeys?,
-           let localData = test.encoded() as Data?,
-           let copy = localData.decoded() as TestAlternativeKeys? {
+        let json = Data(#"{"i":403,"s":"Forbidden"}"#.utf8)
+        if let test = json.decoded() as TestAlternativeKeys?,
+           let data = test.encoded() as Data?,
+           let copy = data.decoded() as TestAlternativeKeys? {
             XCTAssertEqual(test, TestAlternativeKeys(int: 403, string: "Forbidden"))
             XCTAssertEqual(copy, test)
-            let localJSON: [String: Any] = (try? JSONSerialization.jsonObject(with: localData)) as? [String: Any] ?? [:]
+            let localJSON: [String: Any] = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] ?? [:]
             XCTAssertEqual(NSDictionary(dictionary: localJSON), [
                 "_is_local_": true,
                 "int": 403,

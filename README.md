@@ -56,15 +56,13 @@ struct TestAutoCodable: Codable, Equatable {
 
 ```
 
-But, if you have to encode/decode manually for some reason ...
+But, if you have to encode/decode manually for some reason, e.g. Alternative-Keys ...
 
 ```swift
-struct TestManualCodable: Equatable {
+struct TestManualCodable: Codable, Equatable {
+    
     private(set) var int: Int = 0
     private(set) var string: String?
-}
-
-extension TestManualCodable: Codable {
     
     enum Keys: CodingKey {
         case int, i
@@ -83,6 +81,7 @@ extension TestManualCodable: Codable {
             }
         }
     }
+    
     func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: Keys.self)
         try? container.encodeIfPresent(int, forKey: Keys.int)
@@ -94,15 +93,13 @@ extension TestManualCodable: Codable {
 
 ```
 
-With `ExCodable`:
+**With `ExCodable`**:
 
 ```swift
-struct TestExCodable: Equatable {
+struct TestExCodable: ExCodable, Equatable {
+    
     private(set) var int: Int = 0
     private(set) var string: String?
-}
-
-extension TestExCodable: ExCodable {
     
     static var keyMapping: [KeyMap<Self>] = [
         KeyMap(\.int, to: "int", "i"),

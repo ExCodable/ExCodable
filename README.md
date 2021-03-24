@@ -140,9 +140,10 @@ extension TestStruct: ExCodable {
     init(from decoder: Decoder) throws {
         decode(with: Self.keyMapping, using: decoder)
     }
-    func encode(to encoder: Encoder) throws {
-        encode(with: Self.keyMapping, using: encoder)
-    }
+    // `encode` with default implementation can be omitted
+    // func encode(to encoder: Encoder) throws {
+    //     encode(with: Self.keyMapping, using: encoder)
+    // }
     
 }
 
@@ -299,9 +300,9 @@ class TestClass: ExCodable, Equatable {
     required init(from decoder: Decoder) throws {
         decodeReference(with: Self.keyMapping, using: decoder)
     }
-    func encode(to encoder: Encoder) throws {
-        encode(with: Self.keyMapping, using: encoder)
-    }
+    // func encode(to encoder: Encoder) throws {
+    //     encode(with: Self.keyMapping, using: encoder)
+    // }
     
     static func == (lhs: TestClass, rhs: TestClass) -> Bool {
         return lhs.int == rhs.int && lhs.string == rhs.string

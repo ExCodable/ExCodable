@@ -56,7 +56,7 @@ struct TestAutoCodable: Codable, Equatable {
 
 ```
 
-But, if you have to encode/decode manually for some reason, e.g. Nested-Keys ...
+But, if you have to encode/decode manually for some reason, e.g. Alternative-Keys and Nested-Keys ...
 
 ```swift
 struct TestManualCodable: Codable, Equatable {

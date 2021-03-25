@@ -90,9 +90,9 @@ struct TestCodextended: Codable {
 
 ```
 
-## 另外 GitHub 上 Star 比较多的 [ObjectMapper](https://github.com/tristanhimmelman/ObjectMapper)、[HandyJSON](https://github.com/alibaba/HandyJSON)、[KakaJSON](https://github.com/kakaopensource/KakaJSON) 等各有所长，但是相比 Objective-C 的 [YYModel](https://github.com/ibireme/YYModel) 多少都欠了点意思：
+## 另外 GitHub 上 Star 比较多的 [ObjectMapper](https://github.com/tristanhimmelman/ObjectMapper)、[HandyJSON](https://github.com/alibaba/HandyJSON)、[KakaJSON](https://github.com/kakaopensource/KakaJSON) 等：
 
-他们都各自构建了整套的序列化、反序列化机制，略复杂，甚至还有直接读写内存的（“依赖于从 Swift Runtime 源码中推断的内存规则，任何变动我们将随时跟进”），这就不大靠谱了，至少不够优雅。
+他们都各自构建了整套的序列化、反序列化机制，各有所长，但是相比 Objective-C 的 [YYModel](https://github.com/ibireme/YYModel) 多少都欠了点意思。复杂不说，甚至还有直接读写内存的（“依赖于从 Swift Runtime 源码中推断的内存规则，任何变动我们将随时跟进”），这就不大靠谱了，至少不够优雅。
 
 ## ExCodable：
 

@@ -48,53 +48,56 @@ public extension ExCodable where Root == Self {
 
 // MARK: - key-mapping
 
-public struct KeyMap<Root: Codable> {
+public final class KeyMap<Root: Codable> {
     fileprivate let encode: (_ root: Root, _ encoder: Encoder) -> Void
     fileprivate let decode: ((_ root: inout Root, _ decoder: Decoder) -> Void)?
     fileprivate let decodeReference: ((_ root: Root, _ decoder: Decoder) -> Void)?
+    fileprivate init(encode: @escaping (_ root: Root, _ encoder: Encoder) -> Void, decode: ((_ root: inout Root, _ decoder: Decoder) -> Void)?, decodeReference: ((_ root: Root, _ decoder: Decoder) -> Void)?) {
+        (self.encode, self.decode, self.decodeReference) = (encode, decode, decodeReference)
+    }
 }
 
 public extension KeyMap {
     
     /// Constructor for value-type with `String` type codingKeys
-    init<Value: Codable>(_ keyPath: WritableKeyPath<Root, Value>, to codingKeys: String ...) {
+    convenience init<Value: Codable>(_ keyPath: WritableKeyPath<Root, Value>, to codingKeys: String ..., default: ((Root) -> Value?)? = nil) {
         self.init(encode: { (root, encoder) in
             encoder[codingKeys.first!] = root[keyPath: keyPath]
         }, decode: { (root, decoder) in
-            if let value: Value = decoder[codingKeys] {
+            if let value: Value = decoder[codingKeys] as Value? ?? `default`?(root) {
                 root[keyPath: keyPath] = value
             }
         }, decodeReference: nil)
     }
     
     /// Constructor for value-type with `CodingKey` type codingKeys
-    init<Value: Codable, Key: CodingKey>(_ keyPath: WritableKeyPath<Root, Value>, to codingKeys: Key ...) {
+    convenience init<Value: Codable, Key: CodingKey>(_ keyPath: WritableKeyPath<Root, Value>, to codingKeys: Key ..., default: ((Root) -> Value?)? = nil) {
         self.init(encode: { (root, encoder) in
             encoder[codingKeys.first!] = root[keyPath: keyPath]
         }, decode: { (root, decoder) in
-            if let value: Value = decoder[codingKeys] {
+            if let value: Value = decoder[codingKeys] as Value? ?? `default`?(root) {
                 root[keyPath: keyPath] = value
             }
         }, decodeReference: nil)
     }
     
     /// Constructor for ref-type with `String` type codingKeys
-    init<Value: Codable>(ref keyPath: ReferenceWritableKeyPath<Root, Value>, to codingKeys: String ...) {
+    convenience init<Value: Codable>(ref keyPath: ReferenceWritableKeyPath<Root, Value>, to codingKeys: String ..., default: ((Root) -> Value?)? = nil) {
         self.init(encode: { (root, encoder) in
             encoder[codingKeys.first!] = root[keyPath: keyPath]
         }, decode: nil, decodeReference: { (root, decoder) in
-            if let value: Value = decoder[codingKeys] {
+            if let value: Value = decoder[codingKeys] as Value? ?? `default`?(root) {
                 root[keyPath: keyPath] = value
             }
         })
     }
     
     /// Constructor for ref-type with `CodingKey` type codingKeys
-    init<Value: Codable, Key: CodingKey>(ref keyPath: ReferenceWritableKeyPath<Root, Value>, to codingKeys: Key ...) {
+    convenience init<Value: Codable, Key: CodingKey>(ref keyPath: ReferenceWritableKeyPath<Root, Value>, to codingKeys: Key ..., default: ((Root) -> Value?)? = nil) {
         self.init(encode: { (root, encoder) in
             encoder[codingKeys.first!] = root[keyPath: keyPath]
         }, decode: nil, decodeReference: { (root, decoder) in
-            if let value: Value = decoder[codingKeys] {
+            if let value: Value = decoder[codingKeys] as Value? ?? `default`?(root) {
                 root[keyPath: keyPath] = value
             }
         })

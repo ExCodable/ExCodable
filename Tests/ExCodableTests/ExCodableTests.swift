@@ -61,13 +61,15 @@ extension TestManualCodable: Codable {
 struct TestStruct: Equatable {
     private(set) var int: Int = 0
     private(set) var string: String?
+    var bool: Bool!
 }
 
 extension TestStruct: ExCodable {
     
     static var keyMapping: [KeyMap<Self>] = [
         KeyMap(\.int, to: "int"),
-        KeyMap(\.string, to: "string")
+        KeyMap(\.string, to: "string"),
+        KeyMap(\.bool, to: "bool") { $0.int > 0 }
     ]
     
     init(from decoder: Decoder) throws {
@@ -83,19 +85,19 @@ extension TestStruct: ExCodable {
 
 struct TestAlternativeKeys: Equatable {
     var int: Int = 0
-    var string: String = ""
+    var string: String!
 }
 
 extension TestAlternativeKeys: ExCodable {
     
     static var keyMapping: [KeyMap<Self>] = [
-        KeyMap(\.int, to: "int"),
-        KeyMap(\.string, to: "string")
-    ]
-    
-    static var keyMappingFromServer: [KeyMap<Self>] = [
         KeyMap(\.int, to: "int", "i"),
         KeyMap(\.string, to: "string", "str", "s")
+    ]
+    
+    static var keyMappingFromLocal: [KeyMap<Self>] = [
+        KeyMap(\.int, to: "int"),
+        KeyMap(\.string, to: "string")
     ]
     
     enum LocalKeys: String {
@@ -104,10 +106,10 @@ extension TestAlternativeKeys: ExCodable {
     
     init(from decoder: Decoder) throws {
         let isLocal = decoder[LocalKeys.isLocal.rawValue] ?? false
-        decode(with: isLocal ? Self.keyMapping : Self.keyMappingFromServer, using: decoder)
+        decode(with: isLocal ? Self.keyMappingFromLocal : Self.keyMapping, using: decoder)
     }
     func encode(to encoder: Encoder) throws {
-        encode(with: Self.keyMapping, using: encoder)
+        encode(with: Self.keyMappingFromLocal, using: encoder)
         encoder[LocalKeys.isLocal.rawValue] = true
     }
     
@@ -117,7 +119,7 @@ extension TestAlternativeKeys: ExCodable {
 
 struct TestNestedKeys: Equatable {
     var int: Int = 0
-    var string: String = ""
+    var string: String!
 }
 
 extension TestNestedKeys: ExCodable {
@@ -359,6 +361,30 @@ class TestSubclass: TestClass {
     }
 }
 
+// MARK: ExCodable
+
+struct TestExCodable: Equatable {
+    private(set) var int: Int = 0
+    private(set) var string: String?
+}
+
+extension TestExCodable: ExCodable {
+    
+    static var keyMapping: [KeyMap<Self>] = [
+        KeyMap(\.int, to: "int"),
+        KeyMap(\.string, to: "string")
+    ]
+    
+    init(from decoder: Decoder) throws {
+        decode(with: Self.keyMapping, using: decoder)
+    }
+    // func encode(to encoder: Encoder) throws {
+    //     encode(with: Self.keyMapping, using: encoder)
+    // }
+    
+}
+
+
 // MARK: - Tests
 
 final class ExCodableTests: XCTestCase {
@@ -392,7 +418,10 @@ final class ExCodableTests: XCTestCase {
     func testStruct() {
         let test = TestStruct(int: 304, string: "Not Modified")
         if let data = test.encoded() as Data?,
-           let copy = data.decoded() as TestStruct? {
+           var copy = data.decoded() as TestStruct? {
+            XCTAssertEqual(test.bool, nil)
+            XCTAssertEqual(copy.bool, true)
+            copy.bool = nil
             XCTAssertEqual(copy, test)
         }
         else {
@@ -488,19 +517,19 @@ final class ExCodableTests: XCTestCase {
         """#.utf8)
         if let test = data.decoded() as TestTypeConversions? {
             XCTAssertEqual(test, TestTypeConversions(boolFromInt:      true,
-                                                  boolFromString:   true,
-                                                  intFromBool:      1,
-                                                  intFromDouble:    12,
-                                                  intFromString:    123,
-                                                  uIntFromBool:     1,
-                                                  uIntFromString:   123,
-                                                  doubleFromInt64:  -123.0,
-                                                  doubleFromString: 123.0,
-                                                  floatFromInt64:   -123.0,
-                                                  floatFromString:  123.0,
-                                                  stringFromBool:   "true",
-                                                  stringFromInt64:  "-123",
-                                                  stringFromDouble: "12.3"))
+                                                     boolFromString:   true,
+                                                     intFromBool:      1,
+                                                     intFromDouble:    12,
+                                                     intFromString:    123,
+                                                     uIntFromBool:     1,
+                                                     uIntFromString:   123,
+                                                     doubleFromInt64:  -123.0,
+                                                     doubleFromString: 123.0,
+                                                     floatFromInt64:   -123.0,
+                                                     floatFromString:  123.0,
+                                                     stringFromBool:   "true",
+                                                     stringFromInt64:  "-123",
+                                                     stringFromDouble: "12.3"))
         }
         else {
             XCTFail()
@@ -526,19 +555,19 @@ final class ExCodableTests: XCTestCase {
         """#.utf8)
         if let test2 = data2.decoded() as TestTypeConversions? {
             XCTAssertEqual(test2, TestTypeConversions(boolFromInt:      false,
-                                                   boolFromString:   nil,
-                                                   intFromBool:      0,
-                                                   intFromDouble:    12,
-                                                   intFromString:    nil,
-                                                   uIntFromBool:     0,
-                                                   uIntFromString:   nil,
-                                                   doubleFromInt64:  -123.0,
-                                                   doubleFromString: nil,
-                                                   floatFromInt64:   -123.0,
-                                                   floatFromString:  nil,
-                                                   stringFromBool:   "false",
-                                                   stringFromInt64:  "-123",
-                                                   stringFromDouble: "12.3"))
+                                                      boolFromString:   nil,
+                                                      intFromBool:      0,
+                                                      intFromDouble:    12,
+                                                      intFromString:    nil,
+                                                      uIntFromBool:     0,
+                                                      uIntFromString:   nil,
+                                                      doubleFromInt64:  -123.0,
+                                                      doubleFromString: nil,
+                                                      floatFromInt64:   -123.0,
+                                                      floatFromString:  nil,
+                                                      stringFromBool:   "false",
+                                                      stringFromInt64:  "-123",
+                                                      stringFromDouble: "12.3"))
         }
         else {
             XCTFail()
@@ -584,31 +613,31 @@ final class ExCodableTests: XCTestCase {
     
     func testExCodable() {
         let array = [
-            TestStruct(int: 100, string: "Continue"),
-            TestStruct(int: 200, string: "OK"),
-            TestStruct(int: 304, string: "Not Modified"),
-            TestStruct(int: 403, string: "Forbidden"),
-            TestStruct(int: 404, string: "Not Found"),
-            TestStruct(int: 418, string: "I'm a teapot"),
-            TestStruct(int: 500, string: "Internal Server Error"),
-            TestStruct(int: 502, string: "Bad Gateway"),
-            TestStruct(int: 504, string: "Gateway Timeout")
+            TestExCodable(int: 100, string: "Continue"),
+            TestExCodable(int: 200, string: "OK"),
+            TestExCodable(int: 304, string: "Not Modified"),
+            TestExCodable(int: 403, string: "Forbidden"),
+            TestExCodable(int: 404, string: "Not Found"),
+            TestExCodable(int: 418, string: "I'm a teapot"),
+            TestExCodable(int: 500, string: "Internal Server Error"),
+            TestExCodable(int: 502, string: "Bad Gateway"),
+            TestExCodable(int: 504, string: "Gateway Timeout")
         ]
         let dictionary = [
-            "100": TestStruct(int: 100, string: "Continue"),
-            "200": TestStruct(int: 200, string: "OK"),
-            "304": TestStruct(int: 304, string: "Not Modified"),
-            "403": TestStruct(int: 403, string: "Forbidden"),
-            "404": TestStruct(int: 404, string: "Not Found"),
-            "418": TestStruct(int: 418, string: "I'm a teapot"),
-            "500": TestStruct(int: 500, string: "Internal Server Error"),
-            "502": TestStruct(int: 502, string: "Bad Gateway"),
-            "504": TestStruct(int: 504, string: "Gateway Timeout")
+            "100": TestExCodable(int: 100, string: "Continue"),
+            "200": TestExCodable(int: 200, string: "OK"),
+            "304": TestExCodable(int: 304, string: "Not Modified"),
+            "403": TestExCodable(int: 403, string: "Forbidden"),
+            "404": TestExCodable(int: 404, string: "Not Found"),
+            "418": TestExCodable(int: 418, string: "I'm a teapot"),
+            "500": TestExCodable(int: 500, string: "Internal Server Error"),
+            "502": TestExCodable(int: 502, string: "Bad Gateway"),
+            "504": TestExCodable(int: 504, string: "Gateway Timeout")
         ]
         
         if let json = array.encoded() as Data?,
-           let copies = json.decoded() as [TestStruct]?,
-           let copies2 = [TestStruct].decoded(from: json) {
+           let copies = json.decoded() as [TestExCodable]?,
+           let copies2 = [TestExCodable].decoded(from: json) {
             XCTAssertEqual(copies, array)
             XCTAssertEqual(copies2, array)
         }
@@ -616,8 +645,8 @@ final class ExCodableTests: XCTestCase {
             XCTFail()
         }
         if let json = array.encoded() as [Any]?,
-           let copies = json.decoded() as [TestStruct]?,
-           let copies2 = [TestStruct].decoded(from: json) {
+           let copies = json.decoded() as [TestExCodable]?,
+           let copies2 = [TestExCodable].decoded(from: json) {
             XCTAssertEqual(copies, array)
             XCTAssertEqual(copies2, array)
         }
@@ -625,8 +654,8 @@ final class ExCodableTests: XCTestCase {
             XCTFail()
         }
         if let json = array.encoded() as String?,
-           let copies = json.decoded() as [TestStruct]?,
-           let copies2 = [TestStruct].decoded(from: json) {
+           let copies = json.decoded() as [TestExCodable]?,
+           let copies2 = [TestExCodable].decoded(from: json) {
             XCTAssertEqual(copies, array)
             XCTAssertEqual(copies2, array)
         }
@@ -635,8 +664,8 @@ final class ExCodableTests: XCTestCase {
         }
         
         if let json = dictionary.encoded() as Data?,
-           let copies = json.decoded() as [String: TestStruct]?,
-           let copies2 = [String: TestStruct].decoded(from: json) {
+           let copies = json.decoded() as [String: TestExCodable]?,
+           let copies2 = [String: TestExCodable].decoded(from: json) {
             XCTAssertEqual(copies, dictionary)
             XCTAssertEqual(copies2, dictionary)
         }
@@ -644,8 +673,8 @@ final class ExCodableTests: XCTestCase {
             XCTFail()
         }
         if let json = dictionary.encoded() as [String: Any]?,
-           let copies = json.decoded() as [String: TestStruct]?,
-           let copies2 = [String: TestStruct].decoded(from: json) {
+           let copies = json.decoded() as [String: TestExCodable]?,
+           let copies2 = [String: TestExCodable].decoded(from: json) {
             XCTAssertEqual(copies, dictionary)
             XCTAssertEqual(copies2, dictionary)
         }
@@ -653,8 +682,8 @@ final class ExCodableTests: XCTestCase {
             XCTFail()
         }
         if let json = dictionary.encoded() as String?,
-           let copies = json.decoded() as [String: TestStruct]?,
-           let copies2 = [String: TestStruct].decoded(from: json) {
+           let copies = json.decoded() as [String: TestExCodable]?,
+           let copies2 = [String: TestExCodable].decoded(from: json) {
             XCTAssertEqual(copies, dictionary)
             XCTAssertEqual(copies2, dictionary)
         }

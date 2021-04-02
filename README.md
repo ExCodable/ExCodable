@@ -35,9 +35,10 @@ En | [中文](https://iwill.im/ExCodable/)
 - Supports customized encode/decode via subscripts;
 - Supports builtin and custom Type-Conversions;
 - Supports `struct`, `class` and subclass;
+- Supports encode/decode with or without `IfPresent`;
+- Supports abort (throws error) or continue (returns nil) encode/decode if error encountered;
 - Uses JSON encoder/decoder by default, and supports PList;
-- Uses Type-Inference, supports JSON `Data`, `String` and `Object`;
-- Returns `Optional` values instead of throwing errors, to avoid frequent use of `try?`.
+- Uses Type-Inference, supports JSON `Data`, `String` and `Object`.
 
 ## Usage
 
@@ -59,10 +60,12 @@ struct TestAutoCodable: Codable, Equatable {
 But, if you have to encode/decode manually for some reason, e.g. Alternative-Keys and Nested-Keys ...
 
 ```swift
-struct TestManualCodable: Codable, Equatable {
-    
+struct TestManualCodable: Equatable {
     private(set) var int: Int = 0
     private(set) var string: String?
+}
+
+extension TestManualCodable: Codable {
     
     enum Keys: CodingKey {
         case int, i
@@ -88,7 +91,6 @@ struct TestManualCodable: Codable, Equatable {
         var nestedContainer = container.nestedContainer(keyedBy: Keys.self, forKey: Keys.nested)
         try? nestedContainer.encodeIfPresent(string, forKey: Keys.string)
     }
-    
 }
 
 ```
@@ -96,20 +98,19 @@ struct TestManualCodable: Codable, Equatable {
 **With `ExCodable`**:
 
 ```swift
-struct TestExCodable: ExCodable, Equatable {
-    
+struct TestExCodable: Equatable {
     private(set) var int: Int = 0
     private(set) var string: String?
-    
-    static var keyMapping: [KeyMap<Self>] = [
-        KeyMap(\.int, to: "int", "i"),
-        KeyMap(\.string, to: "nested.string")
+}
+
+extension TestExCodable: ExCodable {
+    static let keyMapping: [KeyMap<Self>] = [
+        KeyMap(\.int, to: "int"),
+        KeyMap(\.string, to: "string")
     ]
-    
     init(from decoder: Decoder) throws {
-        decode(with: Self.keyMapping, using: decoder)
+        try decode(from: decoder, with: Self.keyMapping)
     }
-    
 }
 
 ```
@@ -122,6 +123,7 @@ With `ExCodable`, it needs to to declare properties with `var` and provide defau
 struct TestStruct: Equatable {
     private(set) var int: Int = 0
     private(set) var string: String?
+    var bool: Bool!
 }
 
 ```
@@ -129,19 +131,18 @@ struct TestStruct: Equatable {
 ```swift
 extension TestStruct: ExCodable {
     
-    static var keyMapping: [KeyMap<Self>] = [
+    static let keyMapping: [KeyMap<Self>] = [
         KeyMap(\.int, to: "int"),
-        KeyMap(\.string, to: "string")
+        KeyMap(\.string, to: "string"),
     ]
     
     init(from decoder: Decoder) throws {
-        decode(with: Self.keyMapping, using: decoder)
+        try decode(from: decoder, with: Self.keyMapping)
     }
     // `encode` with default implementation can be omitted
     // func encode(to encoder: Encoder) throws {
-    //     encode(with: Self.keyMapping, using: encoder)
+    //     try encode(to: encoder, with: Self.keyMapping)
     // }
-    
 }
 
 ```
@@ -149,7 +150,7 @@ extension TestStruct: ExCodable {
 ### 2. Alternative-Keys:
 
 ```swift
-static var keyMapping: [KeyMap<Self>] = [
+static let keyMapping: [KeyMap<Self>] = [
     KeyMap(\.int, to: "int", "i"),
     KeyMap(\.string, to: "string", "str", "s")
 ]
@@ -159,9 +160,9 @@ static var keyMapping: [KeyMap<Self>] = [
 ### 3. Nested-Keys:
 
 ```swift
-static var keyMapping: [KeyMap<Self>] = [
-    KeyMap(\.int, to: "nested.int"),
-    KeyMap(\.string, to: "nested.nested.string")
+static let keyMapping: [KeyMap<Self>] = [
+    KeyMap(\.int, to: "int"),
+    KeyMap(\.string, to: "nested.string")
 ]
 
 ```
@@ -179,7 +180,7 @@ struct TestCustomEncodeDecode: Equatable {
 ```swift
 extension TestCustomEncodeDecode: ExCodable {
     
-    private enum Keys: String, CodingKey {
+    private enum Keys: CodingKey {
         case int, string
     }
     private static let dddd = "dddd"
@@ -197,22 +198,21 @@ extension TestCustomEncodeDecode: ExCodable {
         }
     }
     
-    static var keyMapping: [KeyMap<Self>] = [
+    static let keyMapping: [KeyMap<Self>] = [
         KeyMap(\.int, to: Keys.int),
-        KeyMap(\.string, to: Keys.string)
     ]
     
     init(from decoder: Decoder) throws {
-        decode(with: Self.keyMapping, using: decoder)
+        try decode(from: decoder, with: Self.keyMapping)
+        string = decoder[Keys.string]
         if string == nil || string == Self.dddd {
             string = string(for: int)
         }
     }
     func encode(to encoder: Encoder) throws {
-        encode(with: Self.keyMapping, using: encoder)
+        try encode(to: encoder, with: Self.keyMapping)
         encoder[Keys.string] = Self.dddd
     }
-    
 }
 
 ```
@@ -230,49 +230,62 @@ struct TestSubscript: Equatable {
 ```
 
 ```swift
-extension TestSubscript: Codable {
+extension TestSubscript: Encodable, Decodable {
     
     enum Keys: CodingKey {
         case int, string
     }
     
     init(from decoder: Decoder) throws {
+        // - seealso:
+        // string = decoder.decode(<#T##codingKeys: CodingKey...##CodingKey#>)
+        // string = try decoder.decodeThrows(<#T##codingKeys: CodingKey...##CodingKey#>)
+        // string = try decoder.decodeNonnullThrows(<#T##codingKeys: CodingKey...##CodingKey#>)
         int = decoder[Keys.int] ?? 0
         string = decoder[Keys.string] ?? ""
     }
     func encode(to encoder: Encoder) throws {
+        // - seealso:
+        // encoder.encode(<#T##value: Encodable?##Encodable?#>, for: <#T##CodingKey#>)
+        // try encoder.encodeThrows(<#T##value: Encodable?##Encodable?#>, for: <#T##CodingKey#>)
+        // try encoder.encodeNonnullThrows(<#T##value: Encodable##Encodable#>, for: <#T##CodingKey#>)
         encoder[Keys.int] = int
         encoder[Keys.string] = string
     }
-    
 }
 
 ```
 
 ### 6. Custom Type-Conversions:
 
-Extends `KeyedDecodingContainer` with protocol `KeyedDecodingContainerCustomTypeConversion` and implement its method, decode values in alternative types and convert to target type.
+Declare struct `FloatToBoolDecodingTypeConverter` with protocol `ExCodableDecodingTypeConverter` and implement its method, decode values in alternative types and convert to target type:
 
 ```swift
-extension KeyedDecodingContainer: KeyedDecodingContainerCustomTypeConversion {
-    public func decodeForTypeConversion<T, K>(_ container: KeyedDecodingContainer<K>, codingKey: K, as type: T.Type) -> T? where T: Decodable, K: CodingKey {
-        
+struct FloatToBoolDecodingTypeConverter: ExCodableDecodingTypeConverter {
+    public func decode<T: Decodable, K: CodingKey>(_ container: KeyedDecodingContainer<K>, codingKey: K, as type: T.Type) -> T? {
+        // Bool -> Double
         if type is Double.Type || type is Double?.Type {
-            if let bool = try? decodeIfPresent(Bool.self, forKey: codingKey as! Self.Key) {
+            if let bool = try? container.decodeIfPresent(Bool.self, forKey: codingKey) {
                 return (bool ? 1.0 : 0.0) as? T
             }
         }
-        
+        // Bool -> Float
         else if type is Float.Type || type is Float?.Type {
-            if let bool = try? decodeIfPresent(Bool.self, forKey: codingKey as! Self.Key) {
+            if let bool = try? container.decodeIfPresent(Bool.self, forKey: codingKey) {
                 return (bool ? 1.0 : 0.0) as? T
             }
         }
-        
+        // Double or Float NOT found
         return nil
     }
 }
 
+```
+
+Register `FloatToBoolDecodingTypeConverter` with an instance:
+
+```swift
+register(FloatToBoolDecodingTypeConverter())
 ```
 
 ### 7. Key-Mapping for `class`:
@@ -285,21 +298,17 @@ class TestClass: ExCodable, Equatable {
     var int: Int = 0
     var string: String? = nil
     init(int: Int, string: String?) {
-        self.int = int
-        self.string = string
+        (self.int, self.string) = (int, string)
     }
     
-    static var keyMapping: [KeyMap<TestClass>] = [
+    static let keyMapping: [KeyMap<TestClass>] = [
         KeyMap(ref: \.int, to: "int"),
         KeyMap(ref: \.string, to: "string")
     ]
     
     required init(from decoder: Decoder) throws {
-        decodeReference(with: Self.keyMapping, using: decoder)
+        try decodeReference(from: decoder, with: Self.keyMapping)
     }
-    // func encode(to encoder: Encoder) throws {
-    //     encode(with: Self.keyMapping, using: encoder)
-    // }
     
     static func == (lhs: TestClass, rhs: TestClass) -> Bool {
         return lhs.int == rhs.int && lhs.string == rhs.string
@@ -320,17 +329,17 @@ class TestSubclass: TestClass {
         super.init(int: int, string: string)
     }
     
-    static var keyMappingForTestSubclass: [KeyMap<TestSubclass>] = [
+    static let keyMappingForTestSubclass: [KeyMap<TestSubclass>] = [
         KeyMap(ref: \.bool, to: "bool")
     ]
     
     required init(from decoder: Decoder) throws {
         try super.init(from: decoder)
-        decodeReference(with: Self.keyMappingForTestSubclass, using: decoder)
+        try decodeReference(from: decoder, with: Self.keyMappingForTestSubclass)
     }
     override func encode(to encoder: Encoder) throws {
         try super.encode(to: encoder)
-        encode(with: Self.keyMappingForTestSubclass, using: encoder)
+        try encode(to: encoder, with: Self.keyMappingForTestSubclass)
     }
     
     static func == (lhs: TestSubclass, rhs: TestSubclass) -> Bool {
@@ -346,9 +355,9 @@ class TestSubclass: TestClass {
 
 ```swift
 let test = TestStruct(int: 304, string: "Not Modified")
-let data = test.encoded() as Data?
-let copy1 = data?.decoded() as TestStruct?
-let copy2 = TestStruct.decoded(from: data)
+let data = try? test.encoded() as Data?
+let copy1 = try? data?.decoded() as TestStruct?
+let copy2 = data.map { try? TestStruct.decoded(from: $0) }
 XCTAssertEqual(copy1, test)
 XCTAssertEqual(copy2, test)
 
@@ -365,14 +374,14 @@ XCTAssertEqual(copy2, test)
 - [Swift Package Manager](https://swift.org/package-manager/):
 
 ```swift
-.package(url: "https://github.com/iwill/ExCodable", from: "0.4.0")
+.package(url: "https://github.com/iwill/ExCodable", from: "0.5.0")
 
 ```
 
 - [CocoaPods](http://cocoapods.org):
 
 ```ruby
-pod 'ExCodable', '~> 0.4.0'
+pod 'ExCodable', '~> 0.5.0'
 
 ```
 
@@ -387,15 +396,15 @@ pod 'ExCodable', '~> 0.4.0'
 
 ```swift
 <#extension/struct/class#> <#Type#>: ExCodable {
-    static var <#keyMapping#>: [KeyMap<<#SelfType#>>] = [
+    static let <#keyMapping#>: [KeyMap<<#SelfType#>>] = [
         KeyMap(\.<#property#>, to: <#"key"#>),
         <#...#>
     ]
     init(from decoder: Decoder) throws {
-        decode<#Reference#>(with: Self.<#keyMapping#>, using: decoder)
+        try decode<#Reference#>(from: decoder, with: Self.<#keyMapping#>)
     }
     func encode(to encoder: Encoder) throws {
-        encode(with: Self.<#keyMapping#>, using: encoder)
+        try encode(to: encoder, with: Self.<#keyMapping#>)
     }
 }
 

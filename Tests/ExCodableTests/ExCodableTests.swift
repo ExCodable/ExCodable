@@ -47,13 +47,13 @@ extension TestManualCodable: Codable {
             }
         }
     }
+    
     func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: Keys.self)
         try? container.encodeIfPresent(int, forKey: Keys.int)
         var nestedContainer = container.nestedContainer(keyedBy: Keys.self, forKey: Keys.nested)
         try? nestedContainer.encodeIfPresent(string, forKey: Keys.string)
     }
-    
 }
 
 // MARK: struct
@@ -66,22 +66,21 @@ struct TestStruct: Equatable {
 
 extension TestStruct: ExCodable {
     
-    static var keyMapping: [KeyMap<Self>] = [
+    static let keyMapping: [KeyMap<Self>] = [
         KeyMap(\.int, to: "int"),
         KeyMap(\.string, to: "string"),
-        KeyMap(\.bool, to: "bool") { $0.int > 0 }
     ]
     
     init(from decoder: Decoder) throws {
-        decode(with: Self.keyMapping, using: decoder)
+        try decode(from: decoder, with: Self.keyMapping)
     }
+    // `encode` with default implementation can be omitted
     // func encode(to encoder: Encoder) throws {
-    //     encode(with: Self.keyMapping, using: encoder)
+    //     try encode(to: encoder, with: Self.keyMapping)
     // }
-    
 }
 
-// MARK: alternative-keys
+// MARK: alternative-keys & alternative-keyMapping
 
 struct TestAlternativeKeys: Equatable {
     var int: Int = 0
@@ -90,29 +89,28 @@ struct TestAlternativeKeys: Equatable {
 
 extension TestAlternativeKeys: ExCodable {
     
-    static var keyMapping: [KeyMap<Self>] = [
+    static let keyMapping: [KeyMap<Self>] = [
         KeyMap(\.int, to: "int", "i"),
         KeyMap(\.string, to: "string", "str", "s")
     ]
     
-    static var keyMappingFromLocal: [KeyMap<Self>] = [
-        KeyMap(\.int, to: "int"),
-        KeyMap(\.string, to: "string")
+    static let keyMappingFromLocal: [KeyMap<Self>] = [
+        KeyMap(\.int, to: "INT"),
+        KeyMap(\.string, to: "STRING")
     ]
     
-    enum LocalKeys: String {
-        case isLocal = "_is_local_"
+    enum LocalKeys: String, CodingKey {
+        case isLocal = "_IS_LOCAL_"
     }
     
     init(from decoder: Decoder) throws {
-        let isLocal = decoder[LocalKeys.isLocal.rawValue] ?? false
-        decode(with: isLocal ? Self.keyMappingFromLocal : Self.keyMapping, using: decoder)
+        let isLocal = decoder[LocalKeys.isLocal] ?? false
+        try decode(from: decoder, with: isLocal ? Self.keyMappingFromLocal : Self.keyMapping)
     }
     func encode(to encoder: Encoder) throws {
-        encode(with: Self.keyMappingFromLocal, using: encoder)
-        encoder[LocalKeys.isLocal.rawValue] = true
+        try encode(to: encoder, with: Self.keyMappingFromLocal)
+        encoder[LocalKeys.isLocal] = true
     }
-    
 }
 
 // MARK: nested-keys
@@ -124,18 +122,17 @@ struct TestNestedKeys: Equatable {
 
 extension TestNestedKeys: ExCodable {
     
-    static var keyMapping: [KeyMap<Self>] = [
+    static let keyMapping: [KeyMap<Self>] = [
         KeyMap(\.int, to: "int"),
         KeyMap(\.string, to: "nested.string")
     ]
     
     init(from decoder: Decoder) throws {
-        decode(with: Self.keyMapping, using: decoder)
+        try decode(from: decoder, with: Self.keyMapping)
     }
     // func encode(to encoder: Encoder) throws {
-    //     encode(with: Self.keyMapping, using: encoder)
+    //     try encode(to: encoder, with: Self.keyMapping)
     // }
-    
 }
 
 // MARK: custom encode/decode
@@ -165,22 +162,21 @@ extension TestCustomEncodeDecode: ExCodable {
         }
     }
     
-    static var keyMapping: [KeyMap<Self>] = [
+    static let keyMapping: [KeyMap<Self>] = [
         KeyMap(\.int, to: Keys.int),
-        KeyMap(\.string, to: Keys.string)
     ]
     
     init(from decoder: Decoder) throws {
-        decode(with: Self.keyMapping, using: decoder)
+        try decode(from: decoder, with: Self.keyMapping)
+        string = decoder[Keys.string]
         if string == nil || string == Self.dddd {
             string = string(for: int)
         }
     }
     func encode(to encoder: Encoder) throws {
-        encode(with: Self.keyMapping, using: encoder)
+        try encode(to: encoder, with: Self.keyMapping)
         encoder[Keys.string] = Self.dddd
     }
-    
 }
 
 // MARK: let + subscripts + CodingKey, without default values
@@ -197,14 +193,21 @@ extension TestSubscript: Encodable, Decodable {
     }
     
     init(from decoder: Decoder) throws {
+        // - seealso:
+        // string = decoder.decode(<#T##codingKeys: CodingKey...##CodingKey#>)
+        // string = try decoder.decodeThrows(<#T##codingKeys: CodingKey...##CodingKey#>)
+        // string = try decoder.decodeNonnullThrows(<#T##codingKeys: CodingKey...##CodingKey#>)
         int = decoder[Keys.int] ?? 0
         string = decoder[Keys.string] ?? ""
     }
     func encode(to encoder: Encoder) throws {
+        // - seealso:
+        // encoder.encode(<#T##value: Encodable?##Encodable?#>, for: <#T##CodingKey#>)
+        // try encoder.encodeThrows(<#T##value: Encodable?##Encodable?#>, for: <#T##CodingKey#>)
+        // try encoder.encodeNonnullThrows(<#T##value: Encodable##Encodable#>, for: <#T##CodingKey#>)
         encoder[Keys.int] = int
         encoder[Keys.string] = string
     }
-    
 }
 
 // MARK: type-conversions
@@ -262,47 +265,65 @@ extension TestTypeConversions: Encodable, Decodable {
         encoder[Keys.stringFromInt64] = stringFromInt64
         encoder[Keys.stringFromDouble] = stringFromDouble
     }
-    
 }
 
 // MARK: custom type-conversions
 
-extension KeyedDecodingContainer: KeyedDecodingContainerCustomTypeConversion {
-    public func decodeForTypeConversion<T, K>(_ container: KeyedDecodingContainer<K>, codingKey: K, as type: T.Type) -> T? where T: Decodable, K: CodingKey {
-        
+// @available(*, deprecated)
+// extension KeyedDecodingContainer: KeyedDecodingContainerCustomTypeConversion {
+//     public func decodeForTypeConversion<T, K>(_ container: KeyedDecodingContainer<K>, codingKey: K, as type: T.Type) -> T? where T: Decodable, K: CodingKey {
+//         
+//         if type is Double.Type || type is Double?.Type {
+//             if let bool = try? decodeIfPresent(Bool.self, forKey: codingKey as! Self.Key) {
+//                 return (bool ? 1.0 : 0.0) as? T
+//             }
+//         }
+//         
+//         else if type is Float.Type || type is Float?.Type {
+//             if let bool = try? decodeIfPresent(Bool.self, forKey: codingKey as! Self.Key) {
+//                 return (bool ? 1.0 : 0.0) as? T
+//             }
+//         }
+//         
+//         return nil
+//     }
+// }
+
+struct FloatToBoolDecodingTypeConverter: ExCodableDecodingTypeConverter {
+    public func decode<T: Decodable, K: CodingKey>(_ container: KeyedDecodingContainer<K>, codingKey: K, as type: T.Type) -> T? {
+        // Bool -> Double
         if type is Double.Type || type is Double?.Type {
-            if let bool = try? decodeIfPresent(Bool.self, forKey: codingKey as! Self.Key) {
+            if let bool = try? container.decodeIfPresent(Bool.self, forKey: codingKey) {
                 return (bool ? 1.0 : 0.0) as? T
             }
         }
-        
+        // Bool -> Float
         else if type is Float.Type || type is Float?.Type {
-            if let bool = try? decodeIfPresent(Bool.self, forKey: codingKey as! Self.Key) {
+            if let bool = try? container.decodeIfPresent(Bool.self, forKey: codingKey) {
                 return (bool ? 1.0 : 0.0) as? T
             }
         }
-        
+        // Double or Float NOT found
         return nil
     }
 }
 
-struct TestCustomTypeConversions: Equatable {
+struct TestCustomTypeConverter: Equatable {
     var doubleFromBool: Double? = nil
 }
 
-extension TestCustomTypeConversions: ExCodable {
+extension TestCustomTypeConverter: ExCodable {
     
-    static var keyMapping: [KeyMap<Self>] = [
+    static let keyMapping: [KeyMap<Self>] = [
         KeyMap(\.doubleFromBool, to: "doubleFromBool")
     ]
     
     init(from decoder: Decoder) throws {
-        decode(with: Self.keyMapping, using: decoder)
+        try decode(from: decoder, with: Self.keyMapping)
     }
     // func encode(to encoder: Encoder) throws {
-    //     encode(with: Self.keyMapping, using: encoder)
+    //     try encode(to: encoder, with: Self.keyMapping)
     // }
-    
 }
 
 // MARK: class
@@ -315,16 +336,16 @@ class TestClass: ExCodable, Equatable {
         (self.int, self.string) = (int, string)
     }
     
-    static var keyMapping: [KeyMap<TestClass>] = [
+    static let keyMapping: [KeyMap<TestClass>] = [
         KeyMap(ref: \.int, to: "int"),
         KeyMap(ref: \.string, to: "string")
     ]
     
     required init(from decoder: Decoder) throws {
-        decodeReference(with: Self.keyMapping, using: decoder)
+        try decodeReference(from: decoder, with: Self.keyMapping)
     }
     // func encode(to encoder: Encoder) throws {
-    //     encode(with: Self.keyMapping, using: encoder)
+    //     try encode(to: encoder, with: Self.keyMapping)
     // }
     
     static func == (lhs: TestClass, rhs: TestClass) -> Bool {
@@ -341,17 +362,17 @@ class TestSubclass: TestClass {
         super.init(int: int, string: string)
     }
     
-    static var keyMappingForTestSubclass: [KeyMap<TestSubclass>] = [
+    static let keyMappingForTestSubclass: [KeyMap<TestSubclass>] = [
         KeyMap(ref: \.bool, to: "bool")
     ]
     
     required init(from decoder: Decoder) throws {
         try super.init(from: decoder)
-        decodeReference(with: Self.keyMappingForTestSubclass, using: decoder)
+        try decodeReference(from: decoder, with: Self.keyMappingForTestSubclass)
     }
     override func encode(to encoder: Encoder) throws {
         try super.encode(to: encoder)
-        encode(with: Self.keyMappingForTestSubclass, using: encoder)
+        try encode(to: encoder, with: Self.keyMappingForTestSubclass)
     }
     
     static func == (lhs: TestSubclass, rhs: TestSubclass) -> Bool {
@@ -370,20 +391,18 @@ struct TestExCodable: Equatable {
 
 extension TestExCodable: ExCodable {
     
-    static var keyMapping: [KeyMap<Self>] = [
+    static let keyMapping: [KeyMap<Self>] = [
         KeyMap(\.int, to: "int"),
         KeyMap(\.string, to: "string")
     ]
     
     init(from decoder: Decoder) throws {
-        decode(with: Self.keyMapping, using: decoder)
+        try decode(from: decoder, with: Self.keyMapping)
     }
     // func encode(to encoder: Encoder) throws {
-    //     encode(with: Self.keyMapping, using: encoder)
+    //     try encode(to: encoder, with: Self.keyMapping)
     // }
-    
 }
-
 
 // MARK: - Tests
 
@@ -391,8 +410,8 @@ final class ExCodableTests: XCTestCase {
     
     func testAutoCodable() {
         let test = TestAutoCodable(int: 100, string: "Continue")
-        if let data = test.encoded() as Data?,
-           let copy = data.decoded() as TestAutoCodable?,
+        if let data = try? test.encoded() as Data,
+           let copy = try? data.decoded() as TestAutoCodable,
            let json: [String: Any] = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
             XCTAssertEqual(copy, test)
             XCTAssertEqual(NSDictionary(dictionary: json), ["i": 100, "s": "Continue"])
@@ -404,9 +423,9 @@ final class ExCodableTests: XCTestCase {
     
     func testManualCodable() {
         let json = Data(#"{"i":200,"nested":{"string":"OK"}}"#.utf8)
-        if let test = json.decoded() as TestManualCodable?,
-           let data = test.encoded() as Data?,
-           let copy = data.decoded() as TestManualCodable? {
+        if let test = try? json.decoded() as TestManualCodable,
+           let data = try? test.encoded() as Data,
+           let copy = try? data.decoded() as TestManualCodable {
             XCTAssertEqual(copy, test)
             XCTAssertEqual(data, Data(#"{"int":200,"nested":{"string":"OK"}}"#.utf8))
         }
@@ -417,12 +436,11 @@ final class ExCodableTests: XCTestCase {
     
     func testStruct() {
         let test = TestStruct(int: 304, string: "Not Modified")
-        if let data = test.encoded() as Data?,
-           var copy = data.decoded() as TestStruct? {
-            XCTAssertEqual(test.bool, nil)
-            XCTAssertEqual(copy.bool, true)
-            copy.bool = nil
-            XCTAssertEqual(copy, test)
+        if let data = try? test.encoded() as Data,
+           let copy1 = try? data.decoded() as TestStruct,
+           let copy2 = try? TestStruct.decoded(from: data) {
+            XCTAssertEqual(copy1, test)
+            XCTAssertEqual(copy2, test)
         }
         else {
             XCTFail()
@@ -431,16 +449,16 @@ final class ExCodableTests: XCTestCase {
     
     func testAlternativeKeys() {
         let json = Data(#"{"i":403,"s":"Forbidden"}"#.utf8)
-        if let test = json.decoded() as TestAlternativeKeys?,
-           let data = test.encoded() as Data?,
-           let copy = data.decoded() as TestAlternativeKeys? {
+        if let test = try? json.decoded() as TestAlternativeKeys,
+           let data = try? test.encoded() as Data,
+           let copy = try? data.decoded() as TestAlternativeKeys {
             XCTAssertEqual(test, TestAlternativeKeys(int: 403, string: "Forbidden"))
             XCTAssertEqual(copy, test)
             let localJSON: [String: Any] = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] ?? [:]
             XCTAssertEqual(NSDictionary(dictionary: localJSON), [
-                "_is_local_": true,
-                "int": 403,
-                "string": "Forbidden"
+                "_IS_LOCAL_": true,
+                "INT": 403,
+                "STRING": "Forbidden"
             ])
         }
         else {
@@ -450,8 +468,8 @@ final class ExCodableTests: XCTestCase {
     
     func testNestedKeys() {
         let test = TestNestedKeys(int: 404, string: "Not Found")
-        if let data = test.encoded() as Data?,
-           let copy = data.decoded() as TestNestedKeys? {
+        if let data = try? test.encoded() as Data,
+           let copy = try? data.decoded() as TestNestedKeys {
             XCTAssertEqual(copy, test)
             let json: [String: Any] = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] ?? [:]
             debugPrint(json)
@@ -469,8 +487,8 @@ final class ExCodableTests: XCTestCase {
     
     func testCustomEncodeDecode() {
         let test = TestCustomEncodeDecode(int: 418, string: "I'm a teapot")
-        if let data = test.encoded() as Data?,
-           let copy = data.decoded() as TestCustomEncodeDecode? {
+        if let data = try? test.encoded() as Data,
+           let copy = try? data.decoded() as TestCustomEncodeDecode {
             XCTAssertEqual(copy, test)
             let json: [String: Any] = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] ?? [:]
             debugPrint(json)
@@ -486,8 +504,8 @@ final class ExCodableTests: XCTestCase {
     
     func testSubscript() {
         let test = TestSubscript(int: 500, string: "Internal Server Error")
-        if let data = test.encoded() as Data?,
-           let copy = data.decoded() as TestSubscript? {
+        if let data = try? test.encoded() as Data,
+           let copy = try? data.decoded() as TestSubscript {
             XCTAssertEqual(copy, test)
         }
         else {
@@ -515,7 +533,7 @@ final class ExCodableTests: XCTestCase {
             "stringFromDouble": 12.3
         }
         """#.utf8)
-        if let test = data.decoded() as TestTypeConversions? {
+        if let test = try? data.decoded() as TestTypeConversions {
             XCTAssertEqual(test, TestTypeConversions(boolFromInt:      true,
                                                      boolFromString:   true,
                                                      intFromBool:      1,
@@ -553,7 +571,7 @@ final class ExCodableTests: XCTestCase {
             "stringFromDouble": 12.3
         }
         """#.utf8)
-        if let test2 = data2.decoded() as TestTypeConversions? {
+        if let test2 = try? data2.decoded() as TestTypeConversions {
             XCTAssertEqual(test2, TestTypeConversions(boolFromInt:      false,
                                                       boolFromString:   nil,
                                                       intFromBool:      0,
@@ -572,17 +590,17 @@ final class ExCodableTests: XCTestCase {
         else {
             XCTFail()
         }
-        
     }
     
-    func testCustomTypeConversions() {
+    func testCustomTypeConverter() {
+        register(FloatToBoolDecodingTypeConverter())
         let data = Data(#"""
         {
             "doubleFromBool": true
         }
         """#.utf8)
-        if let test = data.decoded() as TestCustomTypeConversions? {
-            XCTAssertEqual(test, TestCustomTypeConversions(doubleFromBool: 1.0))
+        if let test = try? data.decoded() as TestCustomTypeConverter {
+            XCTAssertEqual(test, TestCustomTypeConverter(doubleFromBool: 1.0))
         }
         else {
             XCTFail()
@@ -591,8 +609,8 @@ final class ExCodableTests: XCTestCase {
     
     func testClass() {
         let test = TestClass(int: 502, string: "Bad Gateway")
-        if let data = test.encoded() as Data?,
-           let copy = data.decoded() as TestClass? {
+        if let data = try? test.encoded() as Data,
+           let copy = try? data.decoded() as TestClass {
             XCTAssertEqual(copy, test)
         }
         else {
@@ -602,8 +620,8 @@ final class ExCodableTests: XCTestCase {
     
     func testSubclass() {
         let test = TestSubclass(int: 504, string: "Gateway Timeout", bool: true)
-        if let data = test.encoded() as Data?,
-           let copy = data.decoded() as TestSubclass? {
+        if let data = try? test.encoded() as Data,
+           let copy = try? data.decoded() as TestSubclass {
             XCTAssertEqual(copy, test)
         }
         else {
@@ -635,27 +653,27 @@ final class ExCodableTests: XCTestCase {
             "504": TestExCodable(int: 504, string: "Gateway Timeout")
         ]
         
-        if let json = array.encoded() as Data?,
-           let copies = json.decoded() as [TestExCodable]?,
-           let copies2 = [TestExCodable].decoded(from: json) {
+        if let json = try? array.encoded() as Data,
+           let copies = try? json.decoded() as [TestExCodable],
+           let copies2 = try? [TestExCodable].decoded(from: json) {
             XCTAssertEqual(copies, array)
             XCTAssertEqual(copies2, array)
         }
         else {
             XCTFail()
         }
-        if let json = array.encoded() as [Any]?,
-           let copies = json.decoded() as [TestExCodable]?,
-           let copies2 = [TestExCodable].decoded(from: json) {
+        if let json = try? array.encoded() as [Any],
+           let copies = try? json.decoded() as [TestExCodable],
+           let copies2 = try? [TestExCodable].decoded(from: json) {
             XCTAssertEqual(copies, array)
             XCTAssertEqual(copies2, array)
         }
         else {
             XCTFail()
         }
-        if let json = array.encoded() as String?,
-           let copies = json.decoded() as [TestExCodable]?,
-           let copies2 = [TestExCodable].decoded(from: json) {
+        if let json = try? array.encoded() as String,
+           let copies = try? json.decoded() as [TestExCodable],
+           let copies2 = try? [TestExCodable].decoded(from: json) {
             XCTAssertEqual(copies, array)
             XCTAssertEqual(copies2, array)
         }
@@ -663,27 +681,27 @@ final class ExCodableTests: XCTestCase {
             XCTFail()
         }
         
-        if let json = dictionary.encoded() as Data?,
-           let copies = json.decoded() as [String: TestExCodable]?,
-           let copies2 = [String: TestExCodable].decoded(from: json) {
+        if let json = try? dictionary.encoded() as Data,
+           let copies = try? json.decoded() as [String: TestExCodable],
+           let copies2 = try? [String: TestExCodable].decoded(from: json) {
             XCTAssertEqual(copies, dictionary)
             XCTAssertEqual(copies2, dictionary)
         }
         else {
             XCTFail()
         }
-        if let json = dictionary.encoded() as [String: Any]?,
-           let copies = json.decoded() as [String: TestExCodable]?,
-           let copies2 = [String: TestExCodable].decoded(from: json) {
+        if let json = try? dictionary.encoded() as [String: Any],
+           let copies = try? json.decoded() as [String: TestExCodable],
+           let copies2 = try? [String: TestExCodable].decoded(from: json) {
             XCTAssertEqual(copies, dictionary)
             XCTAssertEqual(copies2, dictionary)
         }
         else {
             XCTFail()
         }
-        if let json = dictionary.encoded() as String?,
-           let copies = json.decoded() as [String: TestExCodable]?,
-           let copies2 = [String: TestExCodable].decoded(from: json) {
+        if let json = try? dictionary.encoded() as String,
+           let copies = try? json.decoded() as [String: TestExCodable],
+           let copies2 = try? [String: TestExCodable].decoded(from: json) {
             XCTAssertEqual(copies, dictionary)
             XCTAssertEqual(copies2, dictionary)
         }
@@ -701,10 +719,9 @@ final class ExCodableTests: XCTestCase {
         ("testCustomEncodeDecode", testCustomEncodeDecode),
         ("testSubscript",       testSubscript),
         ("testTypeConversions", testTypeConversions),
-        ("testCustomTypeConversions", testCustomTypeConversions),
+        ("testCustomTypeConverter", testCustomTypeConverter),
         ("testClass",           testClass),
         ("testSubclass",        testSubclass),
         ("testExCodable",       testExCodable),
     ]
-    
 }

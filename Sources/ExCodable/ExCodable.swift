@@ -502,15 +502,15 @@ extension PropertyListDecoder: DataDecoder {}
 // MARK: - #### DEPRECATED ####
 
 public extension ExCodable {
-    @available(*, deprecated, renamed: "encode(to:with:throws:nonnull:)")
+    @available(*, deprecated, renamed: "encode(to:with:nonnull:throws:)")
     func encode(with keyMapping: [KeyMap<Self>], using encoder: Encoder) {
         try? encode(to: encoder, with: keyMapping)
     }
-    @available(*, deprecated, renamed: "decode(from:with:throws:nonnull:)")
+    @available(*, deprecated, renamed: "decode(from:with:nonnull:throws:)")
     mutating func decode(with keyMapping: [KeyMap<Self>], using decoder: Decoder) {
         try? decode(from: decoder, with: keyMapping)
     }
-    @available(*, deprecated, renamed: "decodeReference(from:with:throws:nonnull:)")
+    @available(*, deprecated, renamed: "decodeReference(from:with:nonnull:throws:)")
     func decodeReference(with keyMapping: [KeyMap<Self>], using decoder: Decoder) {
         try? decodeReference(from: decoder, with: keyMapping)
     }

@@ -5,7 +5,7 @@
 > [NSKeyedArchiver.encodeEncodable(_:forKey:)](https://developer.apple.com/documentation/foundation/nskeyedarchiver/2924373-encodeencodable)  
 > [NSKeyedUnarchiver.decodeTopLevelDecodable(_:forKey:)](https://developer.apple.com/documentation/foundation/nskeyedunarchiver/2924375-decodetopleveldecodable)  
 > [An Answer from Stack Overflow](https://stackoverflow.com/a/49952202/456536)  
-> [Response Decodable Handler from Alamofire](https://github.com/Alamofire/Alamofire/blob/master/Documentation/Usage.md#response-decodable-handler) 
+> [Response Decodable Handler from Alamofire](https://github.com/Alamofire/Alamofire/blob/master/Documentation/Usage.md#response-decodable-handler)  
 - 基于 `KeyPath` 实现 Key-Mapping，无需逐个属性 Encode/Decode；
 - 支持丰富的特性，差不多实现了 Objective-C 版的 [YYModel](https://github.com/ibireme/YYModel) 的所有特性；
 - 轻量，1 个文件、不到 500 行代码。

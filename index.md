@@ -135,7 +135,7 @@ struct TestExCodable: ExCodable, Equatable {
     ]
     
     init(from decoder: Decoder) throws {
-        decode(with: Self.keyMapping, using: decoder)
+        decode(from: decoder, with: Self.keyMapping)
     }
 }
 
@@ -167,12 +167,12 @@ extension TestStruct: ExCodable {
         KeyMap(\.string, to: "nested.string")
     ]
     init(from decoder: Decoder) throws {
-        decode(with: Self.keyMapping, using: decoder)
+        decode(from: decoder, with: Self.keyMapping)
         // 特殊逻辑同样可以在这里手动解决
         // 比如 `string = (int == 0) ? decoder["a"] : decoder["b"]`
     }
     // func encode(to encoder: Encoder) throws {
-    //     encode(with: Self.keyMapping, using: encoder)
+    //     encode(to: encoder, with: Self.keyMapping)
     //     // 特殊逻辑同样可以在这里手动解决
     //     // 比如 `encoder["string"] = (string == "") ? nil : string`
     // }
@@ -210,10 +210,10 @@ XCTAssertEqual(copy2, test)
         <#...#>
     ]
     init(from decoder: Decoder) throws {
-        decode<#Reference#>(with: Self.<#keyMapping#>, using: decoder)
+        decode<#Reference#>(from: decoder, with: Self.<#keyMapping#>)
     }
     func encode(to encoder: Encoder) throws {
-        encode(with: Self.<#keyMapping#>, using: encoder)
+        encode(to: encoder, with: Self.<#keyMapping#>)
     }
 }
 

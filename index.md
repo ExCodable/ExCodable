@@ -1,7 +1,7 @@
 ## [ExCodable](https://github.com/iwill/ExCodable) 是我在春节期间、带娃之余、用了几个晚上完成的一个 Swift 版的 JSON-Model 转换工具。
 
 别走！你可能会想“嗷，又一个轮子”，但是这个真的有点不一样：
-- `ExCodable` 是在 Swift `Codable` 基础上的扩展，可以享受到诸多便利，比如与 `NSCoding`、[Alamofire](https://github.com/Alamofire/Alamofire) 无缝对接；
+- `ExCodable` 是在 Swift `Codable` 基础上的扩展，**可以享受到诸多便利**，比如与 `NSCoding`、[Alamofire](https://github.com/Alamofire/Alamofire) 等无缝对接 —— `ExCodable` 没有做任何额外处理，躺赚那种；
 > [NSKeyedArchiver.encodeEncodable(_:forKey:)](https://developer.apple.com/documentation/foundation/nskeyedarchiver/2924373-encodeencodable)
 > 
 > [NSKeyedUnarchiver.decodeTopLevelDecodable(_:forKey:)](https://developer.apple.com/documentation/foundation/nskeyedunarchiver/2924375-decodetopleveldecodable)
@@ -12,7 +12,7 @@
 > 
 - 基于 `KeyPath` 实现 Key-Mapping，无需逐个属性 Encode/Decode；
 - 支持丰富的特性，差不多实现了 Objective-C 版的 [YYModel](https://github.com/ibireme/YYModel) 的所有特性；
-- 轻量，1 个文件、不到 500 行代码。
+- 轻量，1 个文件、500 行代码。
 
 当然我不是一开始就决定要造轮子的。近期我们团队准备开始使用 Swift，节前开始寻找一些开源框架。网络请求用 [Alamofire](https://github.com/Alamofire/Alamofire)、自动布局用 [SnapKit](https://github.com/SnapKit/SnapKit)，这都毫无悬念，但是 JSON-Model 转换并没有找到合适的。
 
@@ -28,7 +28,7 @@ struct TestAutoCodable: Codable {
 
 ```
 
-但是，一旦不得不手动 Encode/Decode 就麻烦了，相同字段要出现 5 次，而且还要夹杂很多其它代码：
+但是，一旦不得不手动 Encode/Decode 就完蛋了，相同字段要出现 5 次，而且还要夹杂很多其它代码：
 
 ```swift
 struct TestManualCodable: Codable {
@@ -37,7 +37,7 @@ struct TestManualCodable: Codable {
     private(set) var string: String?
     
     enum Keys: CodingKey {
-        case int, i // `int` 两次
+        case int, i // `int` 两次，这里省掉，在第三次、第五次的那里直接写字符串？不要！
         case nested, string
     }
     
@@ -60,7 +60,6 @@ struct TestManualCodable: Codable {
         var nestedContainer = container.nestedContainer(keyedBy: Keys.self, forKey: Keys.nested)
         try? nestedContainer.encodeIfPresent(string, forKey: Keys.string)
     }
-    
 }
 
 ```
@@ -93,7 +92,6 @@ struct TestCodextended: Codable {
         try encoder.encode(int, for: "int") // `int` 四次
         try encoder.encode(string, for: "string")
     }
-    
 }
 
 ```
@@ -117,9 +115,11 @@ Codextended 最欠缺的是 Key-Mapping，经过各种摸索、尝试，确定 `
 - 支持 `struct`、`class`、subclass；
 - 支持 JSON、PList 以及自定义 Encoder/Decoder，默认使用 JSON；
 - 使用类型推断，支持 `Data`、`String`、`Array`、`Object` 类型 JSON 数据；
-- 使用 `Optional` 类型取代抛出没什么用的 `error`，避免到处写 `try?`，有时还要套上括号。
+- 使用 `Optional` 类型取代抛出没什么用的 `error`，避免到处写 `try?`，有时还要套上括号 —— 现在也支持抛出异常了 [可选]。
 
-> 这里要多说两句：一般情况下抛出错误是有用的，但是在 JSON-Model 转换的场景略有不同。经常遇到的错误无非就是字段少了、类型错了。如果是关键数据有问题抛出错误也还好，但是有时不痛不痒的字段出错（这种更容易出错），导致整个解析都失败就不好了。确实这样可以及时发现返回结果中的问题，但是大家可能也知道经常有新“发现”是什么样的体验。老司机可以回忆一下 YYModel 出现之前的岁月。所以我认为，永远不要相信 API 的任何承诺，不管它返回什么，App 不要动不动就崩给人看，这会严重影响一个开发者的名声！可能有人会问，它真的给你返回一坨🍦怎么办？可以加个关键数据校验环节，只校验关键数据。
+> 这里要多说两句：一般情况下抛出错误是有用的，但是在 JSON-Model 转换的场景略有不同。经常遇到的错误无非就是字段少了、类型错了。如果是关键数据有问题抛出错误也还好，但是有时不痛不痒的字段出错（这种更容易出错），导致整个解析都失败就不好了。确实这样可以及时发现返回结果中的问题，但是大家可能也知道经常有新“发现”是什么样的体验。老司机可以回忆一下 YYModel 出现之前的岁月。所以，永远不要相信关于 API 的任何承诺，不管它返回什么，App 不要动不动就死给人看，这会严重影响一个开发者的名声！可能有人会问，它真的给你返回一坨🍦怎么办？可以加个关键数据校验环节，只校验关键数据，而不是依赖异常。
+
+> 为了满足不同的编程习惯，`ExCodable` - 0.5.0 版本开始支持了个别/全部字段是否非空 - `nonnull`（Encode/Decode 时是否使用带有 `IfPresent` 的方法）、以及遇到异常时是否抛出 - `throws`。这两个参数都是 `Bool` 类型，组合使用可以产生不同的效果。比如某内嵌的对象指定某字段 `nonnull = true`、`throws = false`，遇到非空字段无法解析会导致该字段所属对象为 `nil`，但如果它外层对象没有指定该对象 `nonnull = true`，则会继续解析其它字段，而不是完全终止解析。
 
 ## 上面场景，用 `ExCodable` 就简单多了：
 
@@ -137,7 +137,6 @@ struct TestExCodable: ExCodable, Equatable {
     init(from decoder: Decoder) throws {
         decode(with: Self.keyMapping, using: decoder)
     }
-    
 }
 
 ```

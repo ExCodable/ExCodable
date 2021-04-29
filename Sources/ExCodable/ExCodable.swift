@@ -47,9 +47,9 @@ public final class KeyMap<Root: Codable> {
     fileprivate let encode: (_ root: Root, _ encoder: Encoder, _ nonnullAll: Bool, _ throwsAll: Bool) throws -> Void
     fileprivate let decode: ((_ root: inout Root, _ decoder: Decoder, _ nonnullAll: Bool, _ throwsAll: Bool) throws -> Void)?
     fileprivate let decodeReference: ((_ root: Root, _ decoder: Decoder, _ nonnullAll: Bool, _ throwsAll: Bool) throws -> Void)?
-    fileprivate init(encode: @escaping (_ root: Root, _ encoder: Encoder, _ nonnullAll: Bool, _ throwsAll: Bool) throws -> Void,
-                     decode: ((_ root: inout Root, _ decoder: Decoder, _ nonnullAll: Bool, _ throwsAll: Bool) throws -> Void)?,
-                     decodeReference: ((_ root: Root, _ decoder: Decoder, _ nonnullAll: Bool, _ throwsAll: Bool) throws -> Void)?) {
+    private init(encode: @escaping (_ root: Root, _ encoder: Encoder, _ nonnullAll: Bool, _ throwsAll: Bool) throws -> Void,
+                 decode: ((_ root: inout Root, _ decoder: Decoder, _ nonnullAll: Bool, _ throwsAll: Bool) throws -> Void)?,
+                 decodeReference: ((_ root: Root, _ decoder: Decoder, _ nonnullAll: Bool, _ throwsAll: Bool) throws -> Void)?) {
         (self.encode, self.decode, self.decodeReference) = (encode, decode, decodeReference)
     }
 }
@@ -225,7 +225,7 @@ public extension Decoder {
     }
 }
 
-fileprivate struct ExCodingKey: CodingKey {
+private struct ExCodingKey: CodingKey {
     let stringValue: String, intValue: Int?
     init(_ stringValue: String) { (self.stringValue, self.intValue) = (stringValue, nil) }
     init(_ stringValue: Substring) { self.init(String(stringValue)) }
@@ -236,7 +236,7 @@ fileprivate struct ExCodingKey: CodingKey {
 
 // MARK: - alternative-keys + nested-keys + type-conversion
 
-fileprivate extension KeyedDecodingContainer {
+private extension KeyedDecodingContainer {
     
     func decodeForAlternativeKeys<T: Decodable>(_ codingKeys: [Self.Key], as type: T.Type = T.self, nonnull: Bool, throws: Bool) throws -> T? {
         
@@ -413,7 +413,7 @@ public protocol ExCodableDecodingTypeConverter {
     func decode<T: Decodable, K: CodingKey>(_ container: KeyedDecodingContainer<K>, codingKey: K, as type: T.Type) throws -> T?
 }
 
-fileprivate var _decodingTypeConverters: [ExCodableDecodingTypeConverter] = []
+private var _decodingTypeConverters: [ExCodableDecodingTypeConverter] = []
 public func register(_ decodingTypeConverter: ExCodableDecodingTypeConverter) {
     _decodingTypeConverters.append(decodingTypeConverter)
 }

@@ -56,36 +56,36 @@ public final class KeyMap<Root: Codable> {
 
 public extension KeyMap {
     convenience init<Value: Codable>(_ keyPath: WritableKeyPath<Root, Value>, to codingKeys: String ..., nonnull: Bool? = nil, throws: Bool? = nil) {
-        self.init(encode: { (root, encoder, nonnullAll, throwsAll) in
+        self.init(encode: { root, encoder, nonnullAll, throwsAll in
             try encoder.encode(root[keyPath: keyPath], for: codingKeys.first!, nonnull: nonnull ?? nonnullAll, throws: `throws` ?? throwsAll)
-        }, decode: { (root, decoder, nonnullAll, throwsAll) in
+        }, decode: { root, decoder, nonnullAll, throwsAll in
             if let value: Value = try decoder.decode(codingKeys, nonnull: nonnull ?? nonnullAll, throws: `throws` ?? throwsAll) {
                 root[keyPath: keyPath] = value
             }
         }, decodeReference: nil)
     }
     convenience init<Value: Codable, Key: CodingKey>(_ keyPath: WritableKeyPath<Root, Value>, to codingKeys: Key ..., nonnull: Bool? = nil, throws: Bool? = nil) {
-        self.init(encode: { (root, encoder, nonnullAll, throwsAll) in
+        self.init(encode: { root, encoder, nonnullAll, throwsAll in
             try encoder.encode(root[keyPath: keyPath], for: codingKeys.first!, nonnull: nonnull ?? nonnullAll, throws: `throws` ?? throwsAll)
-        }, decode: { (root, decoder, nonnullAll, throwsAll) in
+        }, decode: { root, decoder, nonnullAll, throwsAll in
             if let value: Value = try decoder.decode(codingKeys, nonnull: nonnull ?? nonnullAll, throws: `throws` ?? throwsAll) {
                 root[keyPath: keyPath] = value
             }
         }, decodeReference: nil)
     }
     convenience init<Value: Codable>(ref keyPath: ReferenceWritableKeyPath<Root, Value>, to codingKeys: String ..., nonnull: Bool? = nil, throws: Bool? = nil) {
-        self.init(encode: { (root, encoder, nonnullAll, throwsAll) in
+        self.init(encode: { root, encoder, nonnullAll, throwsAll in
             try encoder.encode(root[keyPath: keyPath], for: codingKeys.first!, nonnull: nonnull ?? nonnullAll, throws: `throws` ?? throwsAll)
-        }, decode: nil, decodeReference: { (root, decoder, nonnullAll, throwsAll) in
+        }, decode: nil, decodeReference: { root, decoder, nonnullAll, throwsAll in
             if let value: Value = try decoder.decode(codingKeys, nonnull: nonnull ?? nonnullAll, throws: `throws` ?? throwsAll) {
                 root[keyPath: keyPath] = value
             }
         })
     }
     convenience init<Value: Codable, Key: CodingKey>(ref keyPath: ReferenceWritableKeyPath<Root, Value>, to codingKeys: Key ..., nonnull: Bool? = nil, throws: Bool? = nil) {
-        self.init(encode: { (root, encoder, nonnullAll, throwsAll) in
+        self.init(encode: { root, encoder, nonnullAll, throwsAll in
             try encoder.encode(root[keyPath: keyPath], for: codingKeys.first!, nonnull: nonnull ?? nonnullAll, throws: `throws` ?? throwsAll)
-        }, decode: nil, decodeReference: { (root, decoder, nonnullAll, throwsAll) in
+        }, decode: nil, decodeReference: { root, decoder, nonnullAll, throwsAll in
             if let value: Value = try decoder.decode(codingKeys, nonnull: nonnull ?? nonnullAll, throws: `throws` ?? throwsAll) {
                 root[keyPath: keyPath] = value
             }

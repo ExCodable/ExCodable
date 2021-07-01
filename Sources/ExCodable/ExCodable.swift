@@ -24,7 +24,18 @@ public protocol ExCodable: Codable {
     static var keyMapping: [KeyMap<Root>] { get }
 }
 
+// default implementation for Encodable
+public extension ExCodable where Root == Self {
+    func encode(to encoder: Encoder) throws {
+        try encode(to: encoder, with: Self.keyMapping)
+    }
+}
+
+// MARK: - keyMapping
+
+// encode/decode
 public extension ExCodable {
+    static var keyMapping: [KeyMap<Root>] { [] } // default implementation for optional property
     func encode(to encoder: Encoder, with keyMapping: [KeyMap<Self>], nonnull: Bool = false, throws: Bool = false) throws {
         try keyMapping.forEach { try $0.encode(self, encoder, nonnull, `throws`) }
     }
@@ -35,13 +46,6 @@ public extension ExCodable {
         try keyMapping.forEach { try $0.decodeReference?(self, decoder, nonnull, `throws`) }
     }
 }
-public extension ExCodable where Root == Self {
-    func encode(to encoder: Encoder) throws {
-        try encode(to: encoder, with: Self.keyMapping)
-    }
-}
-
-// MARK: -
 
 public final class KeyMap<Root: Codable> {
     fileprivate let encode: (_ root: Root, _ encoder: Encoder, _ nonnullAll: Bool, _ throwsAll: Bool) throws -> Void
@@ -119,7 +123,7 @@ public extension Decoder { // , abortIfNull nonnull: Bool = false, abortOnError 
     }
 }
 
-// MARK: -
+// MARK: - Encoder&Decoder
 
 public extension Encoder {
     
@@ -225,13 +229,18 @@ public extension Decoder {
     }
 }
 
-private struct ExCodingKey: CodingKey {
-    let stringValue: String, intValue: Int?
+// MARK: - ExCodingKey
+
+private struct ExCodingKey {
+    public let stringValue: String, intValue: Int?
     init(_ stringValue: String) { (self.stringValue, self.intValue) = (stringValue, nil) }
     init(_ stringValue: Substring) { self.init(String(stringValue)) }
-    init?(stringValue: String) { self.init(stringValue) }
     init(_ intValue: Int) { (self.intValue, self.stringValue) = (intValue, String(intValue)) }
-    init?(intValue: Int) { self.init(intValue) }
+}
+
+extension ExCodingKey: CodingKey {
+    public init?(stringValue: String) { self.init(stringValue) }
+    public init?(intValue: Int) { self.init(intValue) }
 }
 
 // MARK: - alternative-keys + nested-keys + type-conversion
@@ -498,31 +507,3 @@ extension JSONDecoder: DataDecoder {}
 extension PropertyListEncoder: DataEncoder {}
 extension PropertyListDecoder: DataDecoder {}
 #endif
-
-// MARK: - #### DEPRECATED ####
-
-public extension ExCodable {
-    @available(*, deprecated, renamed: "encode(to:with:nonnull:throws:)")
-    func encode(with keyMapping: [KeyMap<Self>], using encoder: Encoder) {
-        try? encode(to: encoder, with: keyMapping)
-    }
-    @available(*, deprecated, renamed: "decode(from:with:nonnull:throws:)")
-    mutating func decode(with keyMapping: [KeyMap<Self>], using decoder: Decoder) {
-        try? decode(from: decoder, with: keyMapping)
-    }
-    @available(*, deprecated, renamed: "decodeReference(from:with:nonnull:throws:)")
-    func decodeReference(with keyMapping: [KeyMap<Self>], using decoder: Decoder) {
-        try? decodeReference(from: decoder, with: keyMapping)
-    }
-}
-
-@available(*, deprecated, renamed: "append(decodingTypeConverter:)")
-public protocol KeyedDecodingContainerCustomTypeConversion: ExCodableDecodingTypeConverter {
-    func decodeForTypeConversion<T: Decodable, K: CodingKey>(_ container: KeyedDecodingContainer<K>, codingKey: K, as type: T.Type) -> T?
-}
-@available(*, deprecated)
-public extension KeyedDecodingContainerCustomTypeConversion {
-    func decode<T: Decodable, K: CodingKey>(_ container: KeyedDecodingContainer<K>, codingKey: K, as type: T.Type) throws -> T? {
-        return decodeForTypeConversion(container, codingKey: codingKey, as: type)
-    }
-}

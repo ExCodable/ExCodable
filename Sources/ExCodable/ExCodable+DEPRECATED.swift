@@ -18,16 +18,13 @@ public protocol ExCodableProtocol: Codable {
 
 @available(*, deprecated)
 public extension ExCodableProtocol where Root == Self {
-    
     // default implementation of ExCodableProtocol
     static var keyMapping: [KeyMap<Root>] { [] }
-    
     // default implementation of Encodable
     func encode(to encoder: Encoder) throws {
         try encode(to: encoder, with: Self.keyMapping)
         try encode(to: encoder, nonnull: false, throws: false)
     }
-    
     func decode(from decoder: Decoder) throws {
         try decode(from: decoder, nonnull: false, throws: false)
     }

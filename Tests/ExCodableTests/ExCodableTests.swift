@@ -90,14 +90,14 @@ extension TestNestedKeys: ExAutoCodable {}
 // MARK: custom encode/decode
 
 struct TestCustomEncodeDecode: Equatable {
+    
     @ExCodable(Keys.int)
     var int: Int = 0
+    
     var string: String?
-    @ExCodable(encode: { encoder, value in
-        encoder[Keys.bool] = value
-    }, decode: { decoder in
-        return decoder[Keys.bool]
-    })
+    
+    @ExCodable(encode: { encoder, value in encoder[Keys.bool] = value },
+               decode: { decoder in return decoder[Keys.bool] })
     var bool: Bool = false
 }
 

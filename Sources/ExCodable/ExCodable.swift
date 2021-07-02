@@ -11,9 +11,15 @@ import Foundation
 /**
  *  # ExCodable
  *  
- *  A protocol extends `Encodable` & `Decodable` with `keyMapping`
+ *  - `ExCodable`: A property-wrapper for mapping property to json-key.
+ *  - `ExAutoEncodable` and `ExAutoDecodable`: Protocols with default implementation for Encodable & Decodable.
+ *  - `ExAutoCodable`: A typealias for `ExAutoEncodable & ExAutoDecodable`.
+ *  - Extensions of `Encodable & Decodable`, for encode/decode-ing from internal/external.
+ *  - Extensions of `Encoder & Encoder`, for encode/decode-ing properties one-by-one.
+ *  - Supports alternative-keys, nested-keys and type-conversion
+ *  
  *  <#swift#> <#codable#> <#json#> <#model#> <#type-inference#>
- *  <#key-mapping#> <#keypath#> <#codingkey#> <#subscript#>
+ *  <#property-wrapper#> <#key-mapping#> <#codingkey#> <#subscript#>
  *  <#alternative-keys#> <#nested-keys#> <#type-conversion#>
  *  
  *  - seealso: [Usage](https://github.com/iwill/ExCodable#usage) from GitGub
@@ -70,7 +76,26 @@ extension ExCodable: DecodablePropertyWrapper where Value: Decodable {
     }
 }
 
-// MARK: Codable
+// MARK: - Auto implementation for Encodable & Decodable
+
+public protocol ExAutoEncodable: Encodable {}
+public extension ExAutoEncodable {
+    func encode(to encoder: Encoder) throws {
+        try encode(to: encoder, nonnull: false, throws: false)
+    }
+}
+
+public protocol ExAutoDecodable: Decodable { init() }
+public extension ExAutoDecodable {
+    init(from decoder: Decoder) throws {
+        self.init()
+        try decode(from: decoder, nonnull: false, throws: false)
+    }
+}
+
+public typealias ExAutoCodable = ExAutoEncodable & ExAutoDecodable
+
+// MARK: - Encodable & Decodable - internal
 
 public extension Encodable {
     func encode(to encoder: Encoder, nonnull: Bool, throws: Bool) throws {
@@ -96,26 +121,7 @@ public extension Decodable {
     }
 }
 
-// MARK: auto implementation for Encodable and Decodable
-
-public protocol ExAutoEncodable: Encodable {}
-public extension ExAutoEncodable {
-    func encode(to encoder: Encoder) throws {
-        try encode(to: encoder, nonnull: false, throws: false)
-    }
-}
-
-public protocol ExAutoDecodable: Decodable { init() }
-public extension ExAutoDecodable {
-    init(from decoder: Decoder) throws {
-        self.init()
-        try decode(from: decoder, nonnull: false, throws: false)
-    }
-}
-
-public protocol ExAutoCodable: ExAutoEncodable, ExAutoDecodable {}
-
-// MARK: - Encoder&Decoder
+// MARK: - Encoder & Decoder
 
 public extension Encoder { // , abortIfNull nonnull: Bool = false, abortOnError throws: Bool = false
     subscript<T: Encodable>(stringKey: String) -> T? { get { return nil }
@@ -257,7 +263,7 @@ extension ExCodingKey: CodingKey {
     public init?(intValue: Int) { self.init(intValue) }
 }
 
-// MARK: - alternative-keys + nested-keys + type-conversion
+// MARK: - KeyedDecodingContainer - alternative-keys + nested-keys + type-conversion
 
 fileprivate extension KeyedDecodingContainer {
     
@@ -418,13 +424,13 @@ fileprivate extension KeyedDecodingContainer {
             else if let double = try? decodeIfPresent(Double.self, forKey: codingKey) { return String(describing: double) as? T } // include Float
         }
         
-        for conversion in _decodingTypeConverters {
-            if let value = try? conversion.decode(self, codingKey: codingKey, as: type) {
+        for converter in _decodingTypeConverters {
+            if let value = try? converter.decode(self, codingKey: codingKey, as: type) {
                 return value
             }
         }
-        if let custom = self as? ExCodableDecodingTypeConverter,
-           let value = try? custom.decode(self, codingKey: codingKey, as: type) {
+        if let customConverter = self as? ExCodableDecodingTypeConverter,
+           let value = try? customConverter.decode(self, codingKey: codingKey, as: type) {
             return value
         }
         
@@ -441,7 +447,7 @@ public func register(_ decodingTypeConverter: ExCodableDecodingTypeConverter) {
     _decodingTypeConverters.append(decodingTypeConverter)
 }
 
-// MARK: - Encodable/Decodable
+// MARK: - Encodable & Decodable - external
 
 // Encodable.encode() -> Data?
 public extension Encodable {

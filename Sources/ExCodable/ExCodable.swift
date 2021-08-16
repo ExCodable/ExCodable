@@ -11,20 +11,20 @@ import Foundation
 /**
  *  # ExCodable
  *  
- *  - `ExCodable`: A property-wrapper for mapping property to json-key.
- *  - `ExAutoEncodable` and `ExAutoDecodable`: Protocols with default implementation for Encodable & Decodable.
+ *  - `ExCodable`: A property-wrapper for mapping properties to JSON keys.
+ *  - `ExAutoEncodable` & `ExAutoDecodable`: Protocols with default implementation for Encodable & Decodable.
  *  - `ExAutoCodable`: A typealias for `ExAutoEncodable & ExAutoDecodable`.
- *  - Extensions of `Encodable & Decodable`, for encode/decode-ing from internal/external.
- *  - Extensions of `Encoder & Encoder`, for encode/decode-ing properties one-by-one.
- *  - Supports alternative-keys, nested-keys and type-conversion
+ *  - `Encodable` & `Decodable` extensions for encode/decode-ing from internal/external.
+ *  - `Encoder` & `Encoder` extensions for encode/decode-ing properties one by one.
+ *  - Supports Alternative-Keys, Nested-Keys, Type-Conversions and Default-Values.
  *  
  *  <#swift#> <#codable#> <#json#> <#model#> <#type-inference#>
- *  <#property-wrapper#> <#key-mapping#> <#codingkey#> <#subscript#>
- *  <#alternative-keys#> <#nested-keys#> <#type-conversion#>
+ *  <#key-mapping#> <#property-wrapper#> <#coding-key#> <#subscript#>
+ *  <#alternative-keys#> <#nested-keys#> <#type-conversions#>
  *  
- *  - seealso: [Usage](https://github.com/iwill/ExCodable#usage) from GitGub
- *  - seealso: `ExCodableTests.swift` form the source code
- *  - seealso: Idea from [Decoding and overriding](https://www.swiftbysundell.com/articles/property-wrappers-in-swift/#decoding-and-overriding), by John Sundell.
+ *  - seealso: [Usage](https://github.com/iwill/ExCodable#usage) from the `README.md`
+ *  - seealso: `ExCodableTests.swift` from the `Tests`
+ *  - seealso: [Decoding and overriding](https://www.swiftbysundell.com/articles/property-wrappers-in-swift/#decoding-and-overriding) and [Useful Codable extensions](https://www.swiftbysundell.com/tips/useful-codable-extensions/), by John Sundell.
  */
 
 @propertyWrapper
@@ -59,7 +59,6 @@ extension ExCodable: EncodablePropertyWrapper where Value: Encodable {
     fileprivate func encode<Label: StringProtocol>(to encoder: Encoder, label: Label, nonnull: Bool, throws: Bool) throws {
         if encode != nil { try encode!(encoder, wrappedValue) }
         else { try encoder.encode(wrappedValue, for: stringKeys?.first ?? String(label), nonnull: self.nonnull ?? nonnull, throws: self.throws ?? `throws`) }
-        
     }
 }
 
@@ -263,7 +262,7 @@ extension ExCodingKey: CodingKey {
     public init?(intValue: Int) { self.init(intValue) }
 }
 
-// MARK: - KeyedDecodingContainer - alternative-keys + nested-keys + type-conversion
+// MARK: - KeyedDecodingContainer - alternative-keys + nested-keys + type-conversions
 
 fileprivate extension KeyedDecodingContainer {
     

@@ -333,7 +333,7 @@ final class ExCodableTests: XCTestCase {
         let test = TestAutoCodable(int: 100, string: "Continue")
         if let data = try? test.encoded() as Data,
            let copy = try? data.decoded() as TestAutoCodable,
-           let json: [String: Any] = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+           let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
             XCTAssertEqual(copy, test)
             XCTAssertEqual(NSDictionary(dictionary: json), ["i": 100, "s": "Continue"])
         }

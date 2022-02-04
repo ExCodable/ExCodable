@@ -226,4 +226,4 @@ XCTAssertEqual(copy2, test)
 
 在此，要特别感谢 John Sundell 的 [Codextended](https://github.com/JohnSundell/Codextended) 的非凡创意、以及 ibireme 的 [YYModel](https://github.com/ibireme/YYModel) 的丰富特性，他们给了我极大的启发。
 
-`ExCodable` 还是一个崭新的框架，使用中遇到任何问题欢迎反馈 - [i+ExCodable@iwill.im](mailto:i+ExCodable@iwill.im)。
+`ExCodable` 还是一个崭新的框架，使用中遇到任何问题欢迎反馈：[i+ExCodable@iwill.im](mailto:i+ExCodable@iwill.im)。

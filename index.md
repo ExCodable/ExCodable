@@ -1,6 +1,26 @@
 ExCodable
 ========
 
+[![ExCodable](https://iwill.im/images/ExCodable-1920x500.png)](https://github.com/iwill/ExCodable#readme)
+
+[![Swift 5.0](https://img.shields.io/badge/Swift-5.0-orange.svg)](https://swift.org/)
+[![Swift Package Manager](https://img.shields.io/badge/spm-compatible-brightgreen.svg?style=flat)](https://swift.org/package-manager/)
+[![Platforms](https://img.shields.io/cocoapods/p/ExCodable.svg)](#)
+<br />
+[![Build and Test](https://github.com/iwill/ExCodable/actions/workflows/build-and-test.yml/badge.svg)](https://github.com/iwill/ExCodable/actions/workflows/build-and-test.yml)
+[![GitHub Releases (latest SemVer)](https://img.shields.io/github/v/release/iwill/ExCodable.svg?sort=semver)](https://github.com/iwill/ExCodable/releases)
+[![Deploy to CocoaPods](https://github.com/iwill/ExCodable/actions/workflows/deploy_to_cocoapods.yml/badge.svg)](https://github.com/iwill/ExCodable/actions/workflows/deploy_to_cocoapods.yml)
+[![Cocoapods](https://img.shields.io/cocoapods/v/ExCodable.svg)](https://cocoapods.org/pods/ExCodable)
+<br />
+[![LICENSE](https://img.shields.io/github/license/iwill/ExCodable.svg)](https://github.com/iwill/ExCodable/blob/master/LICENSE)
+[![@minglq](https://img.shields.io/twitter/url?url=https%3A%2F%2Fgithub.com%2Fiwill%2FExCodable)](https://twitter.com/minglq)
+
+[En](https://github.com/iwill/ExCodable) | 中文
+
+--------
+
+> 0.x
+
 ## [ExCodable](https://github.com/iwill/ExCodable) 是我在春节期间、带娃之余、用了几个晚上完成的一个 Swift 版的 JSON-Model 转换工具。
 
 别走！你可能会想“嗷，又一个轮子”，但是这个真的有点不一样：

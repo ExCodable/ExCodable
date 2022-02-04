@@ -333,7 +333,7 @@ final class ExCodableTests: XCTestCase {
         let test = TestAutoCodable(int: 100, string: "Continue")
         if let data = try? test.encoded() as Data,
            let copy = try? data.decoded() as TestAutoCodable,
-           let json: [String: Any] = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+           let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
             XCTAssertEqual(copy, test)
             XCTAssertEqual(NSDictionary(dictionary: json), ["i": 100, "s": "Continue"])
         }
@@ -375,7 +375,7 @@ final class ExCodableTests: XCTestCase {
            let copy = try? data.decoded() as TestAlternativeKeys {
             XCTAssertEqual(test, TestAlternativeKeys(int: 403, string: "Forbidden"))
             XCTAssertEqual(copy, test)
-            let localJSON: [String: Any] = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] ?? [:]
+            let localJSON = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] ?? [:]
             XCTAssertEqual(NSDictionary(dictionary: localJSON), [
                 "int": 403,
                 "string": "Forbidden"
@@ -391,7 +391,7 @@ final class ExCodableTests: XCTestCase {
         if let data = try? test.encoded() as Data,
            let copy = try? data.decoded() as TestNestedKeys {
             XCTAssertEqual(copy, test)
-            let json: [String: Any] = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] ?? [:]
+            let json = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] ?? [:]
             debugPrint(json)
             XCTAssertEqual(NSDictionary(dictionary: json), [
                 "int": 404,
@@ -410,7 +410,7 @@ final class ExCodableTests: XCTestCase {
         if let data = try? test.encoded() as Data,
            let copy = try? data.decoded() as TestCustomEncodeDecode {
             XCTAssertEqual(copy, test)
-            let json: [String: Any] = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] ?? [:]
+            let json = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] ?? [:]
             debugPrint(json)
             XCTAssertEqual(NSDictionary(dictionary: json), [
                 "int": 418,

@@ -2,8 +2,8 @@
 //  ExCodable.swift
 //  ExCodable
 //
-//  Created by Mr. Ming on 2021-07-01.
-//  Copyright (c) 2021 Mr. Ming <minglq.9@gmail.com>. Released under the MIT license.
+//  Created by Mr. Míng on 2021-07-01.
+//  Copyright (c) 2021 Mr. Míng <minglq.9@gmail.com>. Released under the MIT license.
 //
 
 import Foundation

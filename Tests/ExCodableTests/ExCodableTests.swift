@@ -82,7 +82,7 @@ extension TestAlternativeKeys: ExAutoCodable {}
 struct TestNestedKeys: Equatable {
     @ExCodable
     var int: Int = 0
-    @ExCodable("nested.string")
+    @ExCodable("nested.nested.string")
     var string: String! = nil
 }
 extension TestNestedKeys: ExAutoCodable {}
@@ -396,7 +396,9 @@ final class ExCodableTests: XCTestCase {
             XCTAssertEqual(NSDictionary(dictionary: json), [
                 "int": 404,
                 "nested": [
-                    "string": "Not Found"
+                    "nested": [
+                        "string": "Not Found"
+                    ]
                 ]
             ])
         }

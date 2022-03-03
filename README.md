@@ -417,7 +417,7 @@ pod 'ExCodable', '~> 0.5.0'
 
 - John Sundell ([@JohnSundell](https://github.com/JohnSundell)) and the ideas from his [Codextended](https://github.com/JohnSundell/Codextended)
 - ibireme ([@ibireme](https://github.com/ibireme)) and the features from his [YYModel](https://github.com/ibireme/YYModel)
-- Mr. Ming ([@iwill](https://github.com/iwill)) | i+ExCodable@iwill.im
+- Mr. Míng ([@iwill](https://github.com/iwill)) | i+ExCodable@iwill.im
 
 ## License
 

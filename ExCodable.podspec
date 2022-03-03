@@ -10,7 +10,7 @@ Pod::Spec.new do |s|
     
     # ―――  Spec License  ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――― #
     s.license       = "MIT"
-    s.author        = { "Mr. Ming" => "i+ExCodable@iwill.im" }
+    s.author        = { "Mr. Míng" => "i+ExCodable@iwill.im" }
     s.social_media_url = "https://iwill.im/about/"
     
     # ――― Platform Specifics ――――――――――――――――――――――――――――――――――――――――――――――――――――――― #

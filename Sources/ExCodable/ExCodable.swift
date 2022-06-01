@@ -51,6 +51,10 @@ extension ExCodable: Equatable where Value: Equatable {
         return lhs.wrappedValue == rhs.wrappedValue
     }
 }
+extension ExCodable: CustomStringConvertible { // CustomDebugStringConvertible
+    public var description: String { String(describing: wrappedValue) }
+    // public var debugDescription: String { "\(type(of: self))(\(wrappedValue))" }
+}
 
 fileprivate protocol EncodablePropertyWrapper {
     func encode<Label: StringProtocol>(to encoder: Encoder, label: Label, nonnull: Bool, throws: Bool) throws

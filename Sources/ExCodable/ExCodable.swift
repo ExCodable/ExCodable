@@ -79,6 +79,55 @@ extension ExCodable: DecodablePropertyWrapper where Value: Decodable {
     }
 }
 
+// Make `Any` support Codable, like: [String: Any], [Any]
+fileprivate protocol EncodableAnyPropertyWrapper {
+    func encode<Label: StringProtocol>(to encoder: Encoder, label: Label, nonnull: Bool, throws: Bool) throws
+}
+extension ExCodable: EncodableAnyPropertyWrapper {
+    fileprivate func encode<Label: StringProtocol>(to encoder: Encoder, label: Label, nonnull: Bool, throws: Bool) throws {
+        if encode != nil { try encode!(encoder, wrappedValue) }
+        else {
+            let t = type(of: wrappedValue)
+            if let key = AnyCodingKey(stringValue: String(label)) {
+                if (t is [String: Any].Type || t is [String: Any?].Type || t is [String: Any]?.Type || t is [String: Any?]?.Type) {
+                    var container = try encoder.container(keyedBy: AnyCodingKey.self)
+                    try container.encodeIfPresent(wrappedValue as? [String: Any], forKey: key)
+                } else if (t is [Any].Type || t is [Any?].Type || t is [Any]?.Type || t is [Any?]?.Type) {
+                    var container = try encoder.container(keyedBy: AnyCodingKey.self)
+                    try container.encodeIfPresent(wrappedValue as? [Any], forKey: key)
+                }
+            }
+        }
+    }
+}
+fileprivate protocol DecodableAnyPropertyWrapper {
+    func decode<Label: StringProtocol>(from decoder: Decoder, label: Label, nonnull: Bool, throws: Bool) throws
+}
+extension ExCodable: DecodableAnyPropertyWrapper {
+    fileprivate func decode<Label: StringProtocol>(from decoder: Decoder, label: Label, nonnull: Bool, throws: Bool) throws {
+        if let decode = decode {
+            if let value = try decode(decoder) {
+                wrappedValue = value
+            }
+        } else {
+            let t = type(of: wrappedValue)
+            if let key = AnyCodingKey(stringValue: String(label)) {
+                if (t is [String: Any].Type || t is [String: Any?].Type || t is [String: Any]?.Type || t is [String: Any?]?.Type) {
+                    let container = try decoder.container(keyedBy: AnyCodingKey.self)
+                    if let value = try container.decodeIfPresent([String: Any].self, forKey: key) as? Value {
+                        wrappedValue = value
+                    }
+                } else if (t is [Any].Type || t is [Any?].Type || t is [Any]?.Type || t is [Any?]?.Type) {
+                    let container = try decoder.container(keyedBy: AnyCodingKey.self)
+                    if let value = try container.decodeIfPresent([Any].self, forKey: key) as? Value {
+                        wrappedValue = value
+                    }
+                }
+            }
+        }
+    }
+}
+
 // MARK: - Auto implementation for Encodable & Decodable
 
 public protocol ExAutoEncodable: Encodable {}
@@ -105,7 +154,11 @@ public extension Encodable {
         var mirror: Mirror! = Mirror(reflecting: self)
         while mirror != nil {
             for child in mirror.children where child.label != nil {
-                try (child.value as? EncodablePropertyWrapper)?.encode(to: encoder, label: child.label!.dropFirst(), nonnull: false, throws: false)
+                if let wrapper = (child.value as? EncodablePropertyWrapper) {
+                    try wrapper.encode(to: encoder, label: child.label!.dropFirst(), nonnull: false, throws: false)
+                } else {
+                    try (child.value as? EncodableAnyPropertyWrapper)?.encode(to: encoder, label: child.label!.dropFirst(), nonnull: false, throws: false)
+                }
             }
             mirror = mirror.superclassMirror
         }
@@ -117,7 +170,11 @@ public extension Decodable {
         var mirror: Mirror! = Mirror(reflecting: self)
         while mirror != nil {
             for child in mirror.children where child.label != nil {
-                try (child.value as? DecodablePropertyWrapper)?.decode(from: decoder, label: child.label!.dropFirst(), nonnull: false, throws: false)
+                if let wrapper = (child.value as? DecodablePropertyWrapper) {
+                    try wrapper.decode(from: decoder, label: child.label!.dropFirst(), nonnull: false, throws: false)
+                } else {
+                    try (child.value as? DecodableAnyPropertyWrapper)?.decode(from: decoder, label: child.label!.dropFirst(), nonnull: false, throws: false)
+                }
             }
             mirror = mirror.superclassMirror
         }

@@ -410,12 +410,20 @@ pod 'ExCodable', '~> 0.5.0'
 
 ```
 
+## Like it?
+
+Hope you like this project, don't forget to give it a star [⭐](https://github.com/iwill/ExCodable#repository-container-header)
+
+[![Stargazers over time](https://starchart.cc/iwill/ExCodable.svg)](https://starchart.cc/iwill/ExCodable)
+
+
 ## Credits
 
 - John Sundell ([@JohnSundell](https://github.com/JohnSundell)) and the ideas from his [Codextended](https://github.com/JohnSundell/Codextended)
 - ibireme ([@ibireme](https://github.com/ibireme)) and the features from his [YYModel](https://github.com/ibireme/YYModel)
-- Mr. Ming ([@iwill](https://github.com/iwill)) | i+ExCodable@iwill.im
+- Mr. Míng ([@iwill](https://github.com/iwill)) | i+ExCodable@iwill.im
 
 ## License
 
 **ExCodable** is released under the MIT license. See [LICENSE](./LICENSE) for details.
+

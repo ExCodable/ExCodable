@@ -418,14 +418,15 @@ Hope you like this project, don't forget to give it a star [⭐](https://github.
     <img alt="Star Chart" src="https://starchart.cc/iwill/ExCodable.svg" width="600px">
 </a>
 
-
-## Credits
+## Thanks to
 
 - John Sundell ([@JohnSundell](https://github.com/JohnSundell)) and the ideas from his [Codextended](https://github.com/JohnSundell/Codextended)
 - ibireme ([@ibireme](https://github.com/ibireme)) and the features from his [YYModel](https://github.com/ibireme/YYModel)
+
+## Connect with me
+
 - Mr. Míng ([@iwill](https://github.com/iwill)) | i+ExCodable@iwill.im
 
 ## License
 
 **ExCodable** is released under the MIT license. See [LICENSE](./LICENSE) for details.
-

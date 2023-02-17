@@ -414,7 +414,9 @@ pod 'ExCodable', '~> 0.5.0'
 
 Hope you like this project, don't forget to give it a star [⭐](https://github.com/iwill/ExCodable#repository-container-header)
 
-[![Stargazers over time](https://starchart.cc/iwill/ExCodable.svg)](https://starchart.cc/iwill/ExCodable)
+<a href="https://starchart.cc/iwill/ExCodable">
+    <img alt="Star Chart" src="https://starchart.cc/iwill/ExCodable.svg" width="600px">
+</a>
 
 
 ## Credits

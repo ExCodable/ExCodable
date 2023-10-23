@@ -27,7 +27,7 @@ En | [中文](https://iwill.im/ExCodable/)
 ## Features
 
 - Extends Swift `Codable` - `Encodable & Decodable`;
-- Supports Key-Mapping via Property-Wrapper `ExCodable` + `String`:
+- Supports Key-Mapping via **Property-Wrapper** `ExCodable` + `String`:
     - `ExCodable` did not read/write memory via unsafe pointers;
     - No need to encode/decode properties one by one;
     - Just requires using `var` to declare properties and provide default values;
@@ -45,7 +45,9 @@ En | [中文](https://iwill.im/ExCodable/)
 
 ## Usage
 
-### 0. `Codable`:
+### 0. ⭐️ Star this repo 🤭
+
+### 1. `Codable`:
 
 With `Codable`, it just needs to adop the `Codable` protocol without implementing any method of it.
 
@@ -118,7 +120,7 @@ extension TestExCodable: ExCodable {
 
 ```
 
-### 1. Key-Mapping for `struct`:
+### 2. Key-Mapping for `struct`:
 
 With `ExCodable`, it needs to to declare properties with `var` and provide default values.
 
@@ -150,7 +152,7 @@ extension TestStruct: ExCodable {
 
 ```
 
-### 2. Alternative-Keys:
+### 3. Alternative-Keys:
 
 ```swift
 static let keyMapping: [KeyMap<Self>] = [
@@ -160,7 +162,7 @@ static let keyMapping: [KeyMap<Self>] = [
 
 ```
 
-### 3. Nested-Keys:
+### 4. Nested-Keys:
 
 ```swift
 static let keyMapping: [KeyMap<Self>] = [
@@ -170,7 +172,7 @@ static let keyMapping: [KeyMap<Self>] = [
 
 ```
 
-### 4. Custom encode/decode:
+### 5. Custom encode/decode:
 
 ```swift
 struct TestCustomEncodeDecode: Equatable {
@@ -220,7 +222,7 @@ extension TestCustomEncodeDecode: ExCodable {
 
 ```
 
-### 5. Encode/decode constant properties with subscripts:
+### 6. Encode/decode constant properties with subscripts:
 
 Using `let` to declare properties without default values.
 
@@ -259,7 +261,7 @@ extension TestSubscript: Encodable, Decodable {
 
 ```
 
-### 6. Custom Type-Conversions:
+### 7. Custom Type-Conversions:
 
 Declare struct `FloatToBoolDecodingTypeConverter` with protocol `ExCodableDecodingTypeConverter` and implement its method, decode values in alternative types and convert to target type:
 
@@ -291,7 +293,7 @@ Register `FloatToBoolDecodingTypeConverter` with an instance:
 register(FloatToBoolDecodingTypeConverter())
 ```
 
-### 7. Key-Mapping for `class`:
+### 8. Key-Mapping for `class`:
 
 Cannot adopt `ExCodable` in extension of classes.
 
@@ -320,7 +322,7 @@ class TestClass: ExCodable, Equatable {
 
 ```
 
-### 8. Key-Mapping for subclass:
+### 9. Key-Mapping for subclass:
 
 Requires declaring another static Key-Mapping for subclass.
 
@@ -354,7 +356,7 @@ class TestSubclass: TestClass {
 
 ```
 
-### 9. Encode/decode with Type-Inference:
+### 10. Encode/decode with Type-Inference:
 
 ```swift
 let test = TestStruct(int: 304, string: "Not Modified")
@@ -428,7 +430,7 @@ Hope you like this project, don't forget to give it a star [⭐](https://github.
 
 ## Connect with me
 
-- Mr. Míng ([@iwill](https://github.com/iwill)) | i+ExCodable@iwill.im
+- Míng ([@iwill](https://github.com/iwill)) | i+ExCodable@iwill.im
 
 ## License
 

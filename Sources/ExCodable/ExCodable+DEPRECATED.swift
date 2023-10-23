@@ -10,7 +10,7 @@ import Foundation
 
 // MARK: - keyMapping
 
-@available(*, deprecated, message: "use `@ExCodable` property wrapper instead")
+@available(*, deprecated, message: "Use `@ExCodable` property wrapper instead.")
 public protocol ExCodableProtocol: Codable {
     associatedtype Root = Self where Root: ExCodableProtocol
     static var keyMapping: [KeyMap<Root>] { get }
@@ -43,7 +43,7 @@ public extension ExCodableProtocol {
     }
 }
 
-@available(*, deprecated, message: "use `@ExCodable` property wrapper instead")
+@available(*, deprecated, message: "Use `@ExCodable` property wrapper instead.")
 public final class KeyMap<Root: Codable> {
     fileprivate let encode: (_ root: Root, _ encoder: Encoder, _ nonnullAll: Bool, _ throwsAll: Bool) throws -> Void
     fileprivate let decode: ((_ root: inout Root, _ decoder: Decoder, _ nonnullAll: Bool, _ throwsAll: Bool) throws -> Void)?

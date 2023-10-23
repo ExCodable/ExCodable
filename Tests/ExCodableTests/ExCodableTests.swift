@@ -94,7 +94,9 @@ struct TestCustomEncodeDecode: Equatable {
     @ExCodable(Keys.int)
     var int: Int = 0
     
-    var string: String?
+    @ExCodable(encode: { encoder, value in encoder["nested.nested.string"] = value },
+               decode: { decoder in return decoder["nested.nested.string"] })
+    var string: String? = nil
     
     @ExCodable(encode: { encoder, value in encoder[Keys.bool] = value },
                decode: { decoder in return decoder[Keys.bool] })
@@ -104,7 +106,7 @@ struct TestCustomEncodeDecode: Equatable {
 extension TestCustomEncodeDecode: Codable {
     
     private enum Keys: CodingKey {
-        case int, string, bool
+        case int, bool
     }
     private static let dddd = "dddd"
     private func string(for int: Int) -> String {
@@ -123,14 +125,14 @@ extension TestCustomEncodeDecode: Codable {
     
     init(from decoder: Decoder) throws {
         try decode(from: decoder, nonnull: false, throws: false)
-        string = decoder[Keys.string]
+        string = decoder["nested.nested.string"]
         if string == nil || string == Self.dddd {
             string = string(for: int)
         }
     }
     func encode(to encoder: Encoder) throws {
         try encode(to: encoder, nonnull: false, throws: false)
-        encoder[Keys.string] = Self.dddd
+        encoder["nested.nested.string"] = Self.dddd
     }
 }
 
@@ -309,9 +311,9 @@ class TestSubclass: TestClass {
     }
     
     static func == (lhs: TestSubclass, rhs: TestSubclass) -> Bool {
-        return lhs.int == rhs.int
-            && lhs.string == rhs.string
-            && lhs.bool == rhs.bool
+        return (lhs.int == rhs.int
+                && lhs.string == rhs.string
+                && lhs.bool == rhs.bool)
     }
 }
 
@@ -363,6 +365,11 @@ final class ExCodableTests: XCTestCase {
            let copy2 = try? TestStruct.decoded(from: data) {
             XCTAssertEqual(copy1, test)
             XCTAssertEqual(copy2, test)
+            
+            let string = "string: \(test)"
+            print(string)
+            print(test)
+            debugPrint(test)
         }
         else {
             XCTFail()
@@ -417,7 +424,11 @@ final class ExCodableTests: XCTestCase {
             debugPrint(json)
             XCTAssertEqual(NSDictionary(dictionary: json), [
                 "int": 418,
-                "string": "dddd",
+                "nested": [
+                    "nested": [
+                        "string": "dddd"
+                    ]
+                ],
                 "bool": true
             ])
         }

@@ -24,7 +24,8 @@ import Foundation
  *  
  *  - seealso: [Usage](https://github.com/iwill/ExCodable#usage) from the `README.md`
  *  - seealso: `ExCodableTests.swift` from the `Tests`
- *  - seealso: [Decoding and overriding](https://www.swiftbysundell.com/articles/property-wrappers-in-swift/#decoding-and-overriding) and [Useful Codable extensions](https://www.swiftbysundell.com/tips/useful-codable-extensions/), by John Sundell.
+ *  - seealso: [Decoding and overriding](https://www.swiftbysundell.com/articles/property-wrappers-in-swift/#decoding-and-overriding)
+ *  and [Useful Codable extensions](https://www.swiftbysundell.com/tips/useful-codable-extensions/), by John Sundell.
  */
 
 @propertyWrapper
@@ -71,9 +72,9 @@ fileprivate protocol DecodablePropertyWrapper {
 }
 extension ExCodable: DecodablePropertyWrapper where Value: Decodable {
     fileprivate func decode<Label: StringProtocol>(from decoder: Decoder, label: Label, nonnull: Bool, throws: Bool) throws {
-        if let value = decode != nil
-            ? try decode!(decoder)
-            : try decoder.decode(stringKeys ?? [String(label)], nonnull: self.nonnull ?? nonnull, throws: self.throws ?? `throws`) {
+        if let value = (decode != nil
+                        ? try decode!(decoder)
+                        : try decoder.decode(stringKeys ?? [String(label)], nonnull: self.nonnull ?? nonnull, throws: self.throws ?? `throws`)) {
             wrappedValue = value
         }
     }
@@ -330,9 +331,9 @@ fileprivate extension KeyedDecodingContainer {
         
         var firstError: Error?
         do {
-            if let value = nonnull
-                ? (`throws` ? try decode(type, forKey: codingKey) : try? decode(type, forKey: codingKey))
-                : (`throws` ? try decodeIfPresent(type, forKey: codingKey) : try? decodeIfPresent(type, forKey: codingKey)) {
+            if let value = (nonnull
+                            ? (`throws` ? try decode(type, forKey: codingKey) : try? decode(type, forKey: codingKey))
+                            : (`throws` ? try decodeIfPresent(type, forKey: codingKey) : try? decodeIfPresent(type, forKey: codingKey))) {
                 return value
             }
         }

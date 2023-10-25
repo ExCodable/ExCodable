@@ -288,7 +288,7 @@ private extension KeyedDecodingContainer {
     private func nestedContainer(with keys: [ExCodingKey]) -> Self? {
         var container: Self? = self
         for key in keys {
-            container = try? container?.nestedContainer(keyedBy: Self.Key, forKey: key as! Self.Key)
+            container = try? container?.nestedContainer(keyedBy: Self.Key.self, forKey: key as! Self.Key)
             if container == nil { return nil }
         }
         return container

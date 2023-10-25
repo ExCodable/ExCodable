@@ -374,14 +374,14 @@ XCTAssertEqual(copy2, test)
 - [Swift Package Manager](https://swift.org/package-manager/):
 
 ```swift
-.package(url: "https://github.com/iwill/ExCodable", from: "0.5.0")
+.package(url: "https://github.com/iwill/ExCodable", from: "0.6.0")
 
 ```
 
 - [CocoaPods](http://cocoapods.org):
 
 ```ruby
-pod 'ExCodable', '~> 0.5.0'
+pod 'ExCodable', '~> 0.6.0'
 
 ```
 

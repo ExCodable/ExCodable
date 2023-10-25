@@ -422,12 +422,13 @@ final class ExCodableTests: XCTestCase {
     }
     
     func testManualCodable() {
-        let json = Data(#"{"i":200,"nested":{"string":"OK"}}"#.utf8)
+        let json = Data(#"{"int":200,"nested":{"string":"OK"}}"#.utf8)
         if let test = try? json.decoded() as TestManualCodable,
            let data = try? test.encoded() as Data,
            let copy = try? data.decoded() as TestManualCodable {
             XCTAssertEqual(copy, test)
-            XCTAssertEqual(data, Data(#"{"int":200,"nested":{"string":"OK"}}"#.utf8))
+            let json = try! JSONSerialization.jsonObject(with: data) as! [String: Any]
+            XCTAssertEqual(NSDictionary(dictionary: json), ["int":200,"nested":["string":"OK"]])
         }
         else {
             XCTFail()
@@ -454,7 +455,7 @@ final class ExCodableTests: XCTestCase {
            let copy = try? data.decoded() as TestAlternativeKeys {
             XCTAssertEqual(test, TestAlternativeKeys(int: 403, string: "Forbidden"))
             XCTAssertEqual(copy, test)
-            let localJSON: [String: Any] = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] ?? [:]
+            let localJSON = try! JSONSerialization.jsonObject(with: data) as! [String: Any]
             XCTAssertEqual(NSDictionary(dictionary: localJSON), [
                 "_IS_LOCAL_": true,
                 "INT": 403,
@@ -471,7 +472,7 @@ final class ExCodableTests: XCTestCase {
         if let data = try? test.encoded() as Data,
            let copy = try? data.decoded() as TestNestedKeys {
             XCTAssertEqual(copy, test)
-            let json: [String: Any] = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] ?? [:]
+            let json = try! JSONSerialization.jsonObject(with: data) as! [String: Any]
             debugPrint(json)
             XCTAssertEqual(NSDictionary(dictionary: json), [
                 "int": 404,
@@ -490,7 +491,7 @@ final class ExCodableTests: XCTestCase {
         if let data = try? test.encoded() as Data,
            let copy = try? data.decoded() as TestCustomEncodeDecode {
             XCTAssertEqual(copy, test)
-            let json: [String: Any] = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] ?? [:]
+            let json = try! JSONSerialization.jsonObject(with: data) as! [String: Any]
             debugPrint(json)
             XCTAssertEqual(NSDictionary(dictionary: json), [
                 "int": 418,
@@ -710,6 +711,44 @@ final class ExCodableTests: XCTestCase {
         }
     }
     
+    func testElapsed() {
+        let start = DispatchTime.now().uptimeNanoseconds
+        
+        for _ in 0..<1_0000 {
+            let test = TestStruct(int: 304, string: "Not Modified")
+            if let data = try? test.encoded() as Data,
+               let copy = try? TestStruct.decoded(from: data) {
+                XCTAssertEqual(copy, test)
+            }
+            else {
+                XCTFail()
+            }
+            
+            let test2 = TestClass(int: 502, string: "Bad Gateway")
+            if let data = try? test2.encoded() as Data,
+               let copy = try? data.decoded() as TestClass {
+                XCTAssertEqual(copy, test2)
+            }
+            else {
+                XCTFail()
+            }
+            
+            let test3 = TestSubclass(int: 504, string: "Gateway Timeout", bool: true)
+            if let data = try? test3.encoded() as Data,
+               let copy = try? data.decoded() as TestSubclass {
+                XCTAssertEqual(copy, test3)
+            }
+            else {
+                XCTFail()
+            }
+        }
+        
+        let elapsed = DispatchTime.now().uptimeNanoseconds - start
+        // let seconds = elapsed / 1_000_000_000
+        let milliseconds = elapsed / 1_000_000
+        print("elapsed: \(milliseconds) ms")
+    }
+    
     static var allTests = [
         ("testAutoCodable",     testAutoCodable),
         ("testManualCodable",   testManualCodable),
@@ -723,5 +762,6 @@ final class ExCodableTests: XCTestCase {
         ("testClass",           testClass),
         ("testSubclass",        testSubclass),
         ("testExCodable",       testExCodable),
+        ("testElapsed",         testElapsed)
     ]
 }

@@ -45,11 +45,13 @@ En | [中文](https://iwill.im/ExCodable/)
 
 ## Usage
 
-### 0. ⭐️ Star this repo 🤭
+### 0. Star this repo ⭐️
 
-### 1. `Codable`:
+🤭
 
-With `Codable`, it just needs to adop the `Codable` protocol without implementing any method of it.
+### 1. `Codable` vs `ExCodable`:
+
+With `Codable`, it just needs to adopt the `Codable` protocol without implementing any method of it.
 
 ```swift
 struct TestAutoCodable: Codable, Equatable {
@@ -393,7 +395,7 @@ pod 'ExCodable', '~> 1.0.0'
 - Code Snippets:
 
 > Title: ExCodable
-> Summary: Adopte to ExCodable protocol
+> Summary: Adopt to ExCodable protocol
 > Language: Swift  
 > Platform: All  
 > Completion: ExCodable  

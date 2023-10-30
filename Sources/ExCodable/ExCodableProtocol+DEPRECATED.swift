@@ -1,6 +1,6 @@
 //
-//  ExCodable.swift
-//  ExCodable
+//  ExCodableProtocol+DEPRECATED.swift
+//  ExCodableProtocol
 //
 //  Created by Míng on 2021-07-01.
 //  Copyright (c) 2023 Míng <i+ExCodable@iwill.im>. Released under the MIT license.

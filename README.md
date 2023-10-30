@@ -104,13 +104,29 @@ extension TestManualCodable: Codable {
 
 **With `ExCodable`**:
 
+`[new]` 1.x version:
+
 ```swift
 struct TestExCodable: Equatable {
+    @ExCodable
+    private(set) var int: Int = 0
+    @ExCodable("string", "str")
+    private(set) var string: String? = nil
+}
+
+extension TestExCodable: ExAutoCodable {}
+
+```
+
+0.x version:
+
+```swift
+struct TestExCodableProtocol: Equatable {
     private(set) var int: Int = 0
     private(set) var string: String?
 }
 
-extension TestExCodable: ExCodable {
+extension TestExCodableProtocol: ExCodableProtocol {
     static let keyMapping: [KeyMap<Self>] = [
         KeyMap(\.int, to: "int"),
         KeyMap(\.string, to: "string")

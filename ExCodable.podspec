@@ -43,4 +43,9 @@ Pod::Spec.new do |s|
     # s.xcconfig      = { "HEADER_SEARCH_PATHS" => "$(SDKROOT)/usr/include/libxml2" }
     # s.dependency "pod", "~> 1.0.0"
     
+    # use <"> but not <'> for #{s.name} and #{s.version}
+    s.pod_target_xcconfig = {
+        "OTHER_SWIFT_FLAGS" => "$(inherited) -Xfrontend -module-interface-preserve-types-as-written",
+    }
+    
 end

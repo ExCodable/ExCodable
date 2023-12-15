@@ -682,20 +682,4 @@ final class ExCodableTests: XCTestCase {
         let milliseconds = elapsed / 1_000_000
         print("elapsed: \(milliseconds) ms")
     }
-    
-    static var allTests = [
-        ("testAutoCodable",     testAutoCodable),
-        ("testManualCodable",   testManualCodable),
-        ("testStruct",          testStruct),
-        ("testAlternativeKeys", testAlternativeKeys),
-        ("testNestedKeys",      testNestedKeys),
-        ("testCustomEncodeDecode", testCustomEncodeDecode),
-        ("testSubscript",       testSubscript),
-        ("testTypeConversions", testTypeConversions),
-        ("testCustomTypeConverter", testCustomTypeConverter),
-        ("testClass",           testClass),
-        ("testSubclass",        testSubclass),
-        ("testExCodable",       testExCodable),
-        ("testElapsed",         testElapsed)
-    ]
 }

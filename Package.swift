@@ -1,19 +1,19 @@
-// swift-tools-version:5.3
+// swift-tools-version:5.9
 
 import PackageDescription
 
 let package = Package(
     name: "ExCodable",
     platforms: [
-        .iOS(.v9),
-        .tvOS(.v9),
-        .macOS(.v10_10),
-        .watchOS(.v2)
+        .iOS(.v12),
+        .tvOS(.v12),
+        .macOS(.v10_13),
+        .watchOS(.v4)
     ],
     products: [
-        .library(
-            name: "ExCodable",
-            targets: ["ExCodable"]),
+        .library(name: "ExCodable", targets: ["ExCodable"]),
+        // .library(name: "ExCodable-Static", type: .static, targets: ["ExCodable"]),
+        .library(name: "ExCodable-Dynamic", type: .dynamic, targets: ["ExCodable"])
     ],
     dependencies: [
         // .package(url: "https://github.com/user/repo", from: "1.0.0")

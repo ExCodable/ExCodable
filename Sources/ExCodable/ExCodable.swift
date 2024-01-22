@@ -63,7 +63,12 @@ fileprivate protocol EncodablePropertyWrapper {
 extension ExCodable: EncodablePropertyWrapper where Value: Encodable {
     fileprivate func encode<Label: StringProtocol>(to encoder: Encoder, label: Label, nonnull: Bool, throws: Bool) throws {
         if encode != nil { try encode!(encoder, wrappedValue) }
-        else { try encoder.encode(wrappedValue, for: stringKeys?.first ?? String(label), nonnull: self.nonnull ?? nonnull, throws: self.throws ?? `throws`) }
+        else {
+            let value = deepUnwrap(wrappedValue)
+            if value != nil || self.nonnull ?? nonnull {
+                try encoder.encode(wrappedValue, for: stringKeys?.first ?? String(label), nonnull: self.nonnull ?? nonnull, throws: self.throws ?? `throws`)
+            }
+        }
     }
 }
 
@@ -530,3 +535,22 @@ extension JSONDecoder: DataDecoder {}
 extension PropertyListEncoder: DataEncoder {}
 @available(macOS 10.15, iOS 13.0, tvOS 13.0, watchOS 6.0, *)
 extension PropertyListDecoder: DataDecoder {}
+
+// MARK: Optional
+
+private protocol OptionalProtocol {
+    var deepWrapped: Any? { get }
+}
+extension Optional: OptionalProtocol {
+    var deepWrapped: Any? {
+        guard case let .some(wrapped) = self else { return nil }
+        guard let wrapped = wrapped as? OptionalProtocol else { return wrapped }
+        return wrapped.deepWrapped
+    }
+}
+private func deepUnwrap(_ any: Any) -> Any? {
+    if let any = any as? OptionalProtocol {
+        return any.deepWrapped
+    }
+    return any
+}

@@ -63,7 +63,17 @@ fileprivate protocol EncodablePropertyWrapper {
 extension ExCodable: EncodablePropertyWrapper where Value: Encodable {
     fileprivate func encode<Label: StringProtocol>(to encoder: Encoder, label: Label, nonnull: Bool, throws: Bool) throws {
         if encode != nil { try encode!(encoder, wrappedValue) }
-        else { try encoder.encode(wrappedValue, for: stringKeys?.first ?? String(label), nonnull: self.nonnull ?? nonnull, throws: self.throws ?? `throws`) }
+        else {
+            let value = if let optional = wrappedValue as? OptionalProtocol {
+                optional.wrapped
+            }
+            else {
+                wrappedValue
+            }
+            if value != nil || self.nonnull ?? nonnull {
+                try encoder.encode(wrappedValue, for: stringKeys?.first ?? String(label), nonnull: self.nonnull ?? nonnull, throws: self.throws ?? `throws`)
+            }
+        }
     }
 }
 
@@ -530,3 +540,22 @@ extension JSONDecoder: DataDecoder {}
 extension PropertyListEncoder: DataEncoder {}
 @available(macOS 10.15, iOS 13.0, tvOS 13.0, watchOS 6.0, *)
 extension PropertyListDecoder: DataDecoder {}
+
+// - seealso: https://forums.swift.org/t/challenge-finding-base-type-of-nested-optionals/25096
+
+fileprivate protocol OptionalProtocol {
+    var wrapped: Any? { get }
+}
+
+extension Optional: OptionalProtocol {
+    public var wrapped: Any? {
+        return switch self {
+            case .some(let optional as OptionalProtocol):
+                optional.wrapped
+            case .some(let wrapped):
+                wrapped
+            case .none:
+                nil
+        }
+    }
+}

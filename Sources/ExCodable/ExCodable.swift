@@ -34,17 +34,17 @@ public final class ExCodable<Value> {
     fileprivate let nonnull, `throws`: Bool?
     fileprivate let encode: ((_ encoder: Encoder, _ value: Value) throws -> Void)?, decode: ((_ decoder: Decoder) throws -> Value?)?
     public var wrappedValue: Value
-    private init(wrappedValue: Value, stringKeys: [String]? = nil, nonnull: Bool? = nil, throws: Bool? = nil, encode: ((_ encoder: Encoder, _ value: Value) throws -> Void)?, decode: ((_ decoder: Decoder) throws -> Value?)?) {
-        (self.wrappedValue, self.stringKeys, self.nonnull, self.throws, self.encode, self.decode) = (wrappedValue, stringKeys, nonnull, `throws`, encode, decode)
+    private init(wrappedValue initialValue: Value, stringKeys: [String]? = nil, nonnull: Bool? = nil, throws: Bool? = nil, encode: ((_ encoder: Encoder, _ value: Value) throws -> Void)?, decode: ((_ decoder: Decoder) throws -> Value?)?) {
+        (self.wrappedValue, self.stringKeys, self.nonnull, self.throws, self.encode, self.decode) = (initialValue, stringKeys, nonnull, `throws`, encode, decode)
     }
-    public convenience init(wrappedValue: Value, _ stringKey: String? = nil, nonnull: Bool? = nil, throws: Bool? = nil, encode: ((_ encoder: Encoder, _ value: Value) throws -> Void)? = nil, decode: ((_ decoder: Decoder) throws -> Value?)? = nil) {
-        self.init(wrappedValue: wrappedValue, stringKeys: stringKey.map { [$0] }, nonnull: nonnull, throws: `throws`, encode: encode, decode: decode)
+    public convenience init(wrappedValue initialValue: Value, _ stringKey: String? = nil, nonnull: Bool? = nil, throws: Bool? = nil, encode: ((_ encoder: Encoder, _ value: Value) throws -> Void)? = nil, decode: ((_ decoder: Decoder) throws -> Value?)? = nil) {
+        self.init(wrappedValue: initialValue, stringKeys: stringKey.map { [$0] }, nonnull: nonnull, throws: `throws`, encode: encode, decode: decode)
     }
-    public convenience init(wrappedValue: Value, _ stringKeys: String..., nonnull: Bool? = nil, throws: Bool? = nil, encode: ((_ encoder: Encoder, _ value: Value) throws -> Void)? = nil, decode: ((_ decoder: Decoder) throws -> Value?)? = nil) {
-        self.init(wrappedValue: wrappedValue, stringKeys: stringKeys, nonnull: nonnull, throws: `throws`, encode: encode, decode: decode)
+    public convenience init(wrappedValue initialValue: Value, _ stringKeys: String..., nonnull: Bool? = nil, throws: Bool? = nil, encode: ((_ encoder: Encoder, _ value: Value) throws -> Void)? = nil, decode: ((_ decoder: Decoder) throws -> Value?)? = nil) {
+        self.init(wrappedValue: initialValue, stringKeys: stringKeys, nonnull: nonnull, throws: `throws`, encode: encode, decode: decode)
     }
-    public convenience init(wrappedValue: Value, _ codingKeys: CodingKey..., nonnull: Bool? = nil, throws: Bool? = nil, encode: ((_ encoder: Encoder, _ value: Value) throws -> Void)? = nil, decode: ((_ decoder: Decoder) throws -> Value?)? = nil) {
-        self.init(wrappedValue: wrappedValue, stringKeys: codingKeys.map { $0.stringValue }, nonnull: nonnull, throws: `throws`, encode: encode, decode: decode)
+    public convenience init(wrappedValue initialValue: Value, _ codingKeys: CodingKey..., nonnull: Bool? = nil, throws: Bool? = nil, encode: ((_ encoder: Encoder, _ value: Value) throws -> Void)? = nil, decode: ((_ decoder: Decoder) throws -> Value?)? = nil) {
+        self.init(wrappedValue: initialValue, stringKeys: codingKeys.map { $0.stringValue }, nonnull: nonnull, throws: `throws`, encode: encode, decode: decode)
     }
 }
 extension ExCodable: Equatable where Value: Equatable {
@@ -73,13 +73,13 @@ extension ExCodable: EncodablePropertyWrapper where Value: Encodable {
 }
 
 fileprivate protocol DecodablePropertyWrapper {
-    func decode<Label: StringProtocol>(from decoder: Decoder, label: Label, nonnull: Bool, throws: Bool) throws
+    func decode<Label: StringProtocol>(from decoder: Decoder, label: Label, nonnull: Bool, throws: Bool, typeConverter: (any ExCodableDecodingTypeConverter.Type)?) throws
 }
 extension ExCodable: DecodablePropertyWrapper where Value: Decodable {
-    fileprivate func decode<Label: StringProtocol>(from decoder: Decoder, label: Label, nonnull: Bool, throws: Bool) throws {
+    fileprivate func decode<Label: StringProtocol>(from decoder: Decoder, label: Label, nonnull: Bool, throws: Bool, typeConverter: (any ExCodableDecodingTypeConverter.Type)?) throws {
         if let value = (decode != nil
                         ? try decode!(decoder)
-                        : try decoder.decode(stringKeys ?? [String(label)], nonnull: self.nonnull ?? nonnull, throws: self.throws ?? `throws`)) {
+                        : try decoder.decode(stringKeys ?? [String(label)], nonnull: self.nonnull ?? nonnull, throws: self.throws ?? `throws`, typeConverter: typeConverter)) {
             wrappedValue = value
         }
     }
@@ -123,7 +123,7 @@ public extension Decodable {
         var mirror: Mirror! = Mirror(reflecting: self)
         while mirror != nil {
             for child in mirror.children where child.label != nil {
-                try (child.value as? DecodablePropertyWrapper)?.decode(from: decoder, label: child.label!.dropFirst(), nonnull: false, throws: false)
+                try (child.value as? DecodablePropertyWrapper)?.decode(from: decoder, label: child.label!.dropFirst(), nonnull: false, throws: false, typeConverter: Self.self as? ExCodableDecodingTypeConverter.Type)
             }
             mirror = mirror.superclassMirror
         }
@@ -142,17 +142,17 @@ public extension Encoder { // , abortIfNull nonnull: Bool = false, abortOnError 
 }
 
 public extension Decoder { // , abortIfNull nonnull: Bool = false, abortOnError throws: Bool = false
-    subscript<T: Decodable>(stringKeys: [String]) -> T? {
-        return decode(stringKeys, as: T.self)
+    subscript<T: Decodable>(stringKeys: [String], typeConverter typeConverter: (any ExCodableDecodingTypeConverter.Type)? = nil) -> T? {
+        return decode(stringKeys, as: T.self, typeConverter: typeConverter)
     }
-    subscript<T: Decodable>(stringKeys: String ...) -> T? {
-        return decode(stringKeys, as: T.self)
+    subscript<T: Decodable>(stringKeys: String ..., typeConverter typeConverter: (any ExCodableDecodingTypeConverter.Type)? = nil) -> T? {
+        return decode(stringKeys, as: T.self, typeConverter: typeConverter)
     }
-    subscript<T: Decodable, K: CodingKey>(codingKeys: [K]) -> T? {
-        return decode(codingKeys, as: T.self)
+    subscript<T: Decodable, K: CodingKey>(codingKeys: [K], typeConverter typeConverter: (any ExCodableDecodingTypeConverter.Type)? = nil) -> T? {
+        return decode(codingKeys, as: T.self, typeConverter: typeConverter)
     }
-    subscript<T: Decodable, K: CodingKey>(codingKeys: K ...) -> T? {
-        return decode(codingKeys, as: T.self)
+    subscript<T: Decodable, K: CodingKey>(codingKeys: K ..., typeConverter typeConverter: (any ExCodableDecodingTypeConverter.Type)? = nil) -> T? {
+        return decode(codingKeys, as: T.self, typeConverter: typeConverter)
     }
 }
 
@@ -210,54 +210,67 @@ public extension Encoder {
 
 public extension Decoder {
     
-    func decodeNonnullThrows<T: Decodable>(_ stringKeys: String ..., as type: T.Type = T.self) throws -> T {
-        return try decodeNonnullThrows(stringKeys, as: type)
+    func decodeNonnullThrows<T: Decodable>(_ stringKeys: String ..., as type: T.Type = T.self, typeConverter: (any ExCodableDecodingTypeConverter.Type)?) throws -> T {
+        return try decodeNonnullThrows(stringKeys, as: type, typeConverter: typeConverter)
     }
-    func decodeNonnullThrows<T: Decodable>(_ stringKeys: [String], as type: T.Type = T.self) throws -> T {
-        return try decode(stringKeys, as: type, nonnull: true, throws: true)!
+    func decodeNonnullThrows<T: Decodable>(_ stringKeys: [String], as type: T.Type = T.self, typeConverter: (any ExCodableDecodingTypeConverter.Type)?) throws -> T {
+        return try decode(stringKeys, as: type, nonnull: true, throws: true, typeConverter: typeConverter)!
     }
-    func decodeThrows<T: Decodable>(_ stringKeys: String ..., as type: T.Type = T.self) throws -> T? {
-        return try decodeThrows(stringKeys, as: type)
+    func decodeThrows<T: Decodable>(_ stringKeys: String ..., as type: T.Type = T.self, typeConverter: (any ExCodableDecodingTypeConverter.Type)?) throws -> T? {
+        return try decodeThrows(stringKeys, as: type, typeConverter: typeConverter)
     }
-    func decodeThrows<T: Decodable>(_ stringKeys: [String], as type: T.Type = T.self) throws -> T? {
-        return try decode(stringKeys, as: type, nonnull: false, throws: true)
+    func decodeThrows<T: Decodable>(_ stringKeys: [String], as type: T.Type = T.self, typeConverter: (any ExCodableDecodingTypeConverter.Type)?) throws -> T? {
+        return try decode(stringKeys, as: type, nonnull: false, throws: true, typeConverter: typeConverter)
     }
-    func decode<T: Decodable>(_ stringKeys: String ..., as type: T.Type = T.self) -> T? {
-        return decode(stringKeys, as: type)
+    func decode<T: Decodable>(_ stringKeys: String ..., as type: T.Type = T.self, typeConverter: (any ExCodableDecodingTypeConverter.Type)?) -> T? {
+        return decode(stringKeys, as: type, typeConverter: typeConverter)
     }
-    func decode<T: Decodable>(_ stringKeys: [String], as type: T.Type = T.self) -> T? {
-        return try? decode(stringKeys, as: type, nonnull: false, throws: false)
+    func decode<T: Decodable>(_ stringKeys: [String], as type: T.Type = T.self, typeConverter: (any ExCodableDecodingTypeConverter.Type)?) -> T? {
+        return try? decode(stringKeys, as: type, nonnull: false, throws: false, typeConverter: typeConverter)
     }
-    internal/* fileprivate */ func decode<T: Decodable>(_ stringKeys: [String], as type: T.Type = T.self, nonnull: Bool = false, throws: Bool = false) throws -> T? {
-        return try decode(stringKeys.map { ExCodingKey($0) }, as: type, nonnull: nonnull, throws: `throws`)
+    // TODO: DEPRECATED
+    internal func decode<T: Decodable>(_ stringKeys: [String], as type: T.Type = T.self, nonnull: Bool = false, throws: Bool = false, typeConverter: (any ExCodableDecodingTypeConverter.Type)? = nil) throws -> T? {
+        return try decode(stringKeys.map { ExCodingKey($0) }, as: type, nonnull: nonnull, throws: `throws`, typeConverter: typeConverter)
     }
+    // fileprivate func decode<T: Decodable>(_ stringKeys: [String], as type: T.Type = T.self, nonnull: Bool = false, throws: Bool = false, typeConverter: (any ExCodableDecodingTypeConverter.Type)?) throws -> T? {
+    //     return try decode(stringKeys.map { ExCodingKey($0) }, as: type, nonnull: nonnull, throws: `throws`, typeConverter: typeConverter)
+    // }
     
-    func decodeNonnullThrows<T: Decodable, K: CodingKey>(_ codingKeys: K ..., as type: T.Type = T.self) throws -> T {
-        return try decodeNonnullThrows(codingKeys, as: type)
+    func decodeNonnullThrows<T: Decodable, K: CodingKey>(_ codingKeys: K ..., as type: T.Type = T.self, typeConverter: (any ExCodableDecodingTypeConverter.Type)?) throws -> T {
+        return try decodeNonnullThrows(codingKeys, as: type, typeConverter: typeConverter)
     }
-    func decodeNonnullThrows<T: Decodable, K: CodingKey>(_ codingKeys: [K], as type: T.Type = T.self) throws -> T {
-        return try decode(codingKeys, as: type, nonnull: true, throws: true)!
+    func decodeNonnullThrows<T: Decodable, K: CodingKey>(_ codingKeys: [K], as type: T.Type = T.self, typeConverter: (any ExCodableDecodingTypeConverter.Type)?) throws -> T {
+        return try decode(codingKeys, as: type, nonnull: true, throws: true, typeConverter: typeConverter)!
     }
-    func decodeThrows<T: Decodable, K: CodingKey>(_ codingKeys: K ..., as type: T.Type = T.self) throws -> T? {
-        return try decodeThrows(codingKeys, as: type)
+    func decodeThrows<T: Decodable, K: CodingKey>(_ codingKeys: K ..., as type: T.Type = T.self, typeConverter: (any ExCodableDecodingTypeConverter.Type)?) throws -> T? {
+        return try decodeThrows(codingKeys, as: type, typeConverter: typeConverter)
     }
-    func decodeThrows<T: Decodable, K: CodingKey>(_ codingKeys: [K], as type: T.Type = T.self) throws -> T? {
-        return try decode(codingKeys, as: type, nonnull: false, throws: true)
+    func decodeThrows<T: Decodable, K: CodingKey>(_ codingKeys: [K], as type: T.Type = T.self, typeConverter: (any ExCodableDecodingTypeConverter.Type)?) throws -> T? {
+        return try decode(codingKeys, as: type, nonnull: false, throws: true, typeConverter: typeConverter)
     }
-    func decode<T: Decodable, K: CodingKey>(_ codingKeys: K ..., as type: T.Type = T.self) -> T? {
-        return decode(codingKeys, as: type)
+    func decode<T: Decodable, K: CodingKey>(_ codingKeys: K ..., as type: T.Type = T.self, typeConverter: (any ExCodableDecodingTypeConverter.Type)?) -> T? {
+        return decode(codingKeys, as: type, typeConverter: typeConverter)
     }
-    func decode<T: Decodable, K: CodingKey>(_ codingKeys: [K], as type: T.Type = T.self) -> T? {
-        return try? decode(codingKeys, as: type, nonnull: false, throws: false)
+    func decode<T: Decodable, K: CodingKey>(_ codingKeys: [K], as type: T.Type = T.self, typeConverter: (any ExCodableDecodingTypeConverter.Type)?) -> T? {
+        return try? decode(codingKeys, as: type, nonnull: false, throws: false, typeConverter: typeConverter)
     }
-    internal/* fileprivate */ func decode<T: Decodable, K: CodingKey>(_ codingKeys: [K], as type: T.Type = T.self, nonnull: Bool = false, throws: Bool = false) throws -> T? {
+    // TODO: DEPRECATED
+    internal func decode<T: Decodable, K: CodingKey>(_ codingKeys: [K], as type: T.Type = T.self, nonnull: Bool = false, throws: Bool = false, typeConverter: (any ExCodableDecodingTypeConverter.Type)? = nil) throws -> T? {
         do {
             let container = try self.container(keyedBy: K.self)
-            return try container.decodeForAlternativeKeys(codingKeys, as: type, nonnull: nonnull, throws: `throws`)
+            return try container.decodeForAlternativeKeys(codingKeys, as: type, nonnull: nonnull, throws: `throws`, typeConverter: typeConverter)
         }
         catch { if `throws` || nonnull { throw error } }
         return nil
     }
+    // fileprivate func decode<T: Decodable, K: CodingKey>(_ codingKeys: [K], as type: T.Type = T.self, nonnull: Bool = false, throws: Bool = false, typeConverter: (any ExCodableDecodingTypeConverter.Type)?) throws -> T? {
+    //     do {
+    //         let container = try self.container(keyedBy: K.self)
+    //         return try container.decodeForAlternativeKeys(codingKeys, as: type, nonnull: nonnull, throws: `throws`, typeConverter: typeConverter)
+    //     }
+    //     catch { if `throws` || nonnull { throw error } }
+    //     return nil
+    // }
 }
 
 // MARK: - ExCodingKey
@@ -276,12 +289,12 @@ extension ExCodingKey: CodingKey {
 
 fileprivate extension KeyedDecodingContainer {
     
-    func decodeForAlternativeKeys<T: Decodable>(_ codingKeys: [Self.Key], as type: T.Type = T.self, nonnull: Bool, throws: Bool) throws -> T? {
+    func decodeForAlternativeKeys<T: Decodable>(_ codingKeys: [Self.Key], as type: T.Type = T.self, nonnull: Bool, throws: Bool, typeConverter: (any ExCodableDecodingTypeConverter.Type)?) throws -> T? {
         
         var firstError: Error?
         do {
             let codingKey = codingKeys.first!
-            if let value = try decodeForNestedKeys(codingKey, as: type, nonnull: nonnull, throws: `throws`) {
+            if let value = try decodeForNestedKeys(codingKey, as: type, nonnull: nonnull, throws: `throws`, typeConverter: typeConverter) {
                 return value
             }
         }
@@ -289,7 +302,7 @@ fileprivate extension KeyedDecodingContainer {
         
         let codingKeys = Array(codingKeys.dropFirst())
         if !codingKeys.isEmpty,
-           let value = try? decodeForAlternativeKeys(codingKeys, as: type, nonnull: nonnull, throws: `throws`) {
+           let value = try? decodeForAlternativeKeys(codingKeys, as: type, nonnull: nonnull, throws: `throws`, typeConverter: typeConverter) {
             return value
         }
         
@@ -297,11 +310,11 @@ fileprivate extension KeyedDecodingContainer {
         return nil
     }
     
-    func decodeForNestedKeys<T: Decodable>(_ codingKey: Self.Key, as type: T.Type = T.self, nonnull: Bool, throws: Bool) throws -> T? {
+    func decodeForNestedKeys<T: Decodable>(_ codingKey: Self.Key, as type: T.Type = T.self, nonnull: Bool, throws: Bool, typeConverter: (any ExCodableDecodingTypeConverter.Type)?) throws -> T? {
         
         var firstError: Error?
         do {
-            if let value = try decodeForValue(codingKey, as: type, nonnull: nonnull, throws: `throws`) {
+            if let value = try decodeForValue(codingKey, as: type, nonnull: nonnull, throws: `throws`, typeConverter: typeConverter) {
                 return value
             }
         }
@@ -314,7 +327,7 @@ fileprivate extension KeyedDecodingContainer {
             if !keys.isEmpty,
                let container = nestedContainer(with: keys.dropLast()),
                let codingKey = keys.last,
-               let value = try? container.decodeForNestedKeys(codingKey as! Self.Key, as: type, nonnull: nonnull, throws: `throws`) {
+               let value = try? container.decodeForNestedKeys(codingKey as! Self.Key, as: type, nonnull: nonnull, throws: `throws`, typeConverter: typeConverter) {
                 return value
             }
         }
@@ -332,7 +345,7 @@ fileprivate extension KeyedDecodingContainer {
         return container
     }
     
-    func decodeForValue<T: Decodable>(_ codingKey: Self.Key, as type: T.Type = T.self, nonnull: Bool, throws: Bool) throws -> T? {
+    func decodeForValue<T: Decodable>(_ codingKey: Self.Key, as type: T.Type = T.self, nonnull: Bool, throws: Bool, typeConverter: (any ExCodableDecodingTypeConverter.Type)?) throws -> T? {
         
         var firstError: Error?
         do {
@@ -344,16 +357,61 @@ fileprivate extension KeyedDecodingContainer {
         }
         catch { firstError = error }
         
-        if contains(codingKey),
-           let value = decodeForTypeConversion(codingKey, as: type) {
-            return value
+        if contains(codingKey) {
+            if let value = decodeForTypeConversion(codingKey, as: type, typeConverter: typeConverter) {
+                return value
+            }
+            if #available(iOS 16.0.0, *) {
+                
+                // TODO: how to fix "Type 'any Decodable' cannot conform to 'Decodable'"
+                // if let rawType = type as? any (Decodable&RawRepresentable<Decodable>).Type { return decodeForRawRepresentable(codingKey, as: rawType, typeConverter: typeConverter) as? T }
+                
+                if let rawType = type as? any (Decodable&RawRepresentable<  Bool >).Type { return decodeForRawRepresentable(codingKey, as: rawType, typeConverter: typeConverter) as? T }
+                
+                if let rawType = type as? any (Decodable&RawRepresentable<  Int  >).Type { return decodeForRawRepresentable(codingKey, as: rawType, typeConverter: typeConverter) as? T }
+                if let rawType = type as? any (Decodable&RawRepresentable<  Int8 >).Type { return decodeForRawRepresentable(codingKey, as: rawType, typeConverter: typeConverter) as? T }
+                if let rawType = type as? any (Decodable&RawRepresentable<  Int16>).Type { return decodeForRawRepresentable(codingKey, as: rawType, typeConverter: typeConverter) as? T }
+                if let rawType = type as? any (Decodable&RawRepresentable<  Int32>).Type { return decodeForRawRepresentable(codingKey, as: rawType, typeConverter: typeConverter) as? T }
+                if let rawType = type as? any (Decodable&RawRepresentable<  Int64>).Type { return decodeForRawRepresentable(codingKey, as: rawType, typeConverter: typeConverter) as? T }
+                
+                if let rawType = type as? any (Decodable&RawRepresentable< UInt  >).Type { return decodeForRawRepresentable(codingKey, as: rawType, typeConverter: typeConverter) as? T }
+                if let rawType = type as? any (Decodable&RawRepresentable< UInt8 >).Type { return decodeForRawRepresentable(codingKey, as: rawType, typeConverter: typeConverter) as? T }
+                if let rawType = type as? any (Decodable&RawRepresentable< UInt16>).Type { return decodeForRawRepresentable(codingKey, as: rawType, typeConverter: typeConverter) as? T }
+                if let rawType = type as? any (Decodable&RawRepresentable< UInt32>).Type { return decodeForRawRepresentable(codingKey, as: rawType, typeConverter: typeConverter) as? T }
+                if let rawType = type as? any (Decodable&RawRepresentable< UInt64>).Type { return decodeForRawRepresentable(codingKey, as: rawType, typeConverter: typeConverter) as? T }
+                
+                if let rawType = type as? any (Decodable&RawRepresentable<Double >).Type { return decodeForRawRepresentable(codingKey, as: rawType, typeConverter: typeConverter) as? T }
+                if let rawType = type as? any (Decodable&RawRepresentable<Float  >).Type { return decodeForRawRepresentable(codingKey, as: rawType, typeConverter: typeConverter) as? T }
+                if let rawType = type as? any (Decodable&RawRepresentable<Float16>).Type { return decodeForRawRepresentable(codingKey, as: rawType, typeConverter: typeConverter) as? T }
+                if let rawType = type as? any (Decodable&RawRepresentable<Float32>).Type { return decodeForRawRepresentable(codingKey, as: rawType, typeConverter: typeConverter) as? T }
+                if let rawType = type as? any (Decodable&RawRepresentable<Float64>).Type { return decodeForRawRepresentable(codingKey, as: rawType, typeConverter: typeConverter) as? T }
+                // if let rawType = type as? any (Decodable&RawRepresentable<Float80>).Type { return decodeForRawRepresentable(codingKey, as: rawType, typeConverter: typeConverter) as? T }
+                // if let rawType = type as? any (Decodable&RawRepresentable<Float96>).Type { return decodeForRawRepresentable(codingKey, as: rawType, typeConverter: typeConverter) as? T }
+                
+                if let rawType = type as? any (Decodable&RawRepresentable<String>).Type { return decodeForRawRepresentable(codingKey, as: rawType, typeConverter: typeConverter) as? T }
+            }
         }
         
         if firstError != nil && (`throws` || nonnull) { throw firstError! }
         return nil
     }
     
-    func decodeForTypeConversion<T: Decodable>(_ codingKey: Self.Key, as type: T.Type = T.self) -> T? {
+    // TODO: how to fix "Type 'any Decodable' cannot conform to 'Decodable'"
+    // func decodeForRawRepresentable<T: Decodable&RawRepresentable<Decodable>>(_ codingKey: Self.Key, as type: T.Type = T.self, typeConverter: (any ExCodableDecodingTypeConverter.Type)?) -> T? {
+    //     if let rawValue = decodeForTypeConversion(codingKey, as: T.RawValue.self, typeConverter: typeConverter) {
+    //         return type.init(rawValue: rawValue)
+    //     }
+    //     return nil
+    // }
+    
+    func decodeForRawRepresentable<T: Decodable>(_ codingKey: Self.Key, as type: T.Type = T.self, typeConverter: (any ExCodableDecodingTypeConverter.Type)?) -> T? where T: RawRepresentable, T.RawValue: Decodable {
+        if let rawValue = decodeForTypeConversion(codingKey, as: T.RawValue.self, typeConverter: typeConverter) {
+            return type.init(rawValue: rawValue)
+        }
+        return nil
+    }
+    
+    func decodeForTypeConversion<T: Decodable>(_ codingKey: Self.Key, as type: T.Type = T.self, typeConverter: (any ExCodableDecodingTypeConverter.Type)?) -> T? {
         
         if type is Bool.Type {
             if let int = try? decodeIfPresent(Int.self, forKey: codingKey) {
@@ -397,6 +455,7 @@ fileprivate extension KeyedDecodingContainer {
             else if let double = try? decodeIfPresent(Double.self, forKey: codingKey) { return Int64(double) as? T } // include Float
             else if let string = try? decodeIfPresent(String.self, forKey: codingKey), let value = Int64(string) { return value as? T }
         }
+        
         else if type is UInt.Type {
             if      let bool   = try? decodeIfPresent(Bool.self,   forKey: codingKey) { return UInt(bool ? 1 : 0) as? T }
             else if let string = try? decodeIfPresent(String.self, forKey: codingKey), let value = UInt(string) { return value as? T }
@@ -426,20 +485,43 @@ fileprivate extension KeyedDecodingContainer {
             if      let int64  = try? decodeIfPresent(Int64.self,  forKey: codingKey) { return Float(int64) as? T } // include all Int types
             else if let string = try? decodeIfPresent(String.self, forKey: codingKey), let value = Float(string) { return value as? T }
         }
-        
         else if type is String.Type {
             if      let bool   = try? decodeIfPresent(Bool.self,   forKey: codingKey) { return String(describing: bool) as? T }
             else if let int64  = try? decodeIfPresent(Int64.self,  forKey: codingKey) { return String(describing: int64) as? T } // include all Int types
             else if let double = try? decodeIfPresent(Double.self, forKey: codingKey) { return String(describing: double) as? T } // include Float
         }
         
-        for converter in _decodingTypeConverters {
-            if let value = try? converter.decode(self, codingKey: codingKey, as: type) {
-                return value
+        if #available(iOS 14.0, *) {
+            if type is Float16.Type {
+                if      let int64  = try? decodeIfPresent(Int64.self,  forKey: codingKey) { return Float16(int64) as? T } // include all Int types
+                else if let string = try? decodeIfPresent(String.self, forKey: codingKey), let value = Float16(string) { return value as? T }
             }
+            else if type is Float32.Type {
+                if      let int64  = try? decodeIfPresent(Int64.self,  forKey: codingKey) { return Float32(int64) as? T } // include all Int types
+                else if let string = try? decodeIfPresent(String.self, forKey: codingKey), let value = Float32(string) { return value as? T }
+            }
+            else if type is Float64.Type {
+                if      let int64  = try? decodeIfPresent(Int64.self,  forKey: codingKey) { return Float64(int64) as? T } // include all Int types
+                else if let string = try? decodeIfPresent(String.self, forKey: codingKey), let value = Float64(string) { return value as? T }
+            }
+            // else if type is Float80.Type {
+            //     if      let int64  = try? decodeIfPresent(Int64.self,  forKey: codingKey) { return Float80(int64) as? T } // include all Int types
+            //     else if let string = try? decodeIfPresent(String.self, forKey: codingKey), let value = Float80(string) { return value as? T }
+            // }
+            // else if type is Float96.Type {
+            //     if      let int64  = try? decodeIfPresent(Int64.self,  forKey: codingKey) { return Float96(int64) as? T } // include all Int types
+            //     else if let string = try? decodeIfPresent(String.self, forKey: codingKey), let value = Float96(string) { return value as? T }
+            // }
         }
-        if let customConverter = self as? ExCodableDecodingTypeConverter,
-           let value = try? customConverter.decode(self, codingKey: codingKey, as: type) {
+        
+        // specific converter for type `T`, via `extension T: ExCodableDecodingTypeConverter`
+        if let typeConverter,
+           let value = try? typeConverter.decode(self, codingKey: codingKey, as: type) {
+            return value
+        }
+        // global converter for all types, via `extension KeyedDecodingContainer: ExCodableDecodingTypeConverter`
+        if let selfConverter = Self.self as? ExCodableDecodingTypeConverter.Type,
+           let value = try? selfConverter.decode(self, codingKey: codingKey, as: type) {
             return value
         }
         
@@ -448,12 +530,7 @@ fileprivate extension KeyedDecodingContainer {
 }
 
 public protocol ExCodableDecodingTypeConverter {
-    func decode<T: Decodable, K: CodingKey>(_ container: KeyedDecodingContainer<K>, codingKey: K, as type: T.Type) throws -> T?
-}
-
-fileprivate var _decodingTypeConverters: [ExCodableDecodingTypeConverter] = []
-public func register(_ decodingTypeConverter: ExCodableDecodingTypeConverter) {
-    _decodingTypeConverters.append(decodingTypeConverter)
+    static func decode<T: Decodable, K: CodingKey>(_ container: KeyedDecodingContainer<K>, codingKey: K, as type: T.Type) throws -> T?
 }
 
 // MARK: - Encodable & Decodable - external

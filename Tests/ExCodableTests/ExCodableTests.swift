@@ -67,6 +67,18 @@ struct TestStruct: Equatable {
 }
 extension TestStruct: ExAutoCodable {}
 
+// MARK: struct with enum
+
+enum TestEnum: Int, Codable {
+    case zero = 0, one = 1
+}
+
+struct TestStructWithEnum: Equatable {
+    @ExCodable("enum")
+    private(set) var `enum`: TestEnum = .zero
+}
+extension TestStructWithEnum: ExAutoCodable {}
+
 // MARK: alternative-keys & alternative-keyMapping
 
 struct TestAlternativeKeys: Equatable {
@@ -95,11 +107,11 @@ struct TestCustomEncodeDecode: Equatable {
     var int: Int = 0
     
     @ExCodable(encode: { encoder, value in encoder["nested.nested.string"] = value },
-               decode: { decoder in return decoder["nested.nested.string"] })
+               decode: { decoder in return decoder["nested.nested.string"/*, converter: Self.self*/] })
     var string: String? = nil
     
     @ExCodable(encode: { encoder, value in encoder[Keys.bool] = value },
-               decode: { decoder in return decoder[Keys.bool] })
+               decode: { decoder in return decoder[Keys.bool/*, converter: Self.self*/] })
     var bool: Bool = false
 }
 
@@ -125,7 +137,7 @@ extension TestCustomEncodeDecode: Codable {
     
     init(from decoder: Decoder) throws {
         try decode(from: decoder, nonnull: false, throws: false)
-        string = decoder["nested.nested.string"]
+        string = decoder["nested.nested.string"/*, converter: Self.self*/]
         if string == nil || string == Self.dddd {
             string = string(for: int)
         }
@@ -151,17 +163,17 @@ extension TestSubscript: Encodable, Decodable {
     
     init(from decoder: Decoder) throws {
         // - seealso:
-        // string = decoder.decode(<#T##codingKeys: CodingKey...##CodingKey#>)
-        // string = try decoder.decodeThrows(<#T##codingKeys: CodingKey...##CodingKey#>)
-        // string = try decoder.decodeNonnullThrows(<#T##codingKeys: CodingKey...##CodingKey#>)
-        int = decoder[Keys.int] ?? 0
-        string = decoder[Keys.string] ?? ""
+        // string = decoder.decode(Keys.string, as: String.self, converter: Self.self)!
+        // string = try decoder.decodeThrows(Keys.string, as: String.self, converter: Self.self)!
+        // string = try decoder.decodeNonnullThrows(Keys.string, as: String.self, converter: Self.self)
+        int = decoder[Keys.int/*, converter: Self.self*/] ?? 0
+        string = decoder[Keys.string/*, converter: Self.self*/] ?? ""
     }
     func encode(to encoder: Encoder) throws {
         // - seealso:
-        // encoder.encode(<#T##value: Encodable?##Encodable?#>, for: <#T##CodingKey#>)
-        // try encoder.encodeThrows(<#T##value: Encodable?##Encodable?#>, for: <#T##CodingKey#>)
-        // try encoder.encodeNonnullThrows(<#T##value: Encodable##Encodable#>, for: <#T##CodingKey#>)
+        // encoder.encode(string, for: Keys.string)
+        // try encoder.encodeThrows(string, for: Keys.string)
+        // try encoder.encodeNonnullThrows(string, for: Keys.string)
         encoder[Keys.int] = int
         encoder[Keys.string] = string
     }
@@ -190,20 +202,20 @@ extension TestTypeConversions: Encodable, Decodable {
     }
     
     init(from decoder: Decoder) throws {
-        boolFromInt = decoder[Keys.boolFromInt]
-        boolFromString = decoder[Keys.boolFromString]
-        intFromBool = decoder[Keys.intFromBool]
-        intFromDouble = decoder[Keys.intFromDouble]
-        intFromString = decoder[Keys.intFromString]
-        uIntFromBool = decoder[Keys.uIntFromBool]
-        uIntFromString = decoder[Keys.uIntFromString]
-        doubleFromInt64 = decoder[Keys.doubleFromInt64]
-        doubleFromString = decoder[Keys.doubleFromString]
-        floatFromInt64 = decoder[Keys.floatFromInt64]
-        floatFromString = decoder[Keys.floatFromString]
-        stringFromBool = decoder[Keys.stringFromBool]
-        stringFromInt64 = decoder[Keys.stringFromInt64]
-        stringFromDouble = decoder[Keys.stringFromDouble]
+        boolFromInt = decoder[Keys.boolFromInt/*, converter: Self.self*/]
+        boolFromString = decoder[Keys.boolFromString/*, converter: Self.self*/]
+        intFromBool = decoder[Keys.intFromBool/*, converter: Self.self*/]
+        intFromDouble = decoder[Keys.intFromDouble/*, converter: Self.self*/]
+        intFromString = decoder[Keys.intFromString/*, converter: Self.self*/]
+        uIntFromBool = decoder[Keys.uIntFromBool/*, converter: Self.self*/]
+        uIntFromString = decoder[Keys.uIntFromString/*, converter: Self.self*/]
+        doubleFromInt64 = decoder[Keys.doubleFromInt64/*, converter: Self.self*/]
+        doubleFromString = decoder[Keys.doubleFromString/*, converter: Self.self*/]
+        floatFromInt64 = decoder[Keys.floatFromInt64/*, converter: Self.self*/]
+        floatFromString = decoder[Keys.floatFromString/*, converter: Self.self*/]
+        stringFromBool = decoder[Keys.stringFromBool/*, converter: Self.self*/]
+        stringFromInt64 = decoder[Keys.stringFromInt64/*, converter: Self.self*/]
+        stringFromDouble = decoder[Keys.stringFromDouble/*, converter: Self.self*/]
     }
     
     func encode(to encoder: Encoder) throws {
@@ -246,8 +258,23 @@ extension TestTypeConversions: Encodable, Decodable {
 //     }
 // }
 
-struct FloatToBoolDecodingTypeConverter: ExCodableDecodingTypeConverter {
-    public func decode<T: Decodable, K: CodingKey>(_ container: KeyedDecodingContainer<K>, codingKey: K, as type: T.Type) -> T? {
+struct TestCustomTypeConverter: Equatable {
+    @ExCodable("enum")
+    private(set) var `enum`: TestEnum = .zero
+    @ExCodable("doubleFromBool")
+    var doubleFromBool: Double? = nil
+}
+extension TestCustomTypeConverter: ExAutoCodable {}
+
+extension TestCustomTypeConverter: ExCodableDecodingTypeConverter {
+    static public func decode<T: Decodable, K: CodingKey>(_ container: KeyedDecodingContainer<K>, codingKey: K, as type: T.Type) -> T? {
+        // String -> TestEnum
+        if type is TestEnum.Type || type is TestEnum?.Type {
+            if let string = try? container.decodeIfPresent(String.self, forKey: codingKey),
+               let int = Int(string) {
+                return TestEnum(rawValue: int) as? T
+            }
+        }
         // Bool -> Double
         if type is Double.Type || type is Double?.Type {
             if let bool = try? container.decodeIfPresent(Bool.self, forKey: codingKey) {
@@ -264,12 +291,6 @@ struct FloatToBoolDecodingTypeConverter: ExCodableDecodingTypeConverter {
         return nil
     }
 }
-
-struct TestCustomTypeConverter: Equatable {
-    @ExCodable("doubleFromBool")
-    var doubleFromBool: Double? = nil
-}
-extension TestCustomTypeConverter: ExAutoCodable {}
 
 // MARK: class
 
@@ -370,6 +391,56 @@ final class ExCodableTests: XCTestCase {
             print(string)
             print(test)
             debugPrint(test)
+        }
+        else {
+            XCTFail()
+        }
+    }
+    
+    func testStructWithEnum() {
+        let test = TestStructWithEnum(enum: .one)
+        if let data = try? test.encoded() as Data,
+           let copy1 = try? data.decoded() as TestStructWithEnum,
+           let copy2 = try? TestStructWithEnum.decoded(from: data) {
+            XCTAssertEqual(copy1, test)
+            XCTAssertEqual(copy2, test)
+            
+            let string = String(data: data, encoding: .utf8)
+            print("TestStructWithEnum: \(string ?? "<nil>")")
+        }
+        else {
+            XCTFail()
+        }
+    }
+    
+    func testStructWithEnumFromJSON() {
+        let json = Data(#"{"enum":1}"#.utf8)
+        if let test = try? json.decoded() as TestStructWithEnum,
+           let data = try? test.encoded() as Data,
+           let copy = try? data.decoded() as TestStructWithEnum {
+            XCTAssertEqual(test, TestStructWithEnum(enum: .one))
+            XCTAssertEqual(copy, test)
+            let localJSON = try! JSONSerialization.jsonObject(with: data) as! [String: Any]
+            XCTAssertEqual(NSDictionary(dictionary: localJSON), [
+                "enum": 1
+            ])
+        }
+        else {
+            XCTFail()
+        }
+    }
+    
+    func testStructWithEnumFromJSONWithString() {
+        let json = Data(#"{"enum":"1"}"#.utf8)
+        if let test = try? json.decoded() as TestStructWithEnum,
+           let data = try? test.encoded() as Data,
+           let copy = try? data.decoded() as TestStructWithEnum {
+            XCTAssertEqual(test, TestStructWithEnum(enum: .one))
+            XCTAssertEqual(copy, test)
+            let localJSON = try! JSONSerialization.jsonObject(with: data) as! [String: Any]
+            XCTAssertEqual(NSDictionary(dictionary: localJSON), [
+                "enum": 1
+            ])
         }
         else {
             XCTFail()
@@ -528,14 +599,14 @@ final class ExCodableTests: XCTestCase {
     }
     
     func testCustomTypeConverter() {
-        register(FloatToBoolDecodingTypeConverter())
         let data = Data(#"""
         {
+            "enum": "1",
             "doubleFromBool": true
         }
         """#.utf8)
         if let test = try? data.decoded() as TestCustomTypeConverter {
-            XCTAssertEqual(test, TestCustomTypeConverter(doubleFromBool: 1.0))
+            XCTAssertEqual(test, TestCustomTypeConverter(enum: .one, doubleFromBool: 1.0))
         }
         else {
             XCTFail()

@@ -265,11 +265,11 @@ extension TestSubscript: Encodable, Decodable {
 
 ### 7. Custom Type-Conversions:
 
-Declare struct `FloatToBoolDecodingTypeConverter` with protocol `ExCodableDecodingTypeConverter` and implement its method, decode values in alternative types and convert to target type:
+A. For a specific type:
 
 ```swift
-struct FloatToBoolDecodingTypeConverter: ExCodableDecodingTypeConverter {
-    public func decode<T: Decodable, K: CodingKey>(_ container: KeyedDecodingContainer<K>, codingKey: K, as type: T.Type) -> T? {
+extension TestTypeConverter: ExCodableDecodingTypeConverter {
+    public static func decode<T: Decodable, K: CodingKey>(_ container: KeyedDecodingContainer<K>, codingKey: K, as type: T.Type) -> T? {
         // Bool -> Double
         if type is Double.Type || type is Double?.Type {
             if let bool = try? container.decodeIfPresent(Bool.self, forKey: codingKey) {
@@ -289,10 +289,56 @@ struct FloatToBoolDecodingTypeConverter: ExCodableDecodingTypeConverter {
 
 ```
 
-Register `FloatToBoolDecodingTypeConverter` with an instance:
+B. For multiple types:
 
 ```swift
-register(FloatToBoolDecodingTypeConverter())
+extension ExCodableDecodingTypeConverter {
+    public static func decode<T: Decodable, K: CodingKey>(_ container: KeyedDecodingContainer<K>, codingKey: K, as type: T.Type) -> T? {
+        // Bool -> Double
+        if type is Double.Type || type is Double?.Type {
+            if let bool = try? container.decodeIfPresent(Bool.self, forKey: codingKey) {
+                return (bool ? 1.0 : 0.0) as? T
+            }
+        }
+        // Bool -> Float
+        else if type is Float.Type || type is Float?.Type {
+            if let bool = try? container.decodeIfPresent(Bool.self, forKey: codingKey) {
+                return (bool ? 1.0 : 0.0) as? T
+            }
+        }
+        // Double or Float NOT found
+        return nil
+    }
+}
+
+extension TestTypeConverter001: ExCodableDecodingTypeConverter {}
+extension TestTypeConverter002: ExCodableDecodingTypeConverter {}
+extension TestTypeConverter003: ExCodableDecodingTypeConverter {}
+
+```
+
+C. For all types - DONOT do this in public frameworks:
+
+```swift
+extension KeyedDecodingContainer: ExCodableDecodingTypeConverter {
+    public static func decode<T: Decodable, K: CodingKey>(_ container: KeyedDecodingContainer<K>, codingKey: K, as type: T.Type) -> T? {
+        // Bool -> Double
+        if type is Double.Type || type is Double?.Type {
+            if let bool = try? container.decodeIfPresent(Bool.self, forKey: codingKey) {
+                return (bool ? 1.0 : 0.0) as? T
+            }
+        }
+        // Bool -> Float
+        else if type is Float.Type || type is Float?.Type {
+            if let bool = try? container.decodeIfPresent(Bool.self, forKey: codingKey) {
+                return (bool ? 1.0 : 0.0) as? T
+            }
+        }
+        // Double or Float NOT found
+        return nil
+    }
+}
+
 ```
 
 ### 8. Key-Mapping for `class`:

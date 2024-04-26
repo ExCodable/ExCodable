@@ -435,12 +435,12 @@ final class ExCodableTests: XCTestCase {
         if let test = try? json.decoded() as TestStructWithEnum,
            let data = try? test.encoded() as Data,
            let copy = try? data.decoded() as TestStructWithEnum {
-            // XCTAssertEqual(test, TestStructWithEnum(enum: .one))
+            XCTAssertEqual(test, TestStructWithEnum(enum: .one))
             XCTAssertEqual(copy, test)
-            // let localJSON = try! JSONSerialization.jsonObject(with: data) as! [String: Any]
-            // XCTAssertEqual(NSDictionary(dictionary: localJSON), [
-            //     "enum": 1
-            // ])
+            let localJSON = try! JSONSerialization.jsonObject(with: data) as! [String: Any]
+            XCTAssertEqual(NSDictionary(dictionary: localJSON), [
+                "enum": 1
+            ])
         }
         else {
             XCTFail()

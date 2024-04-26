@@ -48,6 +48,24 @@ public final class ExCodable<Value: Codable> {
     public convenience init(wrappedValue initialValue: Value, _ codingKeys: CodingKey..., nonnull: Bool? = nil, throws: Bool? = nil, encode: ((_ encoder: Encoder, _ value: Value) throws -> Void)? = nil, decode: ((_ decoder: Decoder) throws -> Value?)? = nil) {
         self.init(wrappedValue: initialValue, stringKeys: codingKeys.map { $0.stringValue }, nonnull: nonnull, throws: `throws`, encode: encode, decode: decode)
     }
+    
+    fileprivate let decodeRawRepresentable: ((_ decoder: Decoder, _ stringKeys: [String], _ nonnull: Bool, _ throws: Bool, _ converter: (any ExCodableDecodingTypeConverter.Type)?) throws -> Value?)?
+    private init(wrappedValue initialValue: Value, stringKeys: [String]? = nil, nonnull: Bool? = nil, throws: Bool? = nil, encode: ((_ encoder: Encoder, _ value: Value) throws -> Void)?, decode: ((_ decoder: Decoder) throws -> Value?)?) where Value: RawRepresentable, Value.RawValue: Decodable {
+        (self.wrappedValue, self.stringKeys, self.nonnull, self.throws, self.encode, self.decode) = (initialValue, stringKeys, nonnull, `throws`, encode, decode)
+        decodeRawRepresentable = decode == nil ? { (_ decoder: Decoder, _ stringKeys: [String], _ nonnull: Bool, _ `throws`: Bool, _ converter: (any ExCodableDecodingTypeConverter.Type)?) throws in
+            guard let rawValue = try decoder.decode(stringKeys, as: Value.RawValue.self, nonnull: nonnull, throws: `throws`, converter: converter),
+                  let value = Value(rawValue: rawValue) else { return nil }
+            return value
+        } : nil
+    }
+    public convenience init(wrappedValue initialValue: Value, _ stringKey: String? = nil, nonnull: Bool? = nil, throws: Bool? = nil, encode: ((_ encoder: Encoder, _ value: Value) throws -> Void)? = nil, decode: ((_ decoder: Decoder) throws -> Value?)? = nil) where Value: RawRepresentable, Value.RawValue: Decodable {
+        self.init(wrappedValue: initialValue, stringKeys: stringKey.map { [$0] }, nonnull: nonnull, throws: `throws`, encode: encode, decode: decode)
+    }
+    public convenience init(wrappedValue initialValue: Value, _ stringKeys: String..., nonnull: Bool? = nil, throws: Bool? = nil, encode: ((_ encoder: Encoder, _ value: Value) throws -> Void)? = nil, decode: ((_ decoder: Decoder) throws -> Value?)? = nil) where Value: RawRepresentable, Value.RawValue: Decodable {
+        self.init(wrappedValue: initialValue, stringKeys: stringKeys, nonnull: nonnull, throws: `throws`, encode: encode, decode: decode)
+    }
+    public convenience init(wrappedValue initialValue: Value, _ codingKeys: CodingKey..., nonnull: Bool? = nil, throws: Bool? = nil, encode: ((_ encoder: Encoder, _ value: Value) throws -> Void)? = nil, decode: ((_ decoder: Decoder) throws -> Value?)? = nil) where Value: RawRepresentable, Value.RawValue: Decodable {
+        self.init(wrappedValue: initialValue, stringKeys: codingKeys.map { $0.stringValue }, nonnull: nonnull, throws: `throws`, encode: encode, decode: decode)
     }
 }
 extension ExCodable: Equatable where Value: Equatable {
@@ -75,8 +93,8 @@ extension ExCodable: ExCodablePropertyWrapper {
         }
     }
     fileprivate func decode<Label: StringProtocol>(from decoder: Decoder, label: Label, nonnull: Bool, throws: Bool, converter: (any ExCodableDecodingTypeConverter.Type)?) throws {
-        if let value = (decode != nil
-                        ? try decode!(decoder)
+        if let value = (decode != nil ? try decode!(decoder)
+                        : decodeRawRepresentable != nil ? try decodeRawRepresentable!(decoder, stringKeys ?? [String(label)], self.nonnull ?? nonnull, self.throws ?? `throws`, converter)
                         : try decoder.decode(stringKeys ?? [String(label)], as: Value.self, nonnull: self.nonnull ?? nonnull, throws: self.throws ?? `throws`, converter: converter)) {
             wrappedValue = value
         }
@@ -263,14 +281,14 @@ public extension Decoder {
 
 // MARK: - ExCodingKey
 
-private struct ExCodingKey {
+fileprivate struct ExCodingKey {
     public let stringValue: String, intValue: Int?
     init<S: LosslessStringConvertible>(_ stringValue: S) { (self.stringValue, self.intValue) = (stringValue as? String ?? String(stringValue), nil) }
 }
 
 extension ExCodingKey: CodingKey {
-    public init?(stringValue: String) { self.init(stringValue) }
-    public init?(intValue: Int) { self.init(intValue) }
+    init?(stringValue: String) { self.init(stringValue) }
+    init?(intValue: Int) { self.init(intValue) }
 }
 
 // MARK: - KeyedDecodingContainer - alternative-keys + nested-keys + type-conversions
@@ -558,7 +576,7 @@ extension PropertyListDecoder: DataDecoder {}
 
 // MARK: Optional
 
-private protocol OptionalProtocol {
+fileprivate protocol OptionalProtocol {
     var deepWrapped: Any? { get }
 }
 extension Optional: OptionalProtocol {
@@ -568,7 +586,7 @@ extension Optional: OptionalProtocol {
         return wrapped.deepWrapped
     }
 }
-private func deepUnwrap(_ any: Any) -> Any? {
+fileprivate func deepUnwrap(_ any: Any) -> Any? {
     if let any = any as? OptionalProtocol {
         return any.deepWrapped
     }

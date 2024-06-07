@@ -452,6 +452,7 @@ fileprivate extension KeyedDecodingContainer {
             else if let double = try? decodeIfPresent(Double.self, forKey: codingKey) { return String(describing: double) as? T } // include Float
         }
         
+#if os(iOS) || os(tvOS)
         if #available(iOS 14.0, tvOS 14.0, macOS 11.0, watchOS 7.0, *) {
             if type is Float16.Type {
                 if      let int64  = try? decodeIfPresent(Int64.self,  forKey: codingKey) { return Float16(int64) as? T } // include all Int types
@@ -474,6 +475,7 @@ fileprivate extension KeyedDecodingContainer {
             //     else if let string = try? decodeIfPresent(String.self, forKey: codingKey), let value = Float96(string) { return value as? T }
             // }
         }
+#endif
         
         // specific converter for type `T`, via `extension T: ExCodableDecodingTypeConverter`
         if let selfConverter,

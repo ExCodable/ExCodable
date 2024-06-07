@@ -452,7 +452,7 @@ fileprivate extension KeyedDecodingContainer {
             else if let double = try? decodeIfPresent(Double.self, forKey: codingKey) { return String(describing: double) as? T } // include Float
         }
         
-        if #available(iOS 14.0, *) {
+        if #available(iOS 14.0, tvOS 14.0, *) {
             if type is Float16.Type {
                 if      let int64  = try? decodeIfPresent(Int64.self,  forKey: codingKey) { return Float16(int64) as? T } // include all Int types
                 else if let string = try? decodeIfPresent(String.self, forKey: codingKey), let value = Float16(string) { return value as? T }

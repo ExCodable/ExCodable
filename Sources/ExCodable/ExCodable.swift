@@ -172,7 +172,8 @@ public extension Encoder {
     func encode<T: Encodable>(_ value: T?, for stringKey: String) {
         try? encode(value, for: stringKey, nonnull: false, throws: false)
     }
-    internal/* fileprivate */ func encode<T: Encodable>(_ value: T?, for stringKey: String, nonnull: Bool = false, throws: Bool = false) throws {
+    
+    fileprivate func encode<T: Encodable>(_ value: T?, for stringKey: String, nonnull: Bool = false, throws: Bool = false) throws {
         
         let dot: Character = "."
         guard stringKey.contains(dot), stringKey.count > 1 else {
@@ -203,7 +204,8 @@ public extension Encoder {
     func encode<T: Encodable, K: CodingKey>(_ value: T?, for codingKey: K) {
         try? encode(value, for: codingKey, nonnull: false, throws: false)
     }
-    internal/* fileprivate */ func encode<T: Encodable, K: CodingKey>(_ value: T?, for codingKey: K, nonnull: Bool = false, throws: Bool = false) throws {
+    
+    fileprivate func encode<T: Encodable, K: CodingKey>(_ value: T?, for codingKey: K, nonnull: Bool = false, throws: Bool = false) throws {
         var container = self.container(keyedBy: K.self)
         do {
             if nonnull { try container.encode(value, forKey: codingKey) }
@@ -233,7 +235,7 @@ public extension Decoder {
     func decode<T: Decodable>(_ stringKeys: [String], as type: T.Type = T.self) -> T? {
         return try? decode(stringKeys, as: type, nonnull: false, throws: false)
     }
-    internal/* fileprivate */ func decode<T: Decodable>(_ stringKeys: [String], as type: T.Type = T.self, nonnull: Bool = false, throws: Bool = false) throws -> T? {
+    fileprivate func decode<T: Decodable>(_ stringKeys: [String], as type: T.Type = T.self, nonnull: Bool = false, throws: Bool = false) throws -> T? {
         return try decode(stringKeys.map { ExCodingKey($0) }, as: type, nonnull: nonnull, throws: `throws`)
     }
     
@@ -255,7 +257,7 @@ public extension Decoder {
     func decode<T: Decodable, K: CodingKey>(_ codingKeys: [K], as type: T.Type = T.self) -> T? {
         return try? decode(codingKeys, as: type, nonnull: false, throws: false)
     }
-    internal/* fileprivate */ func decode<T: Decodable, K: CodingKey>(_ codingKeys: [K], as type: T.Type = T.self, nonnull: Bool = false, throws: Bool = false) throws -> T? {
+    fileprivate func decode<T: Decodable, K: CodingKey>(_ codingKeys: [K], as type: T.Type = T.self, nonnull: Bool = false, throws: Bool = false) throws -> T? {
         do {
             let container = try self.container(keyedBy: K.self)
             return try container.decodeForAlternativeKeys(codingKeys, as: type, nonnull: nonnull, throws: `throws`)
@@ -557,5 +559,25 @@ extension Optional: OptionalProtocol {
             case .none:
                 nil
         }
+    }
+}
+
+// MARK: TODO: DEPRECATED
+
+internal extension Encoder {
+    func _encode<T: Encodable>(_ value: T?, for stringKey: String, nonnull: Bool = false, throws: Bool = false) throws {
+        try encode(value, for: stringKey, nonnull: nonnull, throws: `throws`)
+    }
+    func _encode<T: Encodable, K: CodingKey>(_ value: T?, for codingKey: K, nonnull: Bool = false, throws: Bool = false) throws {
+        try encode(value, for: codingKey, nonnull: nonnull, throws: `throws`)
+    }
+}
+
+internal extension Decoder {
+    func _decode<T: Decodable>(_ stringKeys: [String], as type: T.Type = T.self, nonnull: Bool = false, throws: Bool = false, converter: (any ExCodableDecodingTypeConverter.Type)? = nil) throws -> T? {
+        return try decode(stringKeys, as: type, nonnull: nonnull, throws: `throws`)
+    }
+    func _decode<T: Decodable, K: CodingKey>(_ codingKeys: [K], as type: T.Type = T.self, nonnull: Bool = false, throws: Bool = false, converter: (any ExCodableDecodingTypeConverter.Type)? = nil) throws -> T? {
+        try decode(codingKeys, as: type, nonnull: nonnull, throws: `throws`)
     }
 }

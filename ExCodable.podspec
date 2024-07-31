@@ -6,7 +6,7 @@ Pod::Spec.new do |s|
     s.version       = ENV["LIB_VERSION"] || "1.0.0-rc02"
     s.summary       = "Key-Mapping Extensions for Swift Codable"
     # s.description   = "Key-Mapping Extensions for Swift Codable."
-    s.homepage      = "https://github.com/iwill/ExCodable"
+    s.homepage      = "https://github.com/ExCodable/ExCodable"
     
     # ―――  Spec License  ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――― #
     s.license       = "MIT"
@@ -21,7 +21,7 @@ Pod::Spec.new do |s|
     s.swift_version = "5.10"
     
     # ――― Source Location ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――― #
-    s.source        = { :git => "https://github.com/iwill/ExCodable.git", :tag => s.version.to_s }
+    s.source        = { :git => "https://github.com/ExCodable/ExCodable.git", :tag => s.version.to_s }
     
     # ――― Source Code ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――― #
     s.source_files  = "Sources", "Sources/**/*.{swift}"

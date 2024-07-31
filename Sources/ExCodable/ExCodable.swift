@@ -21,7 +21,7 @@ import Foundation
 /// <#key-mapping#> <#property-wrapper#> <#coding-key#> <#subscript#>
 /// <#alternative-keys#> <#nested-keys#> <#type-conversions#>
 /// 
-/// - seealso: [Usage](https://github.com/iwill/ExCodable#usage) from the `README.md`
+/// - seealso: [Usage](https://github.com/ExCodable/ExCodable#usage) from the `README.md`
 /// - seealso: `ExCodableTests.swift` from the `Tests`
 /// - seealso: [Decoding and overriding](https://www.swiftbysundell.com/articles/property-wrappers-in-swift/#decoding-and-overriding)
 /// and [Useful Codable extensions](https://www.swiftbysundell.com/tips/useful-codable-extensions/), by John Sundell.
@@ -157,7 +157,7 @@ public extension Decodable {
 
 // MARK: - Encoder & Decoder
 
-public extension Encoder { // , abortIfNull nonnull: Bool = false, abortOnError throws: Bool = false
+public extension Encoder { // , nonnull nonnull: Bool = false, throws throws: Bool = false
     subscript<T: Encodable>(stringKey: String) -> T? { get { return nil }
         nonmutating set { encode(newValue, for: stringKey) }
     }
@@ -166,7 +166,7 @@ public extension Encoder { // , abortIfNull nonnull: Bool = false, abortOnError 
     }
 }
 
-public extension Decoder { // , abortIfNull nonnull: Bool = false, abortOnError throws: Bool = false
+public extension Decoder { // , nonnull nonnull: Bool = false, throws throws: Bool = false
     subscript<T: Decodable>(stringKeys: [String], converter converter: (any ExCodableDecodingTypeConverter.Type)? = nil) -> T? {
         return decode(stringKeys, as: T.self, converter: converter)
     }
@@ -212,7 +212,7 @@ public extension Encoder {
             if nonnull { try container.encode(value, forKey: codingKey) }
             else { try container.encodeIfPresent(value, forKey: codingKey) }
         }
-        catch { if `throws` || nonnull { throw error } }
+        catch { if nonnull || `throws` { throw error } }
     }
     
     func encodeNonnullThrows<T: Encodable, K: CodingKey>(_ value: T, for codingKey: K) throws {
@@ -231,7 +231,7 @@ public extension Encoder {
             if nonnull { try container.encode(value, forKey: codingKey) }
             else { try container.encodeIfPresent(value, forKey: codingKey) }
         }
-        catch { if `throws` || nonnull { throw error } }
+        catch { if nonnull || `throws` { throw error } }
     }
 }
 
@@ -282,7 +282,7 @@ public extension Decoder {
             let container = try self.container(keyedBy: K.self)
             return try container.decodeForAlternativeKeys(codingKeys, as: type, nonnull: nonnull, throws: `throws`, converter: converter)
         }
-        catch { if `throws` || nonnull { throw error } }
+        catch { if nonnull || `throws` { throw error } }
         return nil
     }
 }
@@ -320,7 +320,7 @@ fileprivate extension KeyedDecodingContainer {
             return value
         }
         
-        if (`throws` || nonnull) && firstError != nil { throw firstError! }
+        if (nonnull || `throws`) && firstError != nil { throw firstError! }
         return nil
     }
     
@@ -346,7 +346,7 @@ fileprivate extension KeyedDecodingContainer {
             }
         }
         
-        if firstError != nil && (`throws` || nonnull) { throw firstError! }
+        if firstError != nil && (nonnull || `throws`) { throw firstError! }
         return nil
     }
     
@@ -376,12 +376,13 @@ fileprivate extension KeyedDecodingContainer {
             return value
         }
         
-        if firstError != nil && (`throws` || nonnull) { throw firstError! }
+        if firstError != nil && (nonnull || `throws`) { throw firstError! }
         return nil
     }
     
     func decodeForTypeConversion<T: Decodable>(_ codingKey: Self.Key, as type: T.Type = T.self, converter selfConverter: (any ExCodableDecodingTypeConverter.Type)?) -> T? {
         
+        // for nested optionals, e.g. `var int: Int??? = nil`
         let wrappedType = T?.wrappedType
         
         if type is Bool.Type || wrappedType is Bool.Type {
@@ -509,6 +510,22 @@ public protocol ExCodableDecodingTypeConverter {
 
 // MARK: - Encodable & Decodable - external
 
+// Methods defined in JSON&PList Encoder&Decoder
+public protocol DataEncoder {
+    func encode<T: Encodable>(_ value: T) throws -> Data
+}
+public protocol DataDecoder {
+    func decode<T: Decodable>(_ type: T.Type, from data: Data) throws -> T
+}
+
+extension JSONEncoder: DataEncoder {}
+extension JSONDecoder: DataDecoder {}
+
+@available(macOS 10.15, iOS 13.0, tvOS 13.0, watchOS 6.0, *)
+extension PropertyListEncoder: DataEncoder {}
+@available(macOS 10.15, iOS 13.0, tvOS 13.0, watchOS 6.0, *)
+extension PropertyListDecoder: DataDecoder {}
+
 // Encodable.encode() -> Data?
 public extension Encodable {
     func encoded(using encoder: DataEncoder = JSONEncoder()) throws -> Data {
@@ -571,32 +588,18 @@ public extension String {
     }
 }
 
-// Methods from JSON&PList Encoder&Decoder
-public protocol DataEncoder {
-    func encode<T: Encodable>(_ value: T) throws -> Data
-}
-public protocol DataDecoder {
-    func decode<T: Decodable>(_ type: T.Type, from data: Data) throws -> T
-}
-
-extension JSONEncoder: DataEncoder {}
-extension JSONDecoder: DataDecoder {}
-
-@available(macOS 10.15, iOS 13.0, tvOS 13.0, watchOS 6.0, *)
-extension PropertyListEncoder: DataEncoder {}
-@available(macOS 10.15, iOS 13.0, tvOS 13.0, watchOS 6.0, *)
-extension PropertyListDecoder: DataDecoder {}
+// MARK: - OptionalProtocol for Nested Optional
 
 // - seealso: https://forums.swift.org/t/challenge-finding-base-type-of-nested-optionals/25096
 
-fileprivate protocol OptionalProtocol {
+public protocol OptionalProtocol {
     static var wrappedType: Any.Type { get }
     var wrapped: Any? { get }
 }
 
 extension Optional: OptionalProtocol {
     
-    fileprivate static var wrappedType: Any.Type {
+    public static var wrappedType: Any.Type {
         if let optional = Wrapped.self as? OptionalProtocol.Type {
             return optional.wrappedType
         }
@@ -615,7 +618,7 @@ extension Optional: OptionalProtocol {
     }
 }
 
-// MARK: TODO: DEPRECATED
+// MARK: DEPRECATED
 
 internal extension Encoder {
     func _encode<T: Encodable>(_ value: T?, for stringKey: String, nonnull: Bool = false, throws: Bool = false) throws {

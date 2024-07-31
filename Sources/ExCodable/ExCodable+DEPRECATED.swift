@@ -8,17 +8,33 @@
 
 import Foundation
 
+// TODO: remove
+
+/// Migration ExCodable from 0.x to 1.x:
+/// 
+/// DEPRECATED:
+/// 
+/// - Replace `ExCodable` with `ExCodableDEPRECATED`.
+/// 
+/// SUGGESTED:
+/// 
+/// - Replace `ExCodable` with `ExAutoCodable`.
+/// - Remove `static` properties `keyMapping`.
+/// - Remove initializer `init(from decoder: Decoder) throws`.
+/// - Use `@ExCodable("<key>", "<alt-key>")`.
+/// 
+
 // MARK: - keyMapping
 
 @available(*, deprecated, message: "Use `@ExCodable` property wrapper instead.")
-public protocol ExCodableProtocol: Codable {
-    associatedtype Root = Self where Root: ExCodableProtocol
+public protocol ExCodableDEPRECATED: Codable {
+    associatedtype Root = Self where Root: ExCodableDEPRECATED
     static var keyMapping: [KeyMap<Root>] { get }
 }
 
 @available(*, deprecated)
-public extension ExCodableProtocol where Root == Self {
-    // default implementation of ExCodableProtocol
+public extension ExCodableDEPRECATED where Root == Self {
+    // default implementation of ExCodableDEPRECATED
     static var keyMapping: [KeyMap<Root>] { [] }
     // default implementation of Encodable
     func encode(to encoder: Encoder) throws {
@@ -31,7 +47,7 @@ public extension ExCodableProtocol where Root == Self {
 }
 
 @available(*, deprecated)
-public extension ExCodableProtocol {
+public extension ExCodableDEPRECATED {
     func encode(to encoder: Encoder, with keyMapping: [KeyMap<Self>], nonnull: Bool = false, throws: Bool = false) throws {
         try keyMapping.forEach { try $0.encode(self, encoder, nonnull, `throws`) }
     }
@@ -98,7 +114,7 @@ public extension KeyMap {
 // MARK: -
 
 @available(*, deprecated)
-public extension ExCodableProtocol {
+public extension ExCodableDEPRECATED {
     @available(*, deprecated, renamed: "encode(to:with:nonnull:throws:)")
     func encode(with keyMapping: [KeyMap<Self>], using encoder: Encoder) {
         try? encode(to: encoder, with: keyMapping)

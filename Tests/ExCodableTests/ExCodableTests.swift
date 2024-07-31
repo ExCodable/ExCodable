@@ -181,6 +181,14 @@ extension TestSubscript: Encodable, Decodable {
 
 // MARK: type-conversions
 
+struct TestTypeConversion: Equatable {
+    @ExCodable("intFromString")
+    var intFromString: Int? = nil
+    @ExCodable("stringFromInt")
+    var stringFromInt: String???? = nil
+}
+extension TestTypeConversion: ExAutoCodable {}
+
 struct TestTypeConversions: Equatable {
     let boolFromInt, boolFromString: Bool?
     let intFromBool, intFromDouble, intFromString: Int?
@@ -513,6 +521,48 @@ final class ExCodableTests: XCTestCase {
         if let data = try? test.encoded() as Data,
            let copy = try? data.decoded() as TestSubscript {
             XCTAssertEqual(copy, test)
+        }
+        else {
+            XCTFail()
+        }
+    }
+    
+    func testTypeConversion() {
+        
+        let data = Data(#"""
+        {
+            "intFromString": "123",
+            "stringFromInt": 456
+        }
+        """#.utf8)
+        
+        if let test = try? data.decoded() as TestTypeConversion {
+            XCTAssertEqual(test, TestTypeConversion(intFromString: 123, stringFromInt:  "456"))
+        }
+        else {
+            XCTFail()
+        }
+        
+        let data2 = Data(#"""
+        {
+            "stringFromInt64": 123
+        }
+        """#.utf8)
+        if let test2 = try? data2.decoded() as TestTypeConversions {
+            XCTAssertEqual(test2, TestTypeConversions(boolFromInt: nil,
+                                                      boolFromString: nil,
+                                                      intFromBool: nil,
+                                                      intFromDouble: nil,
+                                                      intFromString: nil,
+                                                      uIntFromBool: nil,
+                                                      uIntFromString: nil,
+                                                      doubleFromInt64: nil,
+                                                      doubleFromString: nil,
+                                                      floatFromInt64: nil,
+                                                      floatFromString: nil,
+                                                      stringFromBool: nil,
+                                                      stringFromInt64: "123",
+                                                      stringFromDouble: nil))
         }
         else {
             XCTFail()

@@ -8,25 +8,23 @@
 
 import Foundation
 
-/**
- *  # ExCodable
- *  
- *  - `ExCodable`: A property-wrapper for mapping properties to JSON keys.
- *  - `ExAutoEncodable` & `ExAutoDecodable`: Protocols with default implementation for Encodable & Decodable.
- *  - `ExAutoCodable`: A typealias for `ExAutoEncodable & ExAutoDecodable`.
- *  - `Encodable` & `Decodable` extensions for encode/decode-ing from internal/external.
- *  - `Encoder` & `Encoder` extensions for encode/decode-ing properties one by one.
- *  - Supports Alternative-Keys, Nested-Keys, Type-Conversions and Default-Values.
- *  
- *  <#swift#> <#codable#> <#json#> <#model#> <#type-inference#>
- *  <#key-mapping#> <#property-wrapper#> <#coding-key#> <#subscript#>
- *  <#alternative-keys#> <#nested-keys#> <#type-conversions#>
- *  
- *  - seealso: [Usage](https://github.com/iwill/ExCodable#usage) from the `README.md`
- *  - seealso: `ExCodableTests.swift` from the `Tests`
- *  - seealso: [Decoding and overriding](https://www.swiftbysundell.com/articles/property-wrappers-in-swift/#decoding-and-overriding)
- *  and [Useful Codable extensions](https://www.swiftbysundell.com/tips/useful-codable-extensions/), by John Sundell.
- */
+/// # ExCodable
+/// 
+/// - `ExCodable`: A property-wrapper for mapping properties to JSON keys.
+/// - `ExAutoEncodable` & `ExAutoDecodable`: Protocols with default implementation for Encodable & Decodable.
+/// - `ExAutoCodable`: A typealias for `ExAutoEncodable & ExAutoDecodable`.
+/// - `Encodable` & `Decodable` extensions for encode/decode-ing from internal/external.
+/// - `Encoder` & `Encoder` extensions for encode/decode-ing properties one by one.
+/// - Supports Alternative-Keys, Nested-Keys, Type-Conversions and Default-Values.
+/// 
+/// <#swift#> <#codable#> <#json#> <#model#> <#type-inference#>
+/// <#key-mapping#> <#property-wrapper#> <#coding-key#> <#subscript#>
+/// <#alternative-keys#> <#nested-keys#> <#type-conversions#>
+/// 
+/// - seealso: [Usage](https://github.com/iwill/ExCodable#usage) from the `README.md`
+/// - seealso: `ExCodableTests.swift` from the `Tests`
+/// - seealso: [Decoding and overriding](https://www.swiftbysundell.com/articles/property-wrappers-in-swift/#decoding-and-overriding)
+/// and [Useful Codable extensions](https://www.swiftbysundell.com/tips/useful-codable-extensions/), by John Sundell.
 
 @propertyWrapper
 public final class ExCodable<Value: Codable> {
@@ -384,7 +382,9 @@ fileprivate extension KeyedDecodingContainer {
     
     func decodeForTypeConversion<T: Decodable>(_ codingKey: Self.Key, as type: T.Type = T.self, converter selfConverter: (any ExCodableDecodingTypeConverter.Type)?) -> T? {
         
-        if type is Bool.Type {
+        let wrappedType = T?.wrappedType
+        
+        if type is Bool.Type || wrappedType is Bool.Type {
             if let int = try? decodeIfPresent(Int.self, forKey: codingKey) {
                 return (int != 0) as? T
             }
@@ -401,63 +401,63 @@ fileprivate extension KeyedDecodingContainer {
             }
         }
         
-        else if type is Int.Type {
+        else if type is Int.Type || wrappedType is Int.Type {
             if      let bool   = try? decodeIfPresent(Bool.self,   forKey: codingKey) { return Int(bool ? 1 : 0) as? T }
             else if let double = try? decodeIfPresent(Double.self, forKey: codingKey) { return Int(double) as? T } // include Float
             else if let string = try? decodeIfPresent(String.self, forKey: codingKey), let value = Int(string) { return value as? T }
         }
-        else if type is Int8.Type {
+        else if type is Int8.Type || wrappedType is Int8.Type {
             if      let bool   = try? decodeIfPresent(Bool.self,   forKey: codingKey) { return Int8(bool ? 1 : 0) as? T }
             else if let double = try? decodeIfPresent(Double.self, forKey: codingKey) { return Int8(double) as? T } // include Float
             else if let string = try? decodeIfPresent(String.self, forKey: codingKey), let value = Int8(string) { return value as? T }
         }
-        else if type is Int16.Type {
+        else if type is Int16.Type || wrappedType is Int16.Type {
             if      let bool   = try? decodeIfPresent(Bool.self,   forKey: codingKey) { return Int16(bool ? 1 : 0) as? T }
             else if let double = try? decodeIfPresent(Double.self, forKey: codingKey) { return Int16(double) as? T } // include Float
             else if let string = try? decodeIfPresent(String.self, forKey: codingKey), let value = Int16(string) { return value as? T }
         }
-        else if type is Int32.Type {
+        else if type is Int32.Type || wrappedType is Int32.Type {
             if      let bool   = try? decodeIfPresent(Bool.self,   forKey: codingKey) { return Int32(bool ? 1 : 0) as? T }
             else if let double = try? decodeIfPresent(Double.self, forKey: codingKey) { return Int32(double) as? T } // include Float
             else if let string = try? decodeIfPresent(String.self, forKey: codingKey), let value = Int32(string) { return value as? T }
         }
-        else if type is Int64.Type {
+        else if type is Int64.Type || wrappedType is Int64.Type {
             if      let bool   = try? decodeIfPresent(Bool.self,   forKey: codingKey) { return Int64(bool ? 1 : 0) as? T }
             else if let double = try? decodeIfPresent(Double.self, forKey: codingKey) { return Int64(double) as? T } // include Float
             else if let string = try? decodeIfPresent(String.self, forKey: codingKey), let value = Int64(string) { return value as? T }
         }
         
-        else if type is UInt.Type {
+        else if type is UInt.Type || wrappedType is UInt.Type {
             if      let bool   = try? decodeIfPresent(Bool.self,   forKey: codingKey) { return UInt(bool ? 1 : 0) as? T }
             else if let string = try? decodeIfPresent(String.self, forKey: codingKey), let value = UInt(string) { return value as? T }
         }
-        else if type is UInt8.Type {
+        else if type is UInt8.Type || wrappedType is UInt8.Type {
             if      let bool   = try? decodeIfPresent(Bool.self,   forKey: codingKey) { return UInt8(bool ? 1 : 0) as? T }
             else if let string = try? decodeIfPresent(String.self, forKey: codingKey), let value = UInt8(string) { return value as? T }
         }
-        else if type is UInt16.Type {
+        else if type is UInt16.Type || wrappedType is UInt16.Type {
             if      let bool   = try? decodeIfPresent(Bool.self,   forKey: codingKey) { return UInt16(bool ? 1 : 0) as? T }
             else if let string = try? decodeIfPresent(String.self, forKey: codingKey), let value = UInt16(string) { return value as? T }
         }
-        else if type is UInt32.Type {
+        else if type is UInt32.Type || wrappedType is UInt32.Type {
             if      let bool   = try? decodeIfPresent(Bool.self,   forKey: codingKey) { return UInt32(bool ? 1 : 0) as? T }
             else if let string = try? decodeIfPresent(String.self, forKey: codingKey), let value = UInt32(string) { return value as? T }
         }
-        else if type is UInt64.Type {
+        else if type is UInt64.Type || wrappedType is UInt64.Type {
             if      let bool   = try? decodeIfPresent(Bool.self,   forKey: codingKey) { return UInt64(bool ? 1 : 0) as? T }
             else if let string = try? decodeIfPresent(String.self, forKey: codingKey), let value = UInt64(string) { return value as? T }
         }
         
-        else if type is Double.Type {
+        else if type is Double.Type || wrappedType is Double.Type {
             if      let int64  = try? decodeIfPresent(Int64.self,  forKey: codingKey) { return Double(int64) as? T } // include all Int types
             else if let string = try? decodeIfPresent(String.self, forKey: codingKey), let value = Double(string) { return value as? T }
         }
-        else if type is Float.Type {
+        else if type is Float.Type || wrappedType is Float.Type {
             if      let int64  = try? decodeIfPresent(Int64.self,  forKey: codingKey) { return Float(int64) as? T } // include all Int types
             else if let string = try? decodeIfPresent(String.self, forKey: codingKey), let value = Float(string) { return value as? T }
         }
         
-        else if type is String.Type {
+        else if type is String.Type || wrappedType is String.Type {
             if      let bool   = try? decodeIfPresent(Bool.self,   forKey: codingKey) { return String(describing: bool) as? T }
             else if let int64  = try? decodeIfPresent(Int64.self,  forKey: codingKey) { return String(describing: int64) as? T } // include all Int types
             else if let double = try? decodeIfPresent(Double.self, forKey: codingKey) { return String(describing: double) as? T } // include Float
@@ -590,10 +590,19 @@ extension PropertyListDecoder: DataDecoder {}
 // - seealso: https://forums.swift.org/t/challenge-finding-base-type-of-nested-optionals/25096
 
 fileprivate protocol OptionalProtocol {
+    static var wrappedType: Any.Type { get }
     var wrapped: Any? { get }
 }
 
 extension Optional: OptionalProtocol {
+    
+    fileprivate static var wrappedType: Any.Type {
+        if let optional = Wrapped.self as? OptionalProtocol.Type {
+            return optional.wrappedType
+        }
+        return Wrapped.self
+    }
+    
     public var wrapped: Any? {
         return switch self {
             case .some(let optional as OptionalProtocol):

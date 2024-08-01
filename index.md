@@ -1,23 +1,23 @@
 ExCodable
 ========
 
-[![ExCodable](https://iwill.im/images/ExCodable-1920x500.png)](https://github.com/iwill/ExCodable#readme)
+[![ExCodable](https://iwill.im/images/ExCodable-v1-1920x500.png)](https://github.com/ExCodable/ExCodable#readme)
 
 [![Swift 5.0](https://img.shields.io/badge/Swift-5.0-orange.svg)](https://swift.org/)
 [![Swift Package Manager](https://img.shields.io/badge/spm-compatible-brightgreen.svg?style=flat)](https://swift.org/package-manager/)
 [![Platforms](https://img.shields.io/cocoapods/p/ExCodable.svg)](#)
 <br />
-[![Build and Test](https://github.com/iwill/ExCodable/actions/workflows/build-and-test.yml/badge.svg)](https://github.com/iwill/ExCodable/actions/workflows/build-and-test.yml)
-[![GitHub Releases (latest SemVer)](https://img.shields.io/github/v/release/iwill/ExCodable.svg?sort=semver)](https://github.com/iwill/ExCodable/releases)
-[![Deploy to CocoaPods](https://github.com/iwill/ExCodable/actions/workflows/deploy_to_cocoapods.yml/badge.svg)](https://github.com/iwill/ExCodable/actions/workflows/deploy_to_cocoapods.yml)
+[![Build and Test](https://github.com/ExCodable/ExCodable/actions/workflows/build-and-test.yml/badge.svg)](https://github.com/ExCodable/ExCodable/actions/workflows/build-and-test.yml)
+[![GitHub Releases (latest SemVer)](https://img.shields.io/github/v/release/ExCodable/ExCodable.svg?sort=semver)](https://github.com/ExCodable/ExCodable/releases)
+[![Deploy to CocoaPods](https://github.com/ExCodable/ExCodable/actions/workflows/deploy_to_cocoapods.yml/badge.svg)](https://github.com/ExCodable/ExCodable/actions/workflows/deploy_to_cocoapods.yml)
 [![Cocoapods](https://img.shields.io/cocoapods/v/ExCodable.svg)](https://cocoapods.org/pods/ExCodable)
 <br />
-[![LICENSE](https://img.shields.io/github/license/iwill/ExCodable.svg)](https://github.com/iwill/ExCodable/blob/master/LICENSE)
+[![LICENSE](https://img.shields.io/github/license/ExCodable/ExCodable.svg)](https://github.com/ExCodable/ExCodable/blob/master/LICENSE)
 [![@minglq](https://img.shields.io/twitter/url?url=https%3A%2F%2Fgithub.com%2Fiwill%2FExCodable)](https://twitter.com/minglq)
 
-[En](https://github.com/iwill/ExCodable) | 中文
+[En](https://github.com/ExCodable/ExCodable) | 中文
 
-## [ExCodable](https://github.com/iwill/ExCodable) 是一个 Swift 版 JSON-Model 转换工具
+## [ExCodable](https://github.com/ExCodable/ExCodable) 是一个 Swift 版 JSON-Model 转换工具
 
 > 去年春节完成了 0.x 版本，后来有一次巨大的升级，今年春节终于发布了 1.0 版本。这该死的拖延症 ...
 
@@ -163,7 +163,7 @@ struct TestExCodable: ExCodable, Equatable {
 定义 `struct`，使用 `var` 声明变量、并设置默认值，可以使用 `private(set)` 来防止属性被外部修改；
 
 > `Optional` 类型不需要默认值；
-> 想用 `let` 也不是不可以，参考 [Usage](https://github.com/iwill/ExCodable#usage)；
+> 想用 `let` 也不是不可以，参考 [Usage](https://github.com/ExCodable/ExCodable#usage)；
 
 ```swift
 struct TestStruct: Equatable {
@@ -211,7 +211,7 @@ XCTAssertEqual(copy2, test)
 
 ```
 
-更多示例可参考 [Usage](https://github.com/iwill/ExCodable#usage) 以及单元测试代码。
+更多示例可参考 [Usage](https://github.com/ExCodable/ExCodable#usage) 以及单元测试代码。
 
 ### 将下面代码片段添加到 Xcode，只要记住 `ExCodable` 就可以了：
 

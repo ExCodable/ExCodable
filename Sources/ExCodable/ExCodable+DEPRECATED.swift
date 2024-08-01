@@ -1,14 +1,14 @@
 //
-//  ExCodable.swift
+//  ExCodable+DEPRECATED.swift
 //  ExCodable
 //
 //  Created by Míng on 2021-07-01.
-//  Copyright (c) 2023 Míng <i+ExCodable@iwill.im>. Released under the MIT license.
+//  Copyright (c) 2021 Míng <i+ExCodable@iwill.im>. Released under the MIT license.
 //
 
 import Foundation
 
-// TODO: remove
+// TODO: REMOVE
 
 /// Migration ExCodable from 0.x to 1.x:
 /// 
@@ -24,9 +24,31 @@ import Foundation
 /// - Use `@ExCodable("<key>", "<alt-key>")`.
 /// 
 
+// MARK: adaptor
+
+@available(*, deprecated)
+fileprivate extension Encoder {
+    func _encode<T: Encodable>(_ value: T?, for stringKey: String, nonnull: Bool = false, throws: Bool = false) throws {
+        try encode(value, for: stringKey, nonnull: nonnull, throws: `throws`)
+    }
+    func _encode<T: Encodable, K: CodingKey>(_ value: T?, for codingKey: K, nonnull: Bool = false, throws: Bool = false) throws {
+        try encode(value, for: codingKey, nonnull: nonnull, throws: `throws`)
+    }
+}
+
+@available(*, deprecated)
+fileprivate extension Decoder {
+    func _decode<T: Decodable>(_ stringKeys: [String], as type: T.Type = T.self, nonnull: Bool = false, throws: Bool = false, converter: (any ExCodableDecodingTypeConverter.Type)? = nil) throws -> T? {
+        return try decode(stringKeys, as: type, nonnull: nonnull, throws: `throws`, converter: converter)
+    }
+    func _decode<T: Decodable, K: CodingKey>(_ codingKeys: [K], as type: T.Type = T.self, nonnull: Bool = false, throws: Bool = false, converter: (any ExCodableDecodingTypeConverter.Type)? = nil) throws -> T? {
+        try decode(codingKeys, as: type, nonnull: nonnull, throws: `throws`, converter: converter)
+    }
+}
+
 // MARK: - keyMapping
 
-@available(*, deprecated, message: "Use `@ExCodable` property wrapper instead.")
+@available(*, deprecated, message: "Use property wrapper `@ExCodable` instead.")
 public protocol ExCodableDEPRECATED: Codable {
     associatedtype Root = Self where Root: ExCodableDEPRECATED
     static var keyMapping: [KeyMap<Root>] { get }
@@ -59,7 +81,7 @@ public extension ExCodableDEPRECATED {
     }
 }
 
-@available(*, deprecated, message: "Use `@ExCodable` property wrapper instead.")
+@available(*, deprecated, message: "Use property wrapper `@ExCodable` instead.")
 public final class KeyMap<Root: Codable> {
     fileprivate let encode: (_ root: Root, _ encoder: Encoder, _ nonnullAll: Bool, _ throwsAll: Bool) throws -> Void
     fileprivate let decode: ((_ root: inout Root, _ decoder: Decoder, _ nonnullAll: Bool, _ throwsAll: Bool) throws -> Void)?
@@ -115,27 +137,27 @@ public extension KeyMap {
 
 @available(*, deprecated)
 public extension ExCodableDEPRECATED {
-    @available(*, deprecated, renamed: "encode(to:with:nonnull:throws:)")
+    @available(*, deprecated)
     func encode(with keyMapping: [KeyMap<Self>], using encoder: Encoder) {
         try? encode(to: encoder, with: keyMapping)
     }
-    @available(*, deprecated, renamed: "decode(from:with:nonnull:throws:)")
+    @available(*, deprecated)
     mutating func decode(with keyMapping: [KeyMap<Self>], using decoder: Decoder) {
         try? decode(from: decoder, with: keyMapping)
     }
-    @available(*, deprecated, renamed: "decodeReference(from:with:nonnull:throws:)")
+    @available(*, deprecated)
     func decodeReference(with keyMapping: [KeyMap<Self>], using decoder: Decoder) {
         try? decodeReference(from: decoder, with: keyMapping)
     }
 }
 
-@available(*, deprecated, renamed: "append(decodingTypeConverter:)")
+@available(*, deprecated)
 public protocol KeyedDecodingContainerCustomTypeConversion: ExCodableDecodingTypeConverter {
-    func decodeForTypeConversion<T: Decodable, K: CodingKey>(_ container: KeyedDecodingContainer<K>, codingKey: K, as type: T.Type) -> T?
+    static func decodeForTypeConversion<T: Decodable, K: CodingKey>(_ container: KeyedDecodingContainer<K>, codingKey: K, as type: T.Type) -> T?
 }
 @available(*, deprecated)
 public extension KeyedDecodingContainerCustomTypeConversion {
-    func decode<T: Decodable, K: CodingKey>(_ container: KeyedDecodingContainer<K>, codingKey: K, as type: T.Type) throws -> T? {
+    static func decode<T: Decodable, K: CodingKey>(_ container: KeyedDecodingContainer<K>, codingKey: K, as type: T.Type) -> T? {
         return decodeForTypeConversion(container, codingKey: codingKey, as: type)
     }
 }

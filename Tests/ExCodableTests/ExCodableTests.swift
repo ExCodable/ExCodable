@@ -118,7 +118,7 @@ struct TestNestedKeys: ExAutoCodable, Equatable {
     var string: String! = nil
 }
 
-// MARK: custom encode/decode
+// MARK: custom encoding/decoding
 
 fileprivate func message(for int: Int) -> String {
     switch int {
@@ -255,37 +255,19 @@ extension TestTypeConversions: Encodable, Decodable {
 
 // MARK: custom type-conversions
 
-// @available(*, deprecated)
-// extension KeyedDecodingContainer: KeyedDecodingContainerCustomTypeConversion {
-//     public func decodeForTypeConversion<T, K>(_ container: KeyedDecodingContainer<K>, codingKey: K, as type: T.Type) -> T? where T: Decodable, K: CodingKey {
-//         
-//         if type is Double.Type || type is Double?.Type {
-//             if let bool = try? decodeIfPresent(Bool.self, forKey: codingKey as! Self.Key) {
-//                 return (bool ? 1.0 : 0.0) as? T
-//             }
-//         }
-//         
-//         else if type is Float.Type || type is Float?.Type {
-//             if let bool = try? decodeIfPresent(Bool.self, forKey: codingKey as! Self.Key) {
-//                 return (bool ? 1.0 : 0.0) as? T
-//             }
-//         }
-//         
-//         return nil
-//     }
-// }
-
 struct TestCustomTypeConverter: ExAutoCodable, Equatable {
-    @ExCodable("boolFromDouble") private(set)
-    var boolFromDouble: Bool? = nil
     @ExCodable("doubleFromBool") private(set)
     var doubleFromBool: Double? = nil
+    @ExCodable("boolFromDouble") private(set)
+    var boolFromDouble: Bool? = nil
 }
 
 extension TestCustomTypeConverter: ExCodableDecodingTypeConverter {
-    static public func decode<T: Decodable, K: CodingKey>(_ container: KeyedDecodingContainer<K>, codingKey: K, as type: T.Type) -> T? {
+    public static func decode<T: Decodable, K: CodingKey>(_ container: KeyedDecodingContainer<K>, codingKey: K, as type: T.Type) -> T? {
+        
+        // for nested optionals, e.g. `var int: Int??? = nil`
         let wrappedType = T?.wrappedType
-        // NOT implemented: decode Bool from Double
+        
         // decode Double from Bool
         if type is Double.Type || wrappedType is Double.Type {
             if let bool = try? container.decodeIfPresent(Bool.self, forKey: codingKey) {
@@ -298,7 +280,24 @@ extension TestCustomTypeConverter: ExCodableDecodingTypeConverter {
                 return (bool ? 1.0 : 0.0) as? T
             }
         }
-        // Double or Float NOT found
+        
+        return nil
+    }
+}
+
+extension ExCodableGlobalDecodingTypeConverter: ExCodableDecodingTypeConverter {
+    public static func decode<T: Decodable, _K: CodingKey>(_ container: KeyedDecodingContainer<_K>, codingKey: _K, as type: T.Type) -> T? {
+        
+        // for nested optionals, e.g. `var int: Int??? = nil`
+        let wrappedType = T?.wrappedType
+        
+        // decode Bool from Double
+        if type is Bool.Type || wrappedType is Bool.Type {
+            if let double = try? container.decodeIfPresent(Double.self, forKey: codingKey) {
+                return (double != 0) as? T
+            }
+        }
+        
         return nil
     }
 }
@@ -339,6 +338,33 @@ class TestSubclass: TestClass {
                 && lhs.string == rhs.string
                 && lhs.bool == rhs.bool)
     }
+}
+
+// MARK: nonnull and `throws`
+
+struct TestNonnull: ExAutoCodable, Equatable {
+    @ExCodable("int", nonnull: true) private(set)
+    var nonnullInt: Int! = 0
+}
+
+struct TestNestedNonnull: ExAutoCodable, Equatable {
+    @ExCodable("nested.int", "int", nonnull: true) private(set)
+    var nonnullInt: Int! = 0
+}
+
+struct TestThrows: ExAutoCodable, Equatable {
+    @ExCodable("string", "nested.string", throws: true) private(set)
+    var throwsString: String! = ""
+}
+
+struct TestNestedThrows: ExAutoCodable, Equatable {
+    @ExCodable("nested.string", "string", throws: true) private(set)
+    var throwsString: String! = ""
+}
+
+struct TestNonnullWithThrows: ExAutoCodable, Equatable {
+    @ExCodable("throws", nonnull: true) private(set)
+    var testThrows: TestThrows! = nil
 }
 
 // MARK: ExCodable
@@ -661,12 +687,12 @@ final class ExCodableTests: XCTestCase {
     func testCustomTypeConverter() {
         let data = Data(#"""
         {
-            "boolFromDouble": 1.2,
-            "doubleFromBool": true
+            "doubleFromBool": true,
+            "boolFromDouble": 1.2
         }
         """#.utf8)
         if let test = try? data.decoded() as TestCustomTypeConverter {
-            XCTAssertEqual(test, TestCustomTypeConverter(boolFromDouble: nil, doubleFromBool: 1.0))
+            XCTAssertEqual(test, TestCustomTypeConverter(doubleFromBool: 1.0, boolFromDouble: true))
         }
         else {
             XCTFail()
@@ -692,6 +718,106 @@ final class ExCodableTests: XCTestCase {
         }
         else {
             XCTFail()
+        }
+    }
+    
+    func testNonnullAndThrows() {
+        
+        let noIntData = Data(#"""
+        {
+            "noInt": true
+        }
+        """#.utf8)
+        XCTAssertThrowsError(try noIntData.decoded() as TestNonnull) { error in
+            XCTAssertNotNil(error)
+            print("TestNonnull error: \(error)")
+        }
+        XCTAssertThrowsError(try noIntData.decoded() as TestNestedNonnull) { error in
+            XCTAssertNotNil(error)
+            print("TestNestedNonnull error: \(error)")
+        }
+        
+        let nullData = Data(#"""
+        {
+            "int": null,
+            "nested": {
+                "int": null
+            }
+        }
+        """#.utf8)
+        XCTAssertThrowsError(try nullData.decoded() as TestNonnull) { error in
+            XCTAssertNotNil(error)
+            print("TestNonnull error: \(error)")
+        }
+        XCTAssertThrowsError(try nullData.decoded() as TestNestedNonnull) { error in
+            XCTAssertNotNil(error)
+            print("TestNestedNonnull error: \(error)")
+        }
+        
+        let nonnullData = Data(#"""
+        {
+            "int": 1,
+            "nested": {
+                "int": 1
+            }
+        }
+        """#.utf8)
+        XCTAssertEqual(try nonnullData.decoded() as TestNonnull, TestNonnull(nonnullInt: 1))
+        XCTAssertEqual(try nonnullData.decoded() as TestNestedNonnull, TestNestedNonnull(nonnullInt: 1))
+        
+        let throwsData = Data(#"""
+        {
+            "string": [],
+            "nested": {
+                "string": []
+            }
+        }
+        """#.utf8)
+        XCTAssertThrowsError(try throwsData.decoded() as TestThrows) { error in
+            XCTAssertNotNil(error)
+            print("TestThrows error: \(error)")
+        }
+        XCTAssertThrowsError(try throwsData.decoded() as TestNestedThrows) { error in
+            XCTAssertNotNil(error)
+            print("TestNestedThrows error: \(error)")
+        }
+        
+        let noThrowsData = Data(#"""
+        {
+            "string": 123
+        }
+        """#.utf8)
+        XCTAssertEqual(try noThrowsData.decoded() as TestThrows, TestThrows(throwsString: "123"))
+        XCTAssertEqual(try noThrowsData.decoded() as TestNestedThrows, TestNestedThrows(throwsString: "123"))
+        
+        let nonnullWithThrowsData = Data(#"""
+        {
+            "throws": {
+                "string": []
+            }
+        }
+        """#.utf8)
+        XCTAssertThrowsError(try nonnullWithThrowsData.decoded() as TestNonnullWithThrows) { error in
+            XCTAssertNotNil(error)
+            print("TestNonnullWithThrows error: \(error)")
+        }
+        
+        XCTAssertThrowsError(try TestNonnull(nonnullInt: nil).encoded() as Data) { error in
+            XCTAssertNotNil(error)
+            print("TestNonnull error: \(error)")
+        }
+        XCTAssertThrowsError(try TestNestedNonnull(nonnullInt: nil).encoded() as Data) { error in
+            XCTAssertNotNil(error)
+            print("TestNestedNonnull error: \(error)")
+        }
+        
+        XCTAssertThrowsError(try TestThrows(throwsString: nil).encoded() as Data) { error in
+            XCTAssertNotNil(error)
+            print("TestThrows error: \(error)")
+        }
+        XCTAssertThrowsError(try TestNestedThrows(throwsString: nil).encoded() as Data) { error in
+            XCTAssertNotNil(error)
+            print("TestNestedThrows error: \(error)")
         }
     }
     

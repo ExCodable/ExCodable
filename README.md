@@ -1,6 +1,6 @@
-[![ExCodable](https://iwill.im/images/ExCodable-1920x500.png)](#readme)
+[![ExCodable](https://iwill.im/images/ExCodable-1.x-1920x500.png)](#readme)
 
-[![Swift 5.0](https://img.shields.io/badge/Swift-5.0-orange.svg)](https://swift.org/)
+[![Swift 5.10](https://img.shields.io/badge/Swift-5.10-orange.svg)](https://swift.org/)
 [![Swift Package Manager](https://img.shields.io/badge/spm-compatible-brightgreen.svg?style=flat)](https://swift.org/package-manager/)
 [![Platforms](https://img.shields.io/cocoapods/p/ExCodable.svg)](#readme)
 <br />
@@ -52,7 +52,7 @@ struct TestExCodable: ExAutoCodable {
 - Supports **nested keys** via `String` with dot syntax.
 - Supports builtin and custom **type conversions**, including **nested optionals** as well.
 - Supports manual encoding/decoding using **subscripts**.
-- Supports **continue or abort** if error encountered - returns nil or throws error.
+- Supports `return nil` or `throw error` when encoding/decoding failed.
 - Supports **type inference**, including JSON `Data`, `String` and objects.
 - Uses JSON encoder/decoder by default, supports PList and custom encoder/decoder.
 
@@ -231,6 +231,7 @@ struct TestCustomTypeConverter: ExAutoCodable {
 }
 
 extension TestCustomTypeConverter: ExCodableDecodingTypeConverter {
+    
     public static func decode<T: Decodable, K: CodingKey>(_ container: KeyedDecodingContainer<K>, codingKey: K, as type: T.Type) -> T? {
         
         // for nested optionals, e.g. `var int: Int??? = nil`
@@ -264,6 +265,7 @@ struct TestCustomGlobalTypeConverter: ExAutoCodable, Equatable {
 }
 
 extension ExCodableGlobalDecodingTypeConverter: ExCodableDecodingTypeConverter {
+    
     public static func decode<T: Decodable, _K: CodingKey>(_ container: KeyedDecodingContainer<_K>, codingKey: _K, as type: T.Type) -> T? {
         
         // for nested optionals, e.g. `var int: Int??? = nil`
@@ -323,7 +325,6 @@ class TestClass: ExAutoCodable {
     var int: Int = 0
     @ExCodable private(set)
     var string: String? = nil
-    
     required init() {}
     init(int: Int, string: String?) {
         (self.int, self.string) = (int, string)
@@ -334,25 +335,31 @@ class TestClass: ExAutoCodable {
 
 ```swift
 class TestSubclass: TestClass {
-    
     @ExCodable private(set)
     var bool: Bool = false
-    
     required init() { super.init() }
     required init(int: Int, string: String, bool: Bool) {
         self.bool = bool
         super.init(int: int, string: string)
     }
-    
 }
 
 ```
 
-### 8. Continue or Abort
+### 8. `return nil` or `throw error` - <mark>UNSTABLE</mark>
+
+While encoding/decoding, ExCodable ignores the `keyNotFound`, `valueNotFound` and `typeMismatch` errors and `return nil` by default.
+
+When encoding/decoding failed:
+
+- Use `nonnull: true` to throw `EncodingError.invalidValue`, `DecodingError.keyNotFound`, `DecodingError.valueNotFound`.
+- Use `throws: true` to throw `DecodingError.typeMismatch`.
 
 ```swift
-encoding/decoding
-nonnull || `throws`
+struct TestNonnullAndThrows: ExAutoCodable {
+    @ExCodable("int", nonnull: true, throws: true) private(set)
+    var nonnullInt: Int! = 0
+}
 
 ```
 
@@ -361,6 +368,7 @@ nonnull || `throws`
 ```swift
 let test = TestStruct(int: 304, string: "Not Modified"),
     test2 = TestStruct(int: 304, string: "Not Modified")
+
 // type of `data` inferenced from `Data`
 // types of `copy` and `copy2` inferenced from `TestStruct`
 if let data = try? test.encoded() as Data,
@@ -377,48 +385,23 @@ else {
 
 ## Requirements
 
-- iOS 8.0+ | tvOS 9.0+ | macOS X 10.10+ | watchOS 2.0+
-- Xcode 12.0+
-- Swift 5.0+
+- iOS 12.0+ | tvOS 12.0+ | macOS 11.0+ | watchOS 4.0+
+- Xcode 15.4+
+- Swift 5.10+
 
 ## Installation
 
-- [Swift Package Manager](https://swift.org/package-manager/):
+- Swift Package Manager:
 
 ```swift
 .package(url: "https://github.com/ExCodable/ExCodable", from: "1.0.0")
 
 ```
 
-- [CocoaPods](http://cocoapods.org):
+- CocoaPods:
 
 ```ruby
 pod 'ExCodable', '~> 1.0.0'
-
-```
-
-- Code Snippets:
-
-> Title: ExCodable
-> Summary: Adopt to ExCodable protocol
-> Language: Swift  
-> Platform: All  
-> Completion: ExCodable  
-> Availability: Top Level  
-
-```swift
-<#extension/struct/class#> <#Type#>: ExCodable {
-    static let <#keyMapping#>: [KeyMap<<#SelfType#>>] = [
-        KeyMap(\.<#property#>, to: <#"key"#>),
-        <#...#>
-    ]
-    init(from decoder: Decoder) throws {
-        try decode<#Reference#>(from: decoder, with: Self.<#keyMapping#>)
-    }
-    func encode(to encoder: Encoder) throws {
-        try encode(to: encoder, with: Self.<#keyMapping#>)
-    }
-}
 
 ```
 

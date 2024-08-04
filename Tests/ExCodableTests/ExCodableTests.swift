@@ -383,7 +383,7 @@ final class ExCodableTests: XCTestCase {
     func testAutoCodable() {
         let test = TestAutoCodable(int: 100, string: "Continue")
         if let data = try? test.encoded() as Data,
-           let copy = try? data.decoded() as TestAutoCodable,
+           let copy = try? TestAutoCodable.decoded(from: data),
            let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
             XCTAssertEqual(copy, test)
             XCTAssertEqual(NSDictionary(dictionary: json), ["i": 100, "s": "Continue"])
@@ -395,6 +395,7 @@ final class ExCodableTests: XCTestCase {
     
     func testManualCodable() {
         let json = Data(#"{"int":200,"nested":{"nested":{"string":"OK"}}}"#.utf8)
+        // decoded with type-inference
         if let test = try? json.decoded() as TestManualCodable,
            let data = try? test.encoded() as Data,
            let copy = try? data.decoded() as TestManualCodable {
@@ -410,9 +411,9 @@ final class ExCodableTests: XCTestCase {
     @available(*, deprecated)
     func testExCodable_0_x() {
         let json = Data(#"{"int":200,"string":"OK"}"#.utf8)
-        if let test = try? json.decoded() as TestExCodable_0_x,
+        if let test = try? TestExCodable_0_x.decoded(from: json),
            let data = try? test.encoded() as Data,
-           let copy = try? data.decoded() as TestExCodable_0_x {
+           let copy = try? TestExCodable_0_x.decoded(from: data) {
             XCTAssertEqual(copy, test)
             let json = try! JSONSerialization.jsonObject(with: data) as! [String: Any]
             XCTAssertEqual(NSDictionary(dictionary: json), ["int":200,"string":"OK"])
@@ -426,7 +427,7 @@ final class ExCodableTests: XCTestCase {
         let test = TestStruct(int: 304, string: "Not Modified"),
             test2 = TestStruct(int: 304, string: "Not Modified", bool: nil)
         if let data = try? test.encoded() as Data,
-           let copy = try? data.decoded() as TestStruct,
+           let copy = try? TestStruct.decoded(from: data),
            let copy2 = try? TestStruct.decoded(from: data) {
             XCTAssertEqual(copy, test)
             XCTAssertEqual(copy2, test2)
@@ -444,7 +445,7 @@ final class ExCodableTests: XCTestCase {
     func testStructWithEnum() {
         let test = TestStructWithEnum(enum: .one)
         if let data = try? test.encoded() as Data,
-           let copy1 = try? data.decoded() as TestStructWithEnum,
+           let copy1 = try? TestStructWithEnum.decoded(from: data),
            let copy2 = try? TestStructWithEnum.decoded(from: data) {
             XCTAssertEqual(copy1, test)
             XCTAssertEqual(copy2, test)
@@ -459,9 +460,9 @@ final class ExCodableTests: XCTestCase {
     
     func testStructWithEnumFromJSON() {
         let json = Data(#"{"enum":1}"#.utf8)
-        if let test = try? json.decoded() as TestStructWithEnum,
+        if let test = try? TestStructWithEnum.decoded(from: json),
            let data = try? test.encoded() as Data,
-           let copy = try? data.decoded() as TestStructWithEnum {
+           let copy = try? TestStructWithEnum.decoded(from: data) {
             XCTAssertEqual(test, TestStructWithEnum(enum: .one))
             XCTAssertEqual(copy, test)
             let localJSON = try! JSONSerialization.jsonObject(with: data) as! [String: Any]
@@ -476,9 +477,9 @@ final class ExCodableTests: XCTestCase {
     
     func testStructWithEnumFromJSONWithString() {
         let json = Data(#"{"enum":"1"}"#.utf8)
-        if let test = try? json.decoded() as TestStructWithEnum,
+        if let test = try? TestStructWithEnum.decoded(from: json),
            let data = try? test.encoded() as Data,
-           let copy = try? data.decoded() as TestStructWithEnum {
+           let copy = try? TestStructWithEnum.decoded(from: data) {
             XCTAssertEqual(test, TestStructWithEnum(enum: .one))
             XCTAssertEqual(copy, test)
             let localJSON = try! JSONSerialization.jsonObject(with: data) as! [String: Any]
@@ -493,9 +494,9 @@ final class ExCodableTests: XCTestCase {
     
     func testAlternativeKeys() {
         let json = Data(#"{"i":403,"s":"Forbidden"}"#.utf8)
-        if let test = try? json.decoded() as TestAlternativeKeys,
+        if let test = try? TestAlternativeKeys.decoded(from: json),
            let data = try? test.encoded() as Data,
-           let copy = try? data.decoded() as TestAlternativeKeys {
+           let copy = try? TestAlternativeKeys.decoded(from: data) {
             XCTAssertEqual(test, TestAlternativeKeys(int: 403, string: "Forbidden"))
             XCTAssertEqual(copy, test)
             let localJSON = try! JSONSerialization.jsonObject(with: data) as! [String: Any]
@@ -512,7 +513,7 @@ final class ExCodableTests: XCTestCase {
     func testNestedKeys() {
         let test = TestNestedKeys(int: 404, string: "Not Found")
         if let data = try? test.encoded() as Data,
-           let copy = try? data.decoded() as TestNestedKeys {
+           let copy = try? TestNestedKeys.decoded(from: data) {
             XCTAssertEqual(copy, test)
             let json = try! JSONSerialization.jsonObject(with: data) as! [String: Any]
             debugPrint(json)
@@ -533,7 +534,7 @@ final class ExCodableTests: XCTestCase {
     func testCustomEncodeDecode() {
         let test = TestCustomEncodeDecode(int: 418, string: "I'm a teapot", bool: true)
         if let data = try? test.encoded() as Data,
-           let copy = try? data.decoded() as TestCustomEncodeDecode {
+           let copy = try? TestCustomEncodeDecode.decoded(from: data) {
             XCTAssertEqual(copy, test)
             let json = try! JSONSerialization.jsonObject(with: data) as! [String: Any]
             debugPrint(json)
@@ -555,7 +556,7 @@ final class ExCodableTests: XCTestCase {
     func testSubscript() {
         let test = TestSubscript(int: 500, string: "Internal Server Error")
         if let data = try? test.encoded() as Data,
-           let copy = try? data.decoded() as TestSubscript {
+           let copy = try? TestSubscript.decoded(from: data) {
             XCTAssertEqual(copy, test)
         }
         else {
@@ -572,7 +573,7 @@ final class ExCodableTests: XCTestCase {
         }
         """#.utf8)
         
-        if let test = try? data.decoded() as TestTypeConversion {
+        if let test = try? TestTypeConversion.decoded(from: data) {
             XCTAssertEqual(test, TestTypeConversion(intFromString: 123, stringFromInt:  "456"))
         }
         else {
@@ -584,7 +585,7 @@ final class ExCodableTests: XCTestCase {
             "stringFromInt64": 123
         }
         """#.utf8)
-        if let test2 = try? data2.decoded() as TestTypeConversions {
+        if let test2 = try? TestTypeConversions.decoded(from: data2) {
             XCTAssertEqual(test2, TestTypeConversions(boolFromInt: nil,
                                                       boolFromString: nil,
                                                       intFromBool: nil,
@@ -625,7 +626,7 @@ final class ExCodableTests: XCTestCase {
             "stringFromDouble": 12.3
         }
         """#.utf8)
-        if let test = try? data.decoded() as TestTypeConversions {
+        if let test = try? TestTypeConversions.decoded(from: data) {
             XCTAssertEqual(test, TestTypeConversions(boolFromInt:      true,
                                                      boolFromString:   true,
                                                      intFromBool:      1,
@@ -663,7 +664,7 @@ final class ExCodableTests: XCTestCase {
             "stringFromDouble": 12.3
         }
         """#.utf8)
-        if let test2 = try? data2.decoded() as TestTypeConversions {
+        if let test2 = try? TestTypeConversions.decoded(from: data2) {
             XCTAssertEqual(test2, TestTypeConversions(boolFromInt:      false,
                                                       boolFromString:   nil,
                                                       intFromBool:      0,
@@ -691,7 +692,7 @@ final class ExCodableTests: XCTestCase {
             "boolFromDouble": 1.2
         }
         """#.utf8)
-        if let test = try? data.decoded() as TestCustomTypeConverter {
+        if let test = try? TestCustomTypeConverter.decoded(from: data) {
             XCTAssertEqual(test, TestCustomTypeConverter(doubleFromBool: 1.0, boolFromDouble: true))
         }
         else {
@@ -702,7 +703,7 @@ final class ExCodableTests: XCTestCase {
     func testClass() {
         let test = TestClass(int: 502, string: "Bad Gateway")
         if let data = try? test.encoded() as Data,
-           let copy = try? data.decoded() as TestClass {
+           let copy = try? TestClass.decoded(from: data) {
             XCTAssertEqual(copy, test)
         }
         else {
@@ -713,7 +714,7 @@ final class ExCodableTests: XCTestCase {
     func testSubclass() {
         let test = TestSubclass(int: 504, string: "Gateway Timeout", bool: true)
         if let data = try? test.encoded() as Data,
-           let copy = try? data.decoded() as TestSubclass {
+           let copy = try? TestSubclass.decoded(from: data) {
             XCTAssertEqual(copy, test)
         }
         else {
@@ -728,11 +729,11 @@ final class ExCodableTests: XCTestCase {
             "noInt": true
         }
         """#.utf8)
-        XCTAssertThrowsError(try noIntData.decoded() as TestNonnull) { error in
+        XCTAssertThrowsError(try TestNonnull.decoded(from: noIntData)) { error in
             XCTAssertNotNil(error)
             print("TestNonnull error: \(error)")
         }
-        XCTAssertThrowsError(try noIntData.decoded() as TestNestedNonnull) { error in
+        XCTAssertThrowsError(try TestNestedNonnull.decoded(from: noIntData)) { error in
             XCTAssertNotNil(error)
             print("TestNestedNonnull error: \(error)")
         }
@@ -745,11 +746,11 @@ final class ExCodableTests: XCTestCase {
             }
         }
         """#.utf8)
-        XCTAssertThrowsError(try nullData.decoded() as TestNonnull) { error in
+        XCTAssertThrowsError(try TestNonnull.decoded(from: nullData)) { error in
             XCTAssertNotNil(error)
             print("TestNonnull error: \(error)")
         }
-        XCTAssertThrowsError(try nullData.decoded() as TestNestedNonnull) { error in
+        XCTAssertThrowsError(try TestNestedNonnull.decoded(from: nullData)) { error in
             XCTAssertNotNil(error)
             print("TestNestedNonnull error: \(error)")
         }
@@ -762,8 +763,8 @@ final class ExCodableTests: XCTestCase {
             }
         }
         """#.utf8)
-        XCTAssertEqual(try nonnullData.decoded() as TestNonnull, TestNonnull(nonnullInt: 1))
-        XCTAssertEqual(try nonnullData.decoded() as TestNestedNonnull, TestNestedNonnull(nonnullInt: 1))
+        XCTAssertEqual(try TestNonnull.decoded(from: nonnullData), TestNonnull(nonnullInt: 1))
+        XCTAssertEqual(try TestNestedNonnull.decoded(from: nonnullData), TestNestedNonnull(nonnullInt: 1))
         
         let throwsData = Data(#"""
         {
@@ -773,11 +774,11 @@ final class ExCodableTests: XCTestCase {
             }
         }
         """#.utf8)
-        XCTAssertThrowsError(try throwsData.decoded() as TestThrows) { error in
+        XCTAssertThrowsError(try TestThrows.decoded(from: throwsData)) { error in
             XCTAssertNotNil(error)
             print("TestThrows error: \(error)")
         }
-        XCTAssertThrowsError(try throwsData.decoded() as TestNestedThrows) { error in
+        XCTAssertThrowsError(try TestNestedThrows.decoded(from: throwsData)) { error in
             XCTAssertNotNil(error)
             print("TestNestedThrows error: \(error)")
         }
@@ -787,8 +788,8 @@ final class ExCodableTests: XCTestCase {
             "string": 123
         }
         """#.utf8)
-        XCTAssertEqual(try noThrowsData.decoded() as TestThrows, TestThrows(throwsString: "123"))
-        XCTAssertEqual(try noThrowsData.decoded() as TestNestedThrows, TestNestedThrows(throwsString: "123"))
+        XCTAssertEqual(try TestThrows.decoded(from: noThrowsData), TestThrows(throwsString: "123"))
+        XCTAssertEqual(try TestNestedThrows.decoded(from: noThrowsData), TestNestedThrows(throwsString: "123"))
         
         let nonnullWithThrowsData = Data(#"""
         {
@@ -797,7 +798,7 @@ final class ExCodableTests: XCTestCase {
             }
         }
         """#.utf8)
-        XCTAssertThrowsError(try nonnullWithThrowsData.decoded() as TestNonnullWithThrows) { error in
+        XCTAssertThrowsError(try TestNonnullWithThrows.decoded(from: nonnullWithThrowsData)) { error in
             XCTAssertNotNil(error)
             print("TestNonnullWithThrows error: \(error)")
         }
@@ -846,7 +847,7 @@ final class ExCodableTests: XCTestCase {
         ]
         
         if let json = try? array.encoded() as Data,
-           let copies = try? json.decoded() as [TestExCodable],
+           let copies = try? [TestExCodable].decoded(from: json),
            let copies2 = try? [TestExCodable].decoded(from: json) {
             XCTAssertEqual(copies, array)
             XCTAssertEqual(copies2, array)
@@ -855,7 +856,7 @@ final class ExCodableTests: XCTestCase {
             XCTFail()
         }
         if let json = try? array.encoded() as [Any],
-           let copies = try? json.decoded() as [TestExCodable],
+           let copies = try? [TestExCodable].decoded(from: json),
            let copies2 = try? [TestExCodable].decoded(from: json) {
             XCTAssertEqual(copies, array)
             XCTAssertEqual(copies2, array)
@@ -864,7 +865,7 @@ final class ExCodableTests: XCTestCase {
             XCTFail()
         }
         if let json = try? array.encoded() as String,
-           let copies = try? json.decoded() as [TestExCodable],
+           let copies = try? [TestExCodable].decoded(from: json),
            let copies2 = try? [TestExCodable].decoded(from: json) {
             XCTAssertEqual(copies, array)
             XCTAssertEqual(copies2, array)
@@ -874,7 +875,7 @@ final class ExCodableTests: XCTestCase {
         }
         
         if let json = try? dictionary.encoded() as Data,
-           let copies = try? json.decoded() as [String: TestExCodable],
+           let copies = try? [String: TestExCodable].decoded(from: json),
            let copies2 = try? [String: TestExCodable].decoded(from: json) {
             XCTAssertEqual(copies, dictionary)
             XCTAssertEqual(copies2, dictionary)
@@ -883,7 +884,7 @@ final class ExCodableTests: XCTestCase {
             XCTFail()
         }
         if let json = try? dictionary.encoded() as [String: Any],
-           let copies = try? json.decoded() as [String: TestExCodable],
+           let copies = try? [String: TestExCodable].decoded(from: json),
            let copies2 = try? [String: TestExCodable].decoded(from: json) {
             XCTAssertEqual(copies, dictionary)
             XCTAssertEqual(copies2, dictionary)
@@ -892,7 +893,7 @@ final class ExCodableTests: XCTestCase {
             XCTFail()
         }
         if let json = try? dictionary.encoded() as String,
-           let copies = try? json.decoded() as [String: TestExCodable],
+           let copies = try? [String: TestExCodable].decoded(from: json),
            let copies2 = try? [String: TestExCodable].decoded(from: json) {
             XCTAssertEqual(copies, dictionary)
             XCTAssertEqual(copies2, dictionary)
@@ -917,7 +918,7 @@ final class ExCodableTests: XCTestCase {
             
             let test2 = TestClass(int: 502, string: "Bad Gateway")
             if let data = try? test2.encoded() as Data,
-               let copy = try? data.decoded() as TestClass {
+               let copy = try? TestClass.decoded(from: data) {
                 XCTAssertEqual(copy, test2)
             }
             else {
@@ -926,7 +927,7 @@ final class ExCodableTests: XCTestCase {
             
             let test3 = TestSubclass(int: 504, string: "Gateway Timeout", bool: true)
             if let data = try? test3.encoded() as Data,
-               let copy = try? data.decoded() as TestSubclass {
+               let copy = try? TestSubclass.decoded(from: data) {
                 XCTAssertEqual(copy, test3)
             }
             else {
@@ -938,5 +939,6 @@ final class ExCodableTests: XCTestCase {
         // let seconds = elapsed / 1_000_000_000
         let milliseconds = elapsed / 1_000_000
         print("elapsed: \(milliseconds) ms")
+        // TODO: compare to builtin and 0.x
     }
 }

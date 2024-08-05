@@ -35,7 +35,7 @@ public final class ExCodable<Value: Codable> {
     fileprivate let nonnull, `throws`: Bool?
     fileprivate let encode: ((_ encoder: Encoder, _ value: Value) throws -> Void)?,
                     decode: ((_ decoder: Decoder) throws -> Value?)?
-    fileprivate let decodeRawRepresentable: ((_ decoder: Decoder, _ stringKeys: [String], _ nonnull: Bool, _ throws: Bool, _ converter: (any ExCodableDecodingTypeConverter.Type)?) throws -> Value?)?
+    private let decodeRawRepresentable: ((_ decoder: Decoder, _ stringKeys: [String], _ nonnull: Bool, _ throws: Bool, _ converter: (any ExCodableDecodingTypeConverter.Type)?) throws -> Value?)?
     
     private init(wrappedValue initialValue: Value, stringKeys: [String]? = nil, nonnull: Bool? = nil, throws: Bool? = nil, encode: ((_ encoder: Encoder, _ value: Value) throws -> Void)?, decode: ((_ decoder: Decoder) throws -> Value?)?, decodeRawRepresentable: ((_ decoder: Decoder, _ stringKeys: [String], _ nonnull: Bool, _ throws: Bool, _ converter: (any ExCodableDecodingTypeConverter.Type)?) throws -> Value?)? = nil) {
         (self.wrappedValue, self.stringKeys, self.nonnull, self.throws, self.encode, self.decode, self.decodeRawRepresentable)
@@ -54,11 +54,16 @@ public final class ExCodable<Value: Codable> {
 
 extension ExCodable where Value: RawRepresentable, Value.RawValue: Decodable {
     private convenience init(wrappedValue initialValue: Value, stringKeys: [String]? = nil, nonnull: Bool? = nil, throws: Bool? = nil, encode: ((_ encoder: Encoder, _ value: Value) throws -> Void)?, decode: ((_ decoder: Decoder) throws -> Value?)?) where Value: RawRepresentable, Value.RawValue: Decodable {
-        self.init(wrappedValue: initialValue, stringKeys: stringKeys, nonnull: nonnull, throws: `throws`, encode: encode, decode: decode, decodeRawRepresentable: decode == nil ? { (_ decoder: Decoder, _ stringKeys: [String], _ nonnull: Bool, _ `throws`: Bool, _ converter: (any ExCodableDecodingTypeConverter.Type)?) throws in
-            guard let rawValue = try decoder.decode(stringKeys, as: Value.RawValue.self, nonnull: nonnull, throws: `throws`, converter: converter),
-                  let value = Value(rawValue: rawValue) else { return nil }
-            return value
-        } : nil)
+        if let decode {
+            self.init(wrappedValue: initialValue, stringKeys: stringKeys, nonnull: nonnull, throws: `throws`, encode: encode, decode: decode, decodeRawRepresentable: nil)
+        }
+        else {
+            self.init(wrappedValue: initialValue, stringKeys: stringKeys, nonnull: nonnull, throws: `throws`, encode: encode, decode:    nil, decodeRawRepresentable: { decoder, stringKeys, nonnull, `throws`, converter throws in
+                guard let rawValue = try decoder.decode(stringKeys, as: Value.RawValue.self, nonnull: nonnull, throws: `throws`, converter: converter),
+                      let value = Value(rawValue: rawValue) else { return nil }
+                return value
+            })
+        }
     }
     public convenience init(wrappedValue initialValue: Value, _ stringKey: String? = nil, nonnull: Bool? = nil, throws: Bool? = nil, encode: ((_ encoder: Encoder, _ value: Value) throws -> Void)? = nil, decode: ((_ decoder: Decoder) throws -> Value?)? = nil) where Value: RawRepresentable, Value.RawValue: Decodable {
         self.init(wrappedValue: initialValue, stringKeys: stringKey.map { [$0] }, nonnull: nonnull, throws: `throws`, encode: encode, decode: decode)

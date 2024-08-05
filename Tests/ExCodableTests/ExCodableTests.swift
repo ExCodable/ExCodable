@@ -136,7 +136,14 @@ fileprivate func message(for int: Int) -> String {
 
 struct TestCustomEncodeDecode: ExAutoCodable, Equatable {
     
-    @ExCodable("int") private(set)
+    @ExCodable("int", encode: { encoder, value in
+        encoder["int"] = value <= 0 ? 0 : value
+    }, decode: { decoder in
+        if let int: Int = decoder["int"], int > 0 {
+            return int
+        }
+        return 0
+    }) private(set)
     var int: Int = 0
     
     @ExCodable(encode: { encoder, value in
@@ -426,9 +433,9 @@ final class ExCodableTests: XCTestCase {
     func testStruct() {
         let test = TestStruct(int: 304, string: "Not Modified"),
             test2 = TestStruct(int: 304, string: "Not Modified", bool: nil)
-        if let data = try? test.encoded() as Data,
-           let copy = try? TestStruct.decoded(from: data),
-           let copy2 = try? TestStruct.decoded(from: data) {
+        if let dict = try? test.encoded() as [String: Any],
+           let copy = try? TestStruct.decoded(from: dict),
+           let copy2 = try? TestStruct.decoded(from: dict) {
             XCTAssertEqual(copy, test)
             XCTAssertEqual(copy2, test2)
             

@@ -47,20 +47,22 @@ struct TestExCodable: ExAutoCodable {
     - No need to encode and decode properties one by one.
     - In most cases, the `CodingKey` types are no longer necessary, `String` literals are preferred.
     - Currently, requires declaring properties with `var` and provide default values.
-- Supports `struct`, `enum`, `class` and subclasses.
 - Supports **alternative keys** for decoding.
 - Supports **nested keys** via `String` with dot syntax.
 - Supports builtin and custom **type conversions**, including **nested optionals** as well.
 - Supports manual encoding/decoding using **subscripts**.
 - Supports `return nil` or `throw error` when encoding/decoding failed.
-- Supports **type inference**, including JSON `Data`, `String` and objects.
+- Supports `struct`, `enum`, `class` and subclasses.
+- Supports JSON `Data`, `String`, `Array` and `Dictionary`.
+- Supports **type inference**.
 - Uses JSON encoder/decoder by default, supports PList and custom encoder/decoder.
+- Super lightweight.
 
 <mark>TODO:</mark>
 
 - [ ] Supports `let`.
 - [ ] Supports `var` without default values.
-- [ ] Replacing `ExAutoCodable` with `Codable`.
+- [ ] Use Macros instead of protocol `ExAutoCodable`.
 
 ## Usage
 
@@ -137,14 +139,13 @@ struct TestExCodable: ExAutoCodable {
 
 ```
 
-### 1. `struct`
+### 1. ExCodable
 
 `ExCodable` requires declaring properties with `var` and provide default values.
 
 ```swift
-// Equatable for Assertions
-struct TestStruct: ExAutoCodable, Equatable {
-    @ExCodable("int") private(set)
+struct TestStruct: ExAutoCodable {
+    @ExCodable private(set)
     var int: Int = 0
     @ExCodable("string") private(set)
     var string: String? = nil
@@ -156,8 +157,6 @@ struct TestStruct: ExAutoCodable, Equatable {
 
 ```swift
 struct TestAlternativeKeys: ExAutoCodable {
-    @ExCodable("int", "i") private(set)
-    var int: Int = 0
     @ExCodable("string", "str", "s") private(set)
     var string: String! = nil
 }
@@ -168,8 +167,6 @@ struct TestAlternativeKeys: ExAutoCodable {
 
 ```swift
 struct TestNestedKeys: ExAutoCodable {
-    @ExCodable private(set)
-    var int: Int = 0
     @ExCodable("nested.nested.string") private(set)
     var string: String! = nil
 }
@@ -190,44 +187,57 @@ struct TestStructWithEnum: ExAutoCodable {
 
 ```
 
-### 5. Type Conversions
+### 5. Custom Encoding/Decoding
+
+```swift
+struct TestManualEncodeDecode: ExAutoCodable {
+    @ExCodable("int", encode: { encoder, value in
+        encoder["int"] = value <= 0 ? 0 : value
+    }, decode: { decoder in
+        if let int: Int = decoder["int"], int > 0 {
+            return int
+        }
+        return 0
+    }) private(set)
+    var int: Int = 0
+}
+
+```
+
+### 6. Type Conversions
 
 ExCodable builtin type conversions:
 
-- Decoding `Bool` **from** `Int`, `String`
-- Decoding `Int`, `Int8`, `Int16`, `Int32`, `Int64` **from** `Bool`, `Double`, `String`
-- Decoding `UInt`, `UInt8`, `UInt16`, `UInt32`, `UInt64` **from** `Bool`, `String`
-- Decoding `Double`, `Float` **from** `Int64`, `String`
-- Decoding `String` **from** `Bool`, `Int64`, `Double`
+- `Bool` **from** `Int`, `String`
+- `Int`, `Int8`, `Int16`, `Int32`, `Int64` **from** `Bool`, `Double`, `String`
+- `UInt`, `UInt8`, `UInt16`, `UInt32`, `UInt64` **from** `Bool`, `String`
+- `Double`, `Float` **from** `Int64`, `String`
+- `String` **from** `Bool`, `Int64`, `Double`
 
 Custom type conversions for specific properties:
 
 ```swift
 struct TestCustomEncodeDecode: ExAutoCodable {
-    
-    @ExCodable private(set)
-    var int: Int = 0
-    
-    @ExCodable(encode: { encoder, value in
-        // skip encoding
-    }, decode: { decoder in
-        // custom decoding
-        if let int: Int = decoder["int"] {
-            return message(for: int)
+    @ExCodable("int", decode: { decoder in
+        if let string: String = decoder["string"],
+           let int = Int(string) {
+            return int
         }
-        return nil
+        return 0
     }) private(set)
-    var string: String? = nil
+    var int: Int = 0
 }
 
 ```
 
-Custom type conversions for specific type:
+Custom type conversions for specific model:
 
 ```swift
 struct TestCustomTypeConverter: ExAutoCodable {
     @ExCodable("doubleFromBool") private(set)
     var doubleFromBool: Double? = nil
+    @ExCodable("floatFromBool") private(set)
+    var floatFromBool: Double? = nil
 }
 
 extension TestCustomTypeConverter: ExCodableDecodingTypeConverter {
@@ -284,12 +294,12 @@ extension ExCodableGlobalDecodingTypeConverter: ExCodableDecodingTypeConverter {
 
 ```
 
-### 6. Constants, Manual Encoding/Decoding using Subscripts
+### 7. Manual Encoding/Decoding using Subscripts
 
-Declaring constants without default values:
+A type without `ExCodable`:
 
 ```swift
-struct TestSubscript {
+struct TestManualEncodingDecoding {
     let int: Int
     let string: String
 }
@@ -299,7 +309,7 @@ struct TestSubscript {
 Manual encoding/decoding using subscripts:
 
 ```swift
-extension TestSubscript: Codable {
+extension TestManualEncodingDecoding: Codable {
     
     enum Keys: CodingKey {
         case int, string
@@ -317,7 +327,24 @@ extension TestSubscript: Codable {
 
 ```
 
-### 7. `class` and Subclasses
+### 8. `return nil` or `throw error` - <mark>UNSTABLE</mark>
+
+While encoding/decoding, ExCodable ignores the `keyNotFound`, `valueNotFound`, `invalidValue` and `typeMismatch` errors and `return nil` by default, only throws JSON errors.
+
+ExCodable also supports throw errors:
+
+- Use `nonnull: true` to throw `EncodingError.invalidValue`, `DecodingError.keyNotFound`, `DecodingError.valueNotFound`.
+- Use `throws: true` to throw `DecodingError.typeMismatch`.
+
+```swift
+struct TestNonnullAndThrows: ExAutoCodable {
+    @ExCodable("int", nonnull: true, throws: true) private(set)
+    var nonnullInt: Int! = 0
+}
+
+```
+
+### 9. `class` and Subclasses
 
 ```swift
 class TestClass: ExAutoCodable {
@@ -346,40 +373,21 @@ class TestSubclass: TestClass {
 
 ```
 
-### 8. `return nil` or `throw error` - <mark>UNSTABLE</mark>
-
-While encoding/decoding, ExCodable ignores the `keyNotFound`, `valueNotFound` and `typeMismatch` errors and `return nil` by default.
-
-When encoding/decoding failed:
-
-- Use `nonnull: true` to throw `EncodingError.invalidValue`, `DecodingError.keyNotFound`, `DecodingError.valueNotFound`.
-- Use `throws: true` to throw `DecodingError.typeMismatch`.
+### 10. Type Inference
 
 ```swift
-struct TestNonnullAndThrows: ExAutoCodable {
-    @ExCodable("int", nonnull: true, throws: true) private(set)
-    var nonnullInt: Int! = 0
+struct TestStruct: ExAutoCodable, Equatable {
+    @ExCodable("int") private(set)
+    var int: Int = 0
+    @ExCodable("string") private(set)
+    var string: String? = nil
 }
 
-```
+let json = Data(#"{"int":200,"string":"OK"}"#.utf8)
+let model = try? TestStruct.decoded(from: json)
 
-### 9. Type Inference
-
-```swift
-let test = TestStruct(int: 304, string: "Not Modified"),
-    test2 = TestStruct(int: 304, string: "Not Modified")
-
-// type of `data` inferenced from `Data`
-// types of `copy` and `copy2` inferenced from `TestStruct`
-if let data = try? test.encoded() as Data,
-   let copy = try? data.decoded() as TestStruct,
-   let copy2 = try? TestStruct.decoded(from: data) {
-    XCTAssertEqual(copy, test)
-    XCTAssertEqual(copy2, test2)
-}
-else {
-    XCTFail()
-}
+let dict = try? model.encoded() as [String: Any]
+let copy = try? dict.decoded() as TestStruct
 
 ```
 
@@ -391,14 +399,14 @@ else {
 
 ## Installation
 
-- Swift Package Manager:
+Swift Package Manager:
 
 ```swift
 .package(url: "https://github.com/ExCodable/ExCodable", from: "1.0.0")
 
 ```
 
-- CocoaPods:
+CocoaPods:
 
 ```ruby
 pod 'ExCodable', '~> 1.0.0'
@@ -420,7 +428,6 @@ struct TestExCodable {
     private(set) var string: String?
 }
 
-// replacing protocol `ExCodable`(0.x) with `ExCodableDEPRECATED`(1.x)
 extension TestExCodable: ExCodableDEPRECATED {
     static let keyMapping: [KeyMap<Self>] = [
         KeyMap(\.int, to: "int"),
@@ -435,10 +442,10 @@ extension TestExCodable: ExCodableDEPRECATED {
 
 Upgrade, SUGGESTED:
 
-- Replace `ExCodable` with `ExAutoCodable`.
-- Remove `static` properties `keyMapping`.
+- Replace `protocol` `ExCodable` with `ExAutoCodable`.
 - Remove initializer `init(from decoder: Decoder) throws`.
-- Use `@ExCodable("<key>", "<alt-key>")`.
+- Remove `static` properties `keyMapping`.
+- Use `@ExCodable("<key>", "<alt-key>", ...)`.
 - See [Usage](#usage) for more details.
 
 ```swift

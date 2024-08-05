@@ -208,11 +208,28 @@ struct TestManualEncodeDecode: ExAutoCodable {
 
 ExCodable builtin type conversions:
 
-- `Bool` **from** `Int`, `String`
-- `Int`, `Int8`, `Int16`, `Int32`, `Int64` **from** `Bool`, `Double`, `String`
-- `UInt`, `UInt8`, `UInt16`, `UInt32`, `UInt64` **from** `Bool`, `String`
-- `Double`, `Float` **from** `Int64`, `String`
-- `String` **from** `Bool`, `Int64`, `Double`
+- boolean:
+    - `Bool`
+    - `Int`, `Int8`, `Int16`, `Int32`, `Int64`
+    - `UInt`, `UInt8`, `UInt16`, `UInt32`, `UInt64`
+    - `String`
+- integer:
+    - `Bool`
+    - `Int`, `Int8`, `Int16`, `Int32`, `Int64`
+    - `UInt`, `UInt8`, `UInt16`, `UInt32`, `UInt64`
+    - `Double`, `Float`
+    - `String`
+- float:
+    - `Int`, `Int8`, `Int16`, `Int32`, `Int64`
+    - `UInt`, `UInt8`, `UInt16`, `UInt32`, `UInt64`
+    - `Double`, `Float`
+    - `String`
+- string:
+    - `Bool`
+    - `Int`, `Int8`, `Int16`, `Int32`, `Int64`
+    - `UInt`, `UInt8`, `UInt16`, `UInt32`, `UInt64`
+    - `Double`, `Float`
+    - `String`
 
 Custom type conversions for specific properties:
 
@@ -339,7 +356,7 @@ ExCodable also supports throw errors:
 ```swift
 struct TestNonnullAndThrows: ExAutoCodable {
     @ExCodable("int", nonnull: true, throws: true) private(set)
-    var nonnullInt: Int! = 0
+    var int: Int! = 0
 }
 
 ```

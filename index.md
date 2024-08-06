@@ -49,7 +49,7 @@ struct TestExCodable: ExAutoCodable {
 主要特性：
 
 - ExCodable 是对 Swift 内置的 `Codable` 的扩展，因此可以享受到诸多便利，比如与 `NSCoding`、[SwiftyJSON](https://github.com/SwiftyJSON/SwiftyJSON)、[GenericJSON](https://github.com/iwill/generic-json-swift)、[Alamofire](https://github.com/Alamofire/Alamofire) 等都能无缝对接
-- 在属性上添加注解（`@propertyWrapper`）绑定 JSON key，非常简单、直观，JSON key 与属性同名时，可以简写为 `@ExCodable`
+- 在属性上添加注解（`@propertyWrapper`）绑定 JSON key ，JSON key 与属性同名时，可以简写为 `@ExCodable` —— 目前位置最简单、直观的方式
 - 支持多个候选 JSON key，依次解析
 - 使用 `.` 拼接多层嵌套的 JSON key
 - 需要手动 encode/decode 时，可以使用便捷的 subscript 语法
@@ -344,6 +344,8 @@ let copy = try? dict.decoded() as TestStruct
 
 ```
 
+> 更多用法参考代码中的单元测试。
+
 ## 安装
 
 Swift Package Manager:
@@ -391,7 +393,7 @@ extension TestExCodable: ExCodableDEPRECATED {
 - 删除 `init(from decoder: Decoder) throws` 方法
 - 删除 `keyMapping` 静态属性
 - 改用 `@ExCodable("<key>", "<alt-key>", ...)` 绑定 JSON key
-- 具体参考上面 [使用方法](#使用方法)、以及代码中的单元测试
+- 具体参考上面 [使用方法](#使用方法)
 
 ```swift
 struct TestExCodable: ExAutoCodable {
@@ -405,21 +407,21 @@ struct TestExCodable: ExAutoCodable {
 
 ## 未来
 
-Swift 5.9 发布时引入了 [Macros](https://docs.swift.org/swift-book/documentation/the-swift-programming-language/macros/)，并且非常及时地出现了基于它实现的 [MetaCodable](https://github.com/SwiftyLab/MetaCodable)，这是目前最科学的实现方式。这让我一度想放弃维护 ExCodable，但是我还是更喜欢 ExCodable 的使用方式。
+Swift 5.9 发布时引入了 [Macros](https://docs.swift.org/swift-book/documentation/the-swift-programming-language/macros/)，很快我就看到了基于它实现的 [MetaCodable](https://github.com/SwiftyLab/MetaCodable)，这是目前最科学的「实现方式」。这让我一度想放弃维护 ExCodable，但是我还是更喜欢 ExCodable 的「使用方式」。
 
-未来 ExCodable 也考虑使用 Macros 实现，在保持目前良好特性的同时，突破 Swift 语法对目前方案的种种限制，敬请期待 —— 不确定多久 🫣
+计划未来也使用 Macros 实现重写 ExCodable，在保持目前良好特性的同时，突破 Swift 语法对目前方案的种种限制，敬请期待 —— 不确定多久 🫣
 
 ## 星星
 
 如果你喜欢 ExCodable，欢迎 [给个星星](https://github.com/ExCodable/ExCodable#repository-container-header) ⭐️ 🤩
 
-## 感谢
+## 致敬
 
-在此，再次，要特别感谢 John Sundell 的 [Codextended](https://github.com/JohnSundell/Codextended) 的非凡创意、以及 ibireme 的 [YYModel](https://github.com/ibireme/YYModel) 的丰富特性给我的极大的启发。
+在此，再次，致敬 John Sundell 和 ibireme，[Codextended](https://github.com/JohnSundell/Codextended) 的非凡创意和 [YYModel](https://github.com/ibireme/YYModel) 的丰富特性给了我的极大的启发！
 
 ## 关于
 
-我是 [Míng](https://github.com/iwill)，使用中遇到任何问题，欢迎 [反馈](https://github.com/ExCodable/ExCodable/issues/new) / [i+ExCodable@iwill.im](mailto:i+ExCodable@iwill.im)。
+我是 [Míng](https://github.com/iwill)，使用中遇到任何问题，欢迎 [反馈](https://github.com/ExCodable/ExCodable/issues) / [i+ExCodable@iwill.im](mailto:i+ExCodable@iwill.im)。
 
 ## 开源
 

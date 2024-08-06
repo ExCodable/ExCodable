@@ -1,3 +1,8 @@
+---
+layout: default
+title: ExCodable
+---
+
 ExCodable 1.0
 ========
 

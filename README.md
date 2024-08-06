@@ -407,6 +407,8 @@ let copy = try? dict.decoded() as TestStruct
 
 ```
 
+> See the tests for more examples.
+
 ## Requirements
 
 - iOS 12.0+ | tvOS 12.0+ | macOS 11.0+ | watchOS 4.0+
@@ -433,7 +435,9 @@ pod 'ExCodable', '~> 1.0.0'
 
 ### 0.x to 1.x
 
-Quickly, but **DEPRECATED**:
+When you update to ExCodable 1.0.
+
+Step 1: Update your code to use the old API - **DEPRECATED** but quick.
 
 - Replace protocol `ExCodable` with `ExCodableDEPRECATED`.
 - Add `static` to func `decodeForTypeConversion(_:codingKey:as:)` of protocol `KeyedDecodingContainerCustomTypeConversion`.
@@ -456,7 +460,7 @@ extension TestExCodable: ExCodableDEPRECATED {
 
 ```
 
-Upgrade, SUGGESTED:
+Step 2: Upgrade your models to the new API one by one - SUGGESTED:
 
 - Replace `protocol` `ExCodable` with `ExAutoCodable`.
 - Remove initializer `init(from decoder: Decoder) throws`.

@@ -20,7 +20,7 @@ ExCodable 1.0
 [![LICENSE](https://img.shields.io/github/license/ExCodable/ExCodable.svg)](https://github.com/ExCodable/ExCodable/blob/master/LICENSE)
 [![@minglq](https://img.shields.io/twitter/url?url=https%3A%2F%2Fgithub.com%2Fiwill%2FExCodable)](https://twitter.com/minglq)
 
-[En](https://github.com/ExCodable/ExCodable) | 中文
+[En](https://github.com/ExCodable/ExCodable) \| 中文
 
 ExCodable 是一个 Swift 版 JSON-Model 转换工具，现在迎来重要升级，发布 1.0 版本。
 
@@ -407,7 +407,7 @@ struct TestExCodable: ExAutoCodable {
 
 ## 未来
 
-Swift 5.9 发布时引入了 [Macros](https://docs.swift.org/swift-book/documentation/the-swift-programming-language/macros/)，很快我就看到了基于它实现的 [MetaCodable](https://github.com/SwiftyLab/MetaCodable)，这是目前最科学的「实现方式」。这让我一度想放弃维护 ExCodable，但是我还是更喜欢 ExCodable 的「使用方式」。
+Swift 5.9 发布时引入了 [Macros](https://docs.swift.org/swift-book/documentation/the-swift-programming-language/macros/)，很快我就看到了基于它实现的 [MetaCodable](https://github.com/SwiftyLab/MetaCodable)，这是目前最科学的「实现方式」。这让我一度想放弃维护 ExCodable，但我还是更喜欢 ExCodable 灵活的[「使用方式」](#使用方法)。
 
 计划未来也使用 Macros 实现重写 ExCodable，在保持目前良好特性的同时，突破 Swift 语法对目前方案的种种限制，敬请期待 —— 不确定多久 🫣
 

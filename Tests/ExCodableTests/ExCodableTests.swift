@@ -11,6 +11,15 @@ import XCTest
 // @testable
 import ExCodable
 
+// MARK: ExCodable
+
+struct TestExCodable: ExAutoCodable, Equatable {
+    @ExCodable private(set)
+    var int: Int = 0
+    @ExCodable private(set)
+    var string: String? = nil
+}
+
 // MARK: auto codable
 
 struct TestAutoCodable: Codable, Equatable {
@@ -96,7 +105,7 @@ enum TestEnum: Int, Codable {
 }
 
 struct TestStructWithEnum: ExAutoCodable, Equatable {
-    @ExCodable("enum") private(set)
+    @ExCodable private(set)
     var `enum` = TestEnum.zero
 }
 
@@ -136,7 +145,7 @@ fileprivate func message(for int: Int) -> String {
 
 struct TestCustomEncodeDecode: ExAutoCodable, Equatable {
     
-    @ExCodable("int", encode: { encoder, value in
+    @ExCodable(encode: { encoder, value in
         encoder["int"] = value <= 0 ? 0 : value
     }, decode: { decoder in
         if let int: Int = decoder["int"], int > 0 {
@@ -199,9 +208,9 @@ extension TestSubscript: Codable {
 // MARK: type-conversions
 
 struct TestTypeConversion: ExAutoCodable, Equatable {
-    @ExCodable("intFromString") private(set)
+    @ExCodable private(set)
     var intFromString: Int? = nil
-    @ExCodable("stringFromInt") private(set)
+    @ExCodable private(set)
     var stringFromInt: String??? = nil
 }
 
@@ -263,9 +272,9 @@ extension TestTypeConversions: Encodable, Decodable {
 // MARK: custom type-conversions
 
 struct TestCustomTypeConverter: ExAutoCodable, Equatable {
-    @ExCodable("doubleFromBool") private(set)
+    @ExCodable private(set)
     var doubleFromBool: Double? = nil
-    @ExCodable("boolFromDouble") private(set)
+    @ExCodable private(set)
     var boolFromDouble: Bool? = nil
 }
 
@@ -372,15 +381,6 @@ struct TestNestedThrows: ExAutoCodable, Equatable {
 struct TestNonnullWithThrows: ExAutoCodable, Equatable {
     @ExCodable("throws", nonnull: true) private(set)
     var testThrows: TestThrows! = nil
-}
-
-// MARK: ExCodable
-
-struct TestExCodable: ExAutoCodable, Equatable {
-    @ExCodable("int") private(set)
-    var int: Int = 0
-    @ExCodable("string") private(set)
-    var string: String? = nil
 }
 
 // MARK: - Tests

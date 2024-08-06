@@ -191,7 +191,7 @@ struct TestStructWithEnum: ExAutoCodable {
 
 ```swift
 struct TestManualEncodeDecode: ExAutoCodable {
-    @ExCodable("int", encode: { encoder, value in
+    @ExCodable(encode: { encoder, value in
         encoder["int"] = value <= 0 ? 0 : value
     }, decode: { decoder in
         if let int: Int = decoder["int"], int > 0 {
@@ -235,10 +235,9 @@ Custom type conversions for specific properties:
 
 ```swift
 struct TestCustomEncodeDecode: ExAutoCodable {
-    @ExCodable("int", decode: { decoder in
-        if let string: String = decoder["string"],
-           let int = Int(string) {
-            return int
+    @ExCodable(decode: { decoder in
+        if let string: String = decoder["string"] {
+            return string.count
         }
         return 0
     }) private(set)
@@ -251,9 +250,9 @@ Custom type conversions for specific model:
 
 ```swift
 struct TestCustomTypeConverter: ExAutoCodable {
-    @ExCodable("doubleFromBool") private(set)
+    @ExCodable private(set)
     var doubleFromBool: Double? = nil
-    @ExCodable("floatFromBool") private(set)
+    @ExCodable private(set)
     var floatFromBool: Double? = nil
 }
 
@@ -355,7 +354,7 @@ ExCodable also supports throw errors:
 
 ```swift
 struct TestNonnullAndThrows: ExAutoCodable {
-    @ExCodable("int", nonnull: true, throws: true) private(set)
+    @ExCodable(nonnull: true, throws: true) private(set)
     var int: Int! = 0
 }
 
@@ -394,9 +393,9 @@ class TestSubclass: TestClass {
 
 ```swift
 struct TestStruct: ExAutoCodable, Equatable {
-    @ExCodable("int") private(set)
+    @ExCodable private(set)
     var int: Int = 0
-    @ExCodable("string") private(set)
+    @ExCodable private(set)
     var string: String? = nil
 }
 

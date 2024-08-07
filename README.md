@@ -66,6 +66,8 @@ struct TestExCodable: ExAutoCodable {
 
 ## Usage
 
+<!--
+
 ### 0. `Codable` vs `ExCodable`:
 
 Swift builtin `Codable` is quite convenient, you just need:
@@ -138,6 +140,8 @@ struct TestExCodable: ExAutoCodable {
 }
 
 ```
+
+-->
 
 ### 1. ExCodable
 

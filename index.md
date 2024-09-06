@@ -18,9 +18,12 @@ ExCodable 1.0
 [![Cocoapods](https://img.shields.io/cocoapods/v/ExCodable.svg)](https://cocoapods.org/pods/ExCodable)
 <br />
 [![LICENSE](https://img.shields.io/github/license/ExCodable/ExCodable.svg)](https://github.com/ExCodable/ExCodable/blob/master/LICENSE)
+[![GitHub stars](https://badgen.net/github/stars/ExCodable/ExCodable)](https://github.com/ExCodable/ExCodable/stargazers/)
 [![@minglq](https://img.shields.io/twitter/url?url=https%3A%2F%2Fgithub.com%2Fiwill%2FExCodable)](https://twitter.com/minglq)
 
 [En](https://github.com/ExCodable/ExCodable) \| 中文
+
+--------
 
 ExCodable 是一个 Swift 版 JSON-Model 转换工具，现在迎来重要升级，发布 1.0 版本。
 

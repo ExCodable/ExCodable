@@ -486,7 +486,7 @@ struct TestExCodable: ExAutoCodable {
 ## Stars
 
 <a href="#">
-    <img alt="Star Chart" src="https://starchart.cc/iwill/ExCodable.svg" width="600px">
+    <img alt="Star Chart" src="https://starchart.cc/ExCodable/ExCodable.svg" width="600px">
 </a>
 
 Hope ExCodable will help you! [Make a star](https://github.com/ExCodable/ExCodable/#repository-container-header) ⭐️ 🤩

@@ -13,7 +13,7 @@
 [![GitHub stars](https://badgen.net/github/stars/ExCodable/ExCodable)](https://github.com/ExCodable/ExCodable/stargazers/)
 [![@minglq](https://img.shields.io/twitter/url?url=https%3A%2F%2Fgithub.com%2Fiwill%2FExCodable)](https://twitter.com/minglq)
 
-En | [中文](https://iwill.im/ExCodable/)
+En | [中文](https://excodable.iwill.im/)
 
 ## What's New in ExCodable 1.0
 

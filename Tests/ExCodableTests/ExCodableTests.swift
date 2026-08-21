@@ -11,6 +11,13 @@ import XCTest
 // @testable
 import ExCodable
 
+// let JSON: [String: any Codable] = [ "a": 1, "b": 2 ]
+// 
+// struct TestAnyCodable {
+//     @ExCodable("json")
+//     var json: [String: any Codable]? = nil
+// }
+
 // MARK: ExCodable
 
 struct TestExCodable: ExAutoCodable, Equatable {

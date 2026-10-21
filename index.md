@@ -3,12 +3,12 @@ layout: default
 title: ExCodable
 ---
 
-ExCodable 1.0
+ExCodable 2.0
 ========
 
 [![ExCodable](https://iwill.im/images/ExCodable-1.x-1920x500.png)](https://github.com/ExCodable/ExCodable#readme)
 
-[![Swift 5.10](https://img.shields.io/badge/Swift-5.10-orange.svg)](https://swift.org/)
+[![Swift 6.4](https://img.shields.io/badge/Swift-6.4-orange.svg)](https://swift.org/)
 [![Swift Package Manager](https://img.shields.io/badge/spm-compatible-brightgreen.svg?style=flat)](https://swift.org/package-manager/)
 [![Platforms](https://img.shields.io/cocoapods/p/ExCodable.svg)](#)
 <br />
@@ -25,24 +25,25 @@ ExCodable 1.0
 
 --------
 
-ExCodable 是一个 Swift 版 JSON-Model 转换工具，现在迎来重要升级，发布 1.0 版本。
+ExCodable 是一个 Swift 版 JSON-Model 转换工具。2.0 用 Macros 生成 `init(from:)` 和 `encode(to:)`，属性可以声明为 `let`。备选 key、嵌套 key、类型转换、`nonnull` / `throws` 都还在。
 
 「若非必要，勿造轮子」。但显然，我又造了一个，所以它一定是必要的：
 
 - Swift 内置的 `Codable` 能用，但也有官方框架的通病 —— 繁琐
 - [Codextended](https://github.com/JohnSundell/Codextended) 想法特别好，对 `Codable` 做了大量的简化，但还是要逐个属性 encode/decode
-- 其它 star 较多的 [ObjectMapper](https://github.com/tristanhimmelman/ObjectMapper)、[HandyJSON](https://github.com/alibaba/HandyJSON)、[KakaJSON](https://github.com/kakaopensource/KakaJSON) 等等（不知道最近两年有没有新的），都不兼容 `Codable`，语法奇怪、繁琐，甚至还有读写内存的，说实话 —— 丑得要死！
+- 其它 star 较多的 [ObjectMapper](https://github.com/tristanhimmelman/ObjectMapper)、[HandyJSON](https://github.com/alibaba/HandyJSON)、[KakaJSON](https://github.com/kakaopensource/KakaJSON) 等等，都不兼容 `Codable`，语法奇怪、繁琐，甚至还有读写内存的
 
 ObjC 时代，最好的 JSON-Model 转换非 [YYModel](https://github.com/ibireme/YYModel) 莫属，可惜没有 Swift 版，所以 [自己写一个吧](./0.x.md/#excodable-是我在春节期间带娃之余用了几个晚上完成的一个-swift-版的-json-model-转换工具)。
 
 ## 主要特性
 
 ```swift
-struct TestExCodable: ExAutoCodable {
+@ExCodableEnabled
+struct TestExCodable {
     @ExCodable
-    var int: Int = 0
-    @ExCodable("string", "s", "nested.nested.string")
-    var string: String? = nil
+    let int: Int
+    @ExCodable("nested.nested.string", "string", "str", "s")
+    let string: String?
 }
 
 ```
@@ -51,32 +52,36 @@ struct TestExCodable: ExAutoCodable {
 
 主要特性：
 
-- ExCodable 是对 Swift 内置的 `Codable` 的扩展，因此可以享受到诸多便利，比如与 `NSCoding`、[SwiftyJSON](https://github.com/SwiftyJSON/SwiftyJSON)、[GenericJSON](https://github.com/iwill/generic-json-swift)、[Alamofire](https://github.com/Alamofire/Alamofire) 等都能无缝对接
-- 在属性上添加注解（`@propertyWrapper`）绑定 JSON key ，JSON key 与属性同名时，可以简写为 `@ExCodable` —— 目前位置最简单、直观的方式
-- 支持多个候选 JSON key，依次解析
-- 使用 `.` 拼接多层嵌套的 JSON key
-- 需要手动 encode/decode 时，可以使用便捷的 subscript 语法
-- 支持常见的数据类型转换，以及灵活的自定义转换
-- 灵活的异常处理，出错时默认返回 `nil`，也支持设置抛出 `error`
-- 支持 `struct`、`enum`、`class` 以及子类
-- 支持 `Data`、`String`、`Array`、`Dictionary` 等 JSON 格式
-- 支持类型推断
-- 声明实现 `ExAutoCodable` 协议，即可自动获得 `Codable` 方法的默认实现，无需对属性逐个 encode/decode
-- 支持 JSON、PList 以及自定义 encoder/decoder，默认使用 JSON
-- 非常轻量
+- ExCodable 是对 Swift 内置的 `Codable` 的扩展，因此可以享受到诸多便利，比如与 `NSCoding`、[SwiftyJSON](https://github.com/SwiftyJSON/SwiftyJSON)、[GenericJSON](https://github.com/iwill/generic-json-swift)、[Alamofire](https://github.com/Alamofire/Alamofire) 等都能无缝对接。
+- 在类型上添加 `@ExCodableEnabled`，生成 `init(from:)`、`encode(to:)`。`struct` 还会生成成员初始化方法。
+- 在属性上添加 `@ExCodable` 绑定 JSON key。只有带这个注解的属性会参与 encode/decode。key 与属性同名时，可以简写为 `@ExCodable`。
+- 属性使用 `let`，并且不能再写默认值，因为生成的初始化方法会给它赋值。
+- 不通过 unsafe pointer 读写内存。
+- 支持多个候选 JSON key，依次解析。编码使用第一个 key。
+- 使用 `.` 拼接多层嵌套的 JSON key。
+- 需要手动 encode/decode 时，可以使用便捷的 subscript 语法。
+- 支持常见的数据类型转换，以及灵活的自定义转换，包括多层嵌套的 `Optional`。
+- 灵活的异常处理，出错时默认得到 `nil`，也支持设置抛出 `error`。
+- 支持 `struct`、`class` 以及子类。`RawRepresentable` 属性（包括 `enum`）按 raw value 解析。
+- 支持 `Data`、`String`、`Array`、`Dictionary` 等 JSON 格式。
+- 支持类型推断。
+- 多数情况下不再需要 `CodingKey`，直接写 `String`。
+- 支持 JSON、PList 以及自定义 encoder/decoder，默认使用 JSON。
+- 非常轻量！
 
 ## 使用方法
 
 ### 1、ExCodable
 
-目前，使用 ExCodable 定义属性需要使用 `var`（可以使用 `private(set)` 避免属性被意外修改），并且要提供默认值。
+`@ExCodableEnabled` 为 `struct` 或 `class` 生成 `Codable`。需要参与转换的属性标记 `@ExCodable`，用 `let` 声明，不要写默认值。
 
 ```swift
-struct TestStruct: ExAutoCodable {
-    @ExCodable private(set)
-    var int: Int = 0
-    @ExCodable("string") private(set)
-    var string: String? = nil
+@ExCodableEnabled
+struct TestStruct {
+    @ExCodable
+    let int: Int
+    @ExCodable("string")
+    let string: String?
 }
 
 ```
@@ -84,9 +89,10 @@ struct TestStruct: ExAutoCodable {
 ### 2、多个候选 JSON key
 
 ```swift
-struct TestAlternativeKeys: ExAutoCodable {
-    @ExCodable("string", "str", "s") private(set)
-    var string: String! = nil
+@ExCodableEnabled
+struct TestAlternativeKeys {
+    @ExCodable("string", "str", "s")
+    let string: String!
 }
 
 ```
@@ -94,23 +100,27 @@ struct TestAlternativeKeys: ExAutoCodable {
 ### 3、多层嵌套的 JSON key
 
 ```swift
-struct TestNestedKeys: ExAutoCodable {
-    @ExCodable("nested.nested.string") private(set)
-    var string: String! = nil
+@ExCodableEnabled
+struct TestNestedKeys {
+    @ExCodable("nested.nested.string")
+    let string: String!
 }
 
 ```
 
 ### 4、`RawRepresentable` 类型的 `enum`
 
+根类型不能是 `enum`。`RawRepresentable` 属性（包括 `enum`）会从 raw value 解码。
+
 ```swift
 enum TestEnum: Int, Codable {
     case zero = 0, one = 1
 }
 
-struct TestStructWithEnum: ExAutoCodable {
-    @ExCodable private(set)
-    var `enum` = TestEnum.zero
+@ExCodableEnabled
+struct TestStructWithEnum {
+    @ExCodable("enum")
+    let `enum`: TestEnum
 }
 
 ```
@@ -121,8 +131,11 @@ struct TestStructWithEnum: ExAutoCodable {
 
 `@ExCodable` 支持自定义 `encode` 和 `decode`，并且 `encoder`、`decoder` 支持使用 subscript 方式访问。
 
+如果闭包里没有写出值的类型，需要标明返回类型，例如 `decode: { decoder -> Bool? in ... }`。
+
 ```swift
-struct TestManualEncodeDecode: ExAutoCodable {
+@ExCodableEnabled
+struct TestManualEncodeDecode {
     @ExCodable(encode: { encoder, value in
         encoder["int"] = value <= 0 ? 0 : value
     }, decode: { decoder in
@@ -130,8 +143,8 @@ struct TestManualEncodeDecode: ExAutoCodable {
             return int
         }
         return 0
-    }) private(set)
-    var int: Int = 0
+    })
+    let int: Int
 }
 
 ```
@@ -168,14 +181,15 @@ A、内置支持的类型转换：
 B、单个属性的自定义类型转换：
 
 ```swift
-struct TestCustomEncodeDecode: ExAutoCodable {
+@ExCodableEnabled
+struct TestCustomEncodeDecode {
     @ExCodable(decode: { decoder in
         if let string: String = decoder["string"] {
             return string.count
         }
         return 0
-    }) private(set)
-    var int: Int = 0
+    })
+    let int: Int
 }
 
 ```
@@ -183,18 +197,19 @@ struct TestCustomEncodeDecode: ExAutoCodable {
 C、model 中的自定义类型转换：
 
 ```swift
-struct TestCustomTypeConverter: ExAutoCodable {
-    @ExCodable private(set)
-    var doubleFromBool: Double? = nil
-    @ExCodable private(set)
-    var floatFromBool: Double? = nil
+@ExCodableEnabled
+struct TestCustomTypeConverter {
+    @ExCodable
+    let doubleFromBool: Double?
+    @ExCodable
+    let floatFromBool: Double?
 }
 
 extension TestCustomTypeConverter: ExCodableDecodingTypeConverter {
     
     public static func decode<T: Decodable, K: CodingKey>(_ container: KeyedDecodingContainer<K>, codingKey: K, as type: T.Type) -> T? {
         
-        // for nested optionals, e.g. `var int: Int??? = nil`
+        // for nested optionals, e.g. `let int: Int???`
         let wrappedType = T?.wrappedType
         
         // decode Double from Bool
@@ -219,16 +234,17 @@ extension TestCustomTypeConverter: ExCodableDecodingTypeConverter {
 D、全局的自定义类型转换：
 
 ```swift
-struct TestCustomGlobalTypeConverter: ExAutoCodable, Equatable {
-    @ExCodable private(set)
-    var boolFromDouble: Bool? = nil
+@ExCodableEnabled
+struct TestCustomGlobalTypeConverter: Equatable {
+    @ExCodable("boolFromDouble")
+    let boolFromDouble: Bool?
 }
 
 extension ExCodableGlobalDecodingTypeConverter: ExCodableDecodingTypeConverter {
     
     public static func decode<T: Decodable, _K: CodingKey>(_ container: KeyedDecodingContainer<_K>, codingKey: _K, as type: T.Type) -> T? {
         
-        // for nested optionals, e.g. `var int: Int??? = nil`
+        // for nested optionals, e.g. `let int: Int???`
         let wrappedType = T?.wrappedType
         
         // decode Bool from Double
@@ -279,32 +295,41 @@ extension TestManualEncodingDecoding: Codable {
 
 ### 8、更灵活的异常处理
 
-ExCodable 默认忽略 JSON-Model 转换时遇到的 `EncodingError.invalidValue`、`DecodingError.keyNotFound`、`DecodingError.valueNotFound` 和 `DecodingError.typeMismatch` 等错误，出错的属性不处理 —— encode 时跳过、decode 时保持默认值。只有 JSON 数据本身有问题时才会抛出错误。
+ExCodable 默认忽略 JSON-Model 转换时遇到的 `EncodingError.invalidValue`、`DecodingError.keyNotFound`、`DecodingError.valueNotFound` 和 `DecodingError.typeMismatch`，结果为 `nil`。只有 JSON 数据本身有问题时才会抛出错误。
 
-ExCodable 也支持出错时终止转换，抛出错误：
+`let` 不能写默认值，所以缺 key 时不会再退回属性上的默认值：
+
+- 可选属性（包括隐式解包可选）没有解析到值时为 `nil`
+- 非可选属性没有解析到值时抛出 `DecodingError.valueNotFound`
+
+也可以在出错时终止转换：
 
 - 设置 `nonnull: true` 允许抛出 `EncodingError.invalidValue`、`DecodingError.keyNotFound` 和 `DecodingError.valueNotFound`
 - 设置 `throws: true` 允许抛出 `DecodingError.typeMismatch`
 
 ```swift
-struct TestNonnullAndThrows: ExAutoCodable {
-    @ExCodable(nonnull: true, throws: true) private(set)
-    var int: Int! = 0
+@ExCodableEnabled
+struct TestNonnullAndThrows {
+    @ExCodable(nonnull: true, throws: true)
+    let int: Int!
 }
 
 ```
 
 ### 9、`class` 以及子类
 
+`class` 的初始化方法要给这些 `let` 赋值。子类同样加上 `@ExCodableEnabled`。
+
 ```swift
-class TestClass: ExAutoCodable {
-    
-    @ExCodable private(set)
-    var int: Int = 0
-    @ExCodable private(set)
-    var string: String? = nil
-    
-    required init() {}
+@ExCodableEnabled
+class TestClass {
+    @ExCodable
+    let int: Int
+    @ExCodable
+    let string: String?
+    required init() {
+        (self.int, self.string) = (0, nil)
+    }
     init(int: Int, string: String?) {
         (self.int, self.string) = (int, string)
     }
@@ -313,12 +338,14 @@ class TestClass: ExAutoCodable {
 ```
 
 ```swift
+@ExCodableEnabled
 class TestSubclass: TestClass {
-    
-    @ExCodable private(set)
-    var bool: Bool = false
-    
-    required init() { super.init() }
+    @ExCodable
+    let bool: Bool
+    required init() {
+        self.bool = false
+        super.init()
+    }
     required init(int: Int, string: String, bool: Bool) {
         self.bool = bool
         super.init(int: int, string: string)
@@ -327,14 +354,17 @@ class TestSubclass: TestClass {
 
 ```
 
+如果 `class` 自己实现了 `==`，把 `Equatable` 声明在 extension 里。写在类型声明上时，`@ExCodableEnabled` 增加的 extension 可能让 `==` 产生歧义。
+
 ### 10、类型推断
 
 ```swift
-struct TestStruct: ExAutoCodable, Equatable {
-    @ExCodable private(set)
-    var int: Int = 0
-    @ExCodable private(set)
-    var string: String? = nil
+@ExCodableEnabled
+struct TestStruct: Equatable {
+    @ExCodable
+    let int: Int
+    @ExCodable
+    let string: String?
 }
 
 // 正常的转换
@@ -349,70 +379,52 @@ let copy = try? dict.decoded() as TestStruct
 
 > 更多用法参考代码中的单元测试。
 
+## 系统要求
+
+- iOS 15.0+ | tvOS 15.0+ | macOS 12.0+ | watchOS 9.0+
+- Xcode 27+
+- Swift 6.4+
+
 ## 安装
 
 Swift Package Manager:
 
 ```swift
-.package(url: "https://github.com/ExCodable/ExCodable", from: "1.0.0")
+.package(url: "https://github.com/ExCodable/ExCodable", from: "2.0.0")
 ```
 
-CocoaPods:
-
-```ruby
-pod 'ExCodable', '~> 1.0.0'
-```
+`@ExCodableEnabled` 和 `@ExCodable` 是宏。Swift Package Manager 会加载编译器插件。CocoaPods 不会，所以 CocoaPods 集成时这些宏不会展开。
 
 ## 升级
 
-如果你用过 0.x 版本，感谢支持！但是时候升级了，ExCodable 依然保留了旧的 API，从而降低升级的难度。
+### 1.x 到 2.x
 
-首先，升级到 1.0 之后可以继续使用废弃的 API —— 快速、工作量小：
+- 把 `struct Model: ExAutoCodable` 改成 `@ExCodableEnabled struct Model`
+- 把 `@ExCodable var property: T = default` 改成 `@ExCodable let property: T`
+- 子类同样加上 `@ExCodableEnabled`
+- `class` 的初始化方法要给不再有默认值的 `let` 赋值
+- 自定义 `decode` 闭包可能要写明返回类型，例如 `{ decoder -> Bool? in ... }`
 
-- 全局搜索 `ExCodable`，替换成 `ExCodableDEPRECATED`
-- 如果你实现了 `KeyedDecodingContainerCustomTypeConversion` 的 `decodeForTypeConversion(_:codingKey:as:)` 方法，在前面添加一个 `static`
+### 0.x 到 2.x
 
-```swift
-struct TestExCodable {
-    private(set) var int: Int = 0
-    private(set) var string: String?
-}
+2.0 不再包含 `KeyMap`、`ExCodableDEPRECATED` 和 `ExAutoCodable`。直接改成当前写法：
 
-extension TestExCodable: ExCodableDEPRECATED {
-    static let keyMapping: [KeyMap<Self>] = [
-        KeyMap(\.int, to: "int"),
-        KeyMap(\.string, to: "nested.nested.string", "string", "str", "s")
-    ]
-    init(from decoder: Decoder) throws {
-        try decode(from: decoder, with: Self.keyMapping)
-    }
-}
-
-```
-
-然后逐步升级到新的语法：
-
-- 使用 `ExAutoCodable` 协议替代 `ExCodable`
-- 删除 `init(from decoder: Decoder) throws` 方法
-- 删除 `keyMapping` 静态属性
-- 改用 `@ExCodable("<key>", "<alt-key>", ...)` 绑定 JSON key
+- 删除 `init(from decoder: Decoder) throws`
+- 删除 `keyMapping`
+- 类型加上 `@ExCodableEnabled`
+- 用 `@ExCodable("<key>", "<alt-key>", ...)` 标记 `let` 属性，不要默认值
 - 具体参考上面 [使用方法](#使用方法)
 
 ```swift
-struct TestExCodable: ExAutoCodable {
-    @ExCodable private(set)
-    var int: Int = 0
-    @ExCodable("nested.nested.string", "string", "str", "s") private(set)
-    var string: String?
+@ExCodableEnabled
+struct TestExCodable {
+    @ExCodable
+    let int: Int
+    @ExCodable("nested.nested.string", "string", "str", "s")
+    let string: String?
 }
 
 ```
-
-## 未来
-
-Swift 5.9 发布时引入了 [Macros](https://docs.swift.org/swift-book/documentation/the-swift-programming-language/macros/)，很快我就看到了基于它实现的 [MetaCodable](https://github.com/SwiftyLab/MetaCodable)，这是目前最科学的「实现方式」。这让我一度想放弃维护 ExCodable，但我还是更喜欢 ExCodable 灵活的[「使用方式」](#使用方法)。
-
-计划未来也使用 Macros 实现重写 ExCodable，在保持目前良好特性的同时，突破 Swift 语法对目前方案的种种限制，敬请期待 —— 不确定多久 🫣
 
 ## 星星
 

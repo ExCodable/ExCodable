@@ -20,11 +20,12 @@ import ExCodable
 
 // MARK: ExCodable
 
-struct TestExCodable: ExAutoCodable, Equatable {
-    @ExCodable private(set)
-    var int: Int = 0
-    @ExCodable private(set)
-    var string: String? = nil
+@ExCodableEnabled
+struct TestExCodable: Equatable {
+    @ExCodable
+    let int: Int
+    @ExCodable
+    let string: String?
 }
 
 // MARK: auto codable
@@ -79,11 +80,12 @@ extension TestManualCodable: Codable {
 
 // MARK: struct
 
-struct TestStruct: ExAutoCodable, Equatable {
-    @ExCodable("int") private(set)
-    var int: Int = 0
-    @ExCodable("string") private(set)
-    var string: String? = nil
+@ExCodableEnabled
+struct TestStruct: Equatable {
+    @ExCodable("int")
+    let int: Int
+    @ExCodable("string")
+    let string: String?
     var bool: Bool!
 }
 
@@ -93,27 +95,30 @@ enum TestEnum: Int, Codable {
     case zero = 0, one = 1
 }
 
-struct TestStructWithEnum: ExAutoCodable, Equatable {
-    @ExCodable private(set)
-    var `enum` = TestEnum.zero
+@ExCodableEnabled
+struct TestStructWithEnum: Equatable {
+    @ExCodable
+    let `enum`: TestEnum
 }
 
 // MARK: alternative-keys
 
-struct TestAlternativeKeys: ExAutoCodable, Equatable {
-    @ExCodable("int", "i") private(set)
-    var int: Int = 0
-    @ExCodable("string", "str", "s") private(set)
-    var string: String! = nil
+@ExCodableEnabled
+struct TestAlternativeKeys: Equatable {
+    @ExCodable("int", "i")
+    let int: Int
+    @ExCodable("string", "str", "s")
+    let string: String!
 }
 
 // MARK: nested-keys
 
-struct TestNestedKeys: ExAutoCodable, Equatable {
-    @ExCodable private(set)
-    var int: Int = 0
-    @ExCodable("nested.nested.string") private(set)
-    var string: String! = nil
+@ExCodableEnabled
+struct TestNestedKeys: Equatable {
+    @ExCodable
+    let int: Int
+    @ExCodable("nested.nested.string")
+    let string: String!
 }
 
 // MARK: custom encoding/decoding
@@ -132,7 +137,8 @@ fileprivate func message(for int: Int) -> String {
     }
 }
 
-struct TestCustomEncodeDecode: ExAutoCodable, Equatable {
+@ExCodableEnabled
+struct TestCustomEncodeDecode: Equatable {
     
     @ExCodable(encode: { encoder, value in
         encoder["int"] = value <= 0 ? 0 : value
@@ -141,8 +147,8 @@ struct TestCustomEncodeDecode: ExAutoCodable, Equatable {
             return int
         }
         return 0
-    }) private(set)
-    var int: Int = 0
+    })
+    let int: Int
     
     @ExCodable(encode: { encoder, value in
         encoder["nested.nested.string"] = "<placeholder>"
@@ -155,12 +161,12 @@ struct TestCustomEncodeDecode: ExAutoCodable, Equatable {
             return message(for: int)
         }
         return nil
-    }) private(set)
-    var string: String? = nil
+    })
+    let string: String?
     
     @ExCodable(encode: { encoder, value in encoder["bool"] = value },
-               decode: { decoder in return decoder["bool"/*, converter: Self.self*/] }) private(set)
-    var bool: Bool = false
+               decode: { decoder -> Bool? in return decoder["bool"/*, converter: Self.self*/] })
+    let bool: Bool
 }
 
 // MARK: let + subscripts + CodingKey, without default values
@@ -196,11 +202,12 @@ extension TestSubscript: Codable {
 
 // MARK: type-conversions
 
-struct TestTypeConversion: ExAutoCodable, Equatable {
-    @ExCodable private(set)
-    var intFromString: Int? = nil
-    @ExCodable private(set)
-    var stringFromInt: String??? = nil
+@ExCodableEnabled
+struct TestTypeConversion: Equatable {
+    @ExCodable
+    let intFromString: Int?
+    @ExCodable
+    let stringFromInt: String???
 }
 
 struct TestTypeConversions: Equatable {
@@ -260,11 +267,12 @@ extension TestTypeConversions: Encodable, Decodable {
 
 // MARK: custom type-conversions
 
-struct TestCustomTypeConverter: ExAutoCodable, Equatable {
-    @ExCodable private(set)
-    var doubleFromBool: Double? = nil
-    @ExCodable private(set)
-    var boolFromDouble: Bool? = nil
+@ExCodableEnabled
+struct TestCustomTypeConverter: Equatable {
+    @ExCodable
+    let doubleFromBool: Double?
+    @ExCodable
+    let boolFromDouble: Bool?
 }
 
 extension TestCustomTypeConverter: ExCodableDecodingTypeConverter {
@@ -309,13 +317,16 @@ extension ExCodableGlobalDecodingTypeConverter: ExCodableDecodingTypeConverter {
 
 // MARK: class
 
-class TestClass: ExAutoCodable, Equatable {
-    @ExCodable private(set)
-    var int: Int = 0
-    @ExCodable private(set)
-    var string: String? = nil
+@ExCodableEnabled
+class TestClass {
+    @ExCodable
+    let int: Int
+    @ExCodable
+    let string: String?
     
-    required init() {}
+    required init() {
+        (self.int, self.string) = (0, nil)
+    }
     init(int: Int, string: String?) {
         (self.int, self.string) = (int, string)
     }
@@ -325,14 +336,20 @@ class TestClass: ExAutoCodable, Equatable {
     }
 }
 
+extension TestClass: Equatable {}
+
 // MARK: subclass
 
+@ExCodableEnabled
 class TestSubclass: TestClass {
     
-    @ExCodable private(set)
-    var bool: Bool = false
+    @ExCodable
+    let bool: Bool
     
-    required init() { super.init() }
+    required init() {
+        self.bool = false
+        super.init()
+    }
     required init(int: Int, string: String, bool: Bool) {
         self.bool = bool
         super.init(int: int, string: string)
@@ -347,29 +364,34 @@ class TestSubclass: TestClass {
 
 // MARK: nonnull and `throws`
 
-struct TestNonnull: ExAutoCodable, Equatable {
-    @ExCodable("int", nonnull: true) private(set)
-    var nonnullInt: Int! = 0
+@ExCodableEnabled
+struct TestNonnull: Equatable {
+    @ExCodable("int", nonnull: true)
+    let nonnullInt: Int!
 }
 
-struct TestNestedNonnull: ExAutoCodable, Equatable {
-    @ExCodable("nested.int", "int", nonnull: true) private(set)
-    var nonnullInt: Int! = 0
+@ExCodableEnabled
+struct TestNestedNonnull: Equatable {
+    @ExCodable("nested.int", "int", nonnull: true)
+    let nonnullInt: Int!
 }
 
-struct TestThrows: ExAutoCodable, Equatable {
-    @ExCodable("string", "nested.string", throws: true) private(set)
-    var throwsString: String! = ""
+@ExCodableEnabled
+struct TestThrows: Equatable {
+    @ExCodable("string", "nested.string", throws: true)
+    let throwsString: String!
 }
 
-struct TestNestedThrows: ExAutoCodable, Equatable {
-    @ExCodable("nested.string", "string", throws: true) private(set)
-    var throwsString: String! = ""
+@ExCodableEnabled
+struct TestNestedThrows: Equatable {
+    @ExCodable("nested.string", "string", throws: true)
+    let throwsString: String!
 }
 
-struct TestNonnullWithThrows: ExAutoCodable, Equatable {
-    @ExCodable("throws", nonnull: true) private(set)
-    var testThrows: TestThrows! = nil
+@ExCodableEnabled
+struct TestNonnullWithThrows: Equatable {
+    @ExCodable("throws", nonnull: true)
+    let testThrows: TestThrows!
 }
 
 // MARK: - Tests

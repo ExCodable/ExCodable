@@ -25,6 +25,7 @@ Pod::Spec.new do |s|
     
     # ――― Source Code ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――― #
     s.source_files  = "Sources", "Sources/**/*.{swift}"
+    s.exclude_files = "Sources/ExCodableMacros/**/*.swift"
     # s.exclude_files = "Sources/Exclude"
     # s.public_header_files = "Sources/**/*.h"
     

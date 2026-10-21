@@ -11,12 +11,11 @@ import Foundation
 /// # ExCodable
 /// 
 /// <#swift#> <#codable#> <#json#> <#model#> <#type-inference#>
-/// <#key-mapping#> <#property-wrapper#> <#coding-key#> <#subscript#>
+/// <#key-mapping#> <#macro#> <#coding-key#> <#subscript#>
 /// <#alternative-keys#> <#nested-keys#> <#type-conversions#>
 /// 
-/// - `ExCodable`: A `@propertyWrapper` associates JSON keys to properties.
-/// - `ExAutoEncodable` & `ExAutoDecodable`: Protocols with default implementation for Encodable & Decodable.
-/// - `ExAutoCodable`: A typealias for `ExAutoEncodable & ExAutoDecodable`.
+/// - `ExCodable`: A macro associates JSON keys to properties.
+/// - `ExCodableEnabled`: A macro generates `init(from:)` and `encode(to:)`.
 /// - `Encodable` & `Decodable` extensions for encoding/decoding from internal/external.
 /// - `Encoder` & `Encoder` extensions for encoding/decoding properties one by one.
 /// - Supports alternative keys, nested keys, type conversions, nested optionals and default values.
@@ -25,152 +24,6 @@ import Foundation
 /// - seealso: `ExCodableTests.swift` from the `Tests`
 /// - seealso: [Decoding and overriding](https://www.swiftbysundell.com/articles/property-wrappers-in-swift/#decoding-and-overriding)
 /// and [Useful Codable extensions](https://www.swiftbysundell.com/tips/useful-codable-extensions/), by John Sundell.
-
-@propertyWrapper
-public final class ExCodable<Value: Codable> {
-    
-    public var wrappedValue: Value
-    
-    fileprivate let stringKeys: [String]?
-    fileprivate let nonnull, `throws`: Bool?
-    fileprivate let encode: ((_ encoder: Encoder, _ value: Value) throws -> Void)?,
-                    decode: ((_ decoder: Decoder) throws -> Value?)?
-    private let decodeRawRepresentable: ((_ decoder: Decoder, _ stringKeys: [String], _ nonnull: Bool, _ throws: Bool, _ converter: (any ExCodableDecodingTypeConverter.Type)?) throws -> Value?)?
-    
-    private init(wrappedValue initialValue: Value, stringKeys: [String]? = nil, nonnull: Bool? = nil, throws: Bool? = nil, encode: ((_ encoder: Encoder, _ value: Value) throws -> Void)?, decode: ((_ decoder: Decoder) throws -> Value?)?, decodeRawRepresentable: ((_ decoder: Decoder, _ stringKeys: [String], _ nonnull: Bool, _ throws: Bool, _ converter: (any ExCodableDecodingTypeConverter.Type)?) throws -> Value?)? = nil) {
-        (self.wrappedValue, self.stringKeys, self.nonnull, self.throws, self.encode, self.decode, self.decodeRawRepresentable)
-        = (initialValue, stringKeys, nonnull, `throws`, encode, decode, decodeRawRepresentable)
-    }
-    public convenience init(wrappedValue initialValue: Value, _ stringKey: String? = nil, nonnull: Bool? = nil, throws: Bool? = nil, encode: ((_ encoder: Encoder, _ value: Value) throws -> Void)? = nil, decode: ((_ decoder: Decoder) throws -> Value?)? = nil) {
-        self.init(wrappedValue: initialValue, stringKeys: stringKey.map { [$0] }, nonnull: nonnull, throws: `throws`, encode: encode, decode: decode)
-    }
-    public convenience init(wrappedValue initialValue: Value, _ stringKeys: String..., nonnull: Bool? = nil, throws: Bool? = nil, encode: ((_ encoder: Encoder, _ value: Value) throws -> Void)? = nil, decode: ((_ decoder: Decoder) throws -> Value?)? = nil) {
-        self.init(wrappedValue: initialValue, stringKeys: stringKeys, nonnull: nonnull, throws: `throws`, encode: encode, decode: decode)
-    }
-    public convenience init(wrappedValue initialValue: Value, _ codingKeys: CodingKey..., nonnull: Bool? = nil, throws: Bool? = nil, encode: ((_ encoder: Encoder, _ value: Value) throws -> Void)? = nil, decode: ((_ decoder: Decoder) throws -> Value?)? = nil) {
-        self.init(wrappedValue: initialValue, stringKeys: codingKeys.map { $0.stringValue }, nonnull: nonnull, throws: `throws`, encode: encode, decode: decode)
-    }
-}
-
-extension ExCodable where Value: RawRepresentable, Value.RawValue: Decodable {
-    private convenience init(wrappedValue initialValue: Value, stringKeys: [String]? = nil, nonnull: Bool? = nil, throws: Bool? = nil, encode: ((_ encoder: Encoder, _ value: Value) throws -> Void)?, decode: ((_ decoder: Decoder) throws -> Value?)?) where Value: RawRepresentable, Value.RawValue: Decodable {
-        if let decode {
-            self.init(wrappedValue: initialValue, stringKeys: stringKeys, nonnull: nonnull, throws: `throws`, encode: encode, decode: decode, decodeRawRepresentable: nil)
-        }
-        else {
-            self.init(wrappedValue: initialValue, stringKeys: stringKeys, nonnull: nonnull, throws: `throws`, encode: encode, decode:    nil, decodeRawRepresentable: { decoder, stringKeys, nonnull, `throws`, converter throws in
-                guard let rawValue = try decoder.decode(stringKeys, as: Value.RawValue.self, nonnull: nonnull, throws: `throws`, converter: converter),
-                      let value = Value(rawValue: rawValue) else { return nil }
-                return value
-            })
-        }
-    }
-    public convenience init(wrappedValue initialValue: Value, _ stringKey: String? = nil, nonnull: Bool? = nil, throws: Bool? = nil, encode: ((_ encoder: Encoder, _ value: Value) throws -> Void)? = nil, decode: ((_ decoder: Decoder) throws -> Value?)? = nil) where Value: RawRepresentable, Value.RawValue: Decodable {
-        self.init(wrappedValue: initialValue, stringKeys: stringKey.map { [$0] }, nonnull: nonnull, throws: `throws`, encode: encode, decode: decode)
-    }
-    public convenience init(wrappedValue initialValue: Value, _ stringKeys: String..., nonnull: Bool? = nil, throws: Bool? = nil, encode: ((_ encoder: Encoder, _ value: Value) throws -> Void)? = nil, decode: ((_ decoder: Decoder) throws -> Value?)? = nil) where Value: RawRepresentable, Value.RawValue: Decodable {
-        self.init(wrappedValue: initialValue, stringKeys: stringKeys, nonnull: nonnull, throws: `throws`, encode: encode, decode: decode)
-    }
-    public convenience init(wrappedValue initialValue: Value, _ codingKeys: CodingKey..., nonnull: Bool? = nil, throws: Bool? = nil, encode: ((_ encoder: Encoder, _ value: Value) throws -> Void)? = nil, decode: ((_ decoder: Decoder) throws -> Value?)? = nil) where Value: RawRepresentable, Value.RawValue: Decodable {
-        self.init(wrappedValue: initialValue, stringKeys: codingKeys.map { $0.stringValue }, nonnull: nonnull, throws: `throws`, encode: encode, decode: decode)
-    }
-}
-
-extension ExCodable: Equatable where Value: Equatable {
-    public static func == (lhs: ExCodable<Value>, rhs: ExCodable<Value>) -> Bool {
-        return lhs.wrappedValue == rhs.wrappedValue
-    }
-}
-extension ExCodable: CustomStringConvertible { // CustomDebugStringConvertible
-    public var description: String { String(describing: wrappedValue) }
-    // public var debugDescription: String { "\(type(of: self))(\(wrappedValue))" }
-}
-
-fileprivate protocol ExCodablePropertyWrapper {
-    func encode<Label: StringProtocol>(to encoder: Encoder, label: Label, nonnull: Bool, throws: Bool) throws
-    func decode<Label: StringProtocol>(from decoder: Decoder, label: Label, nonnull: Bool, throws: Bool, converter: (any ExCodableDecodingTypeConverter.Type)?) throws
-}
-extension ExCodable: ExCodablePropertyWrapper {
-    fileprivate func encode<Label: StringProtocol>(to encoder: Encoder, label: Label, nonnull: Bool, throws: Bool) throws {
-        let deepWrapped = if let optional = wrappedValue as? OptionalProtocol {
-            optional.wrapped
-        }
-        else {
-            wrappedValue
-        }
-        // !!!: NOT `if let deepWrapped, self.nonnull ?? nonnull`
-        if deepWrapped != nil || self.nonnull ?? nonnull {
-            if let encode {
-                try encode(encoder, wrappedValue)
-            }
-            else {
-                try encoder.encode(wrappedValue, for: stringKeys?.first ?? String(label), nonnull: self.nonnull ?? nonnull, throws: self.throws ?? `throws`)
-            }
-        }
-    }
-    fileprivate func decode<Label: StringProtocol>(from decoder: Decoder, label: Label, nonnull: Bool, throws: Bool, converter: (any ExCodableDecodingTypeConverter.Type)?) throws {
-        let value = if let decode {
-            try decode(decoder)
-        }
-        else if let decodeRawRepresentable {
-            try decodeRawRepresentable(decoder, stringKeys ?? [String(label)], self.nonnull ?? nonnull, self.throws ?? `throws`, converter)
-        }
-        else {
-            try decoder.decode(stringKeys ?? [String(label)], as: Value.self, nonnull: self.nonnull ?? nonnull, throws: self.throws ?? `throws`, converter: converter)
-        }
-        if let value {
-            wrappedValue = value
-        }
-    }
-}
-
-// MARK: - Auto implementation for Encodable & Decodable
-
-public protocol ExAutoEncodable: Encodable {}
-public extension ExAutoEncodable {
-    func encode(to encoder: Encoder) throws {
-        try encode(to: encoder, nonnull: false, throws: false)
-    }
-}
-
-public protocol ExAutoDecodable: Decodable { init() }
-public extension ExAutoDecodable {
-    init(from decoder: Decoder) throws {
-        self.init()
-        try decode(from: decoder, nonnull: false, throws: false)
-    }
-}
-
-public typealias ExAutoCodable = ExAutoEncodable & ExAutoDecodable
-
-// MARK: - Encodable & Decodable
-
-// TODO: internal -> fileprivate
-internal extension Encodable {
-    func encode(to encoder: Encoder, nonnull: Bool, throws: Bool) throws {
-        var mirror: Mirror! = Mirror(reflecting: self)
-        while mirror != nil {
-            for child in mirror.children where child.label != nil {
-                try (child.value as? ExCodablePropertyWrapper)?.encode(to: encoder, label: child.label!.dropFirst(), nonnull: false, throws: false)
-            }
-            mirror = mirror.superclassMirror
-        }
-    }
-}
-
-// TODO: internal -> fileprivate
-internal extension Decodable {
-    func decode(from decoder: Decoder, nonnull: Bool, throws: Bool) throws {
-        var mirror: Mirror! = Mirror(reflecting: self)
-        while mirror != nil {
-            let converter = mirror.subjectType as? ExCodableDecodingTypeConverter.Type
-            for child in mirror.children where child.label != nil {
-                try (child.value as? ExCodablePropertyWrapper)?.decode(from: decoder, label: child.label!.dropFirst(), nonnull: false, throws: false, converter: converter)
-            }
-            mirror = mirror.superclassMirror
-        }
-    }
-}
 
 // MARK: - Encoder & Decoder
 

@@ -1,14 +1,14 @@
-// swift-tools-version:5.10
+// swift-tools-version: 6.4
 
 import PackageDescription
 
 let package = Package(
     name: "ExCodable",
     platforms: [
-        .iOS(.v12),
-        .tvOS(.v12),
-        .macOS(.v11),
-        .watchOS(.v4)
+        .iOS(.v15),
+        .tvOS(.v15),
+        .macOS(.v12),
+        .watchOS(.v9)
     ],
     products: [
         .library(name: "ExCodable", targets: ["ExCodable"]),
@@ -22,5 +22,5 @@ let package = Package(
         .target(name: "ExCodable", dependencies: []),
         .testTarget(name: "ExCodableTests", dependencies: ["ExCodable"])
     ],
-    swiftLanguageVersions: [.v5]
+    swiftLanguageModes: [.v5]
 )

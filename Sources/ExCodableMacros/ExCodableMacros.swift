@@ -2,14 +2,14 @@ import SwiftSyntax
 import SwiftSyntaxBuilder
 import SwiftSyntaxMacros
 
-public struct ExCodableEnabledMacro: MemberMacro, ExtensionMacro {
+public struct ExCodableMacro: MemberMacro, ExtensionMacro {
     public static func expansion(
         of node: AttributeSyntax,
         providingMembersOf declaration: some DeclGroupSyntax,
         conformingTo protocols: [TypeSyntax],
         in context: some MacroExpansionContext
     ) throws -> [DeclSyntax] {
-        try ExCodableEnabledExpansion.members(of: declaration, attribute: node)
+        try ExCodableExpansion.members(of: declaration, attribute: node)
     }
 
     public static func expansion(
@@ -19,18 +19,18 @@ public struct ExCodableEnabledMacro: MemberMacro, ExtensionMacro {
         conformingTo protocols: [TypeSyntax],
         in context: some MacroExpansionContext
     ) throws -> [ExtensionDeclSyntax] {
-        try ExCodableEnabledExpansion.extensions(of: declaration, type: type, protocols: protocols, attribute: node)
+        try ExCodableExpansion.extensions(of: declaration, type: type, protocols: protocols, attribute: node)
     }
 }
 
-public struct ExCodablePropertyMacro: PeerMacro {
+public struct ExCodableKeyMacro: PeerMacro {
     public static func expansion(
         of node: AttributeSyntax,
         providingPeersOf declaration: some DeclSyntaxProtocol,
         in context: some MacroExpansionContext
     ) throws -> [DeclSyntax] {
         guard declaration.is(VariableDeclSyntax.self) else {
-            throw ExCodableMacroError.message("@ExCodable can only be applied to a stored property")
+            throw ExCodableMacroError.message("@ExCodableKey can only be applied to a stored property")
         }
         return []
     }
@@ -45,7 +45,7 @@ private enum ExCodableMacroError: Error, CustomStringConvertible {
     }
 }
 
-private enum ExCodableEnabledExpansion {
+private enum ExCodableExpansion {
     private struct Property {
         var name: String
         var type: String?
@@ -87,7 +87,7 @@ private enum ExCodableEnabledExpansion {
         attribute: AttributeSyntax
     ) throws -> [ExtensionDeclSyntax] {
         guard declaration.is(StructDeclSyntax.self) || declaration.is(ClassDeclSyntax.self) else {
-            throw ExCodableMacroError.message("@ExCodableEnabled can only be applied to a struct or class")
+            throw ExCodableMacroError.message("@ExCodable can only be applied to a struct or class")
         }
         if declaration.is(ClassDeclSyntax.self) {
             guard !protocols.isEmpty else { return [] }
@@ -111,7 +111,7 @@ private enum ExCodableEnabledExpansion {
 
     private static func properties(of declaration: some DeclGroupSyntax, attribute: AttributeSyntax) throws -> [Property] {
         guard let memberBlock = memberBlock(of: declaration) else {
-            throw ExCodableMacroError.message("@ExCodableEnabled can only be applied to a struct or class")
+            throw ExCodableMacroError.message("@ExCodable can only be applied to a struct or class")
         }
         let assignsAll = declaration.is(StructDeclSyntax.self) && !hasInitializer(declaration)
         var properties: [Property] = []
@@ -125,25 +125,25 @@ private enum ExCodableEnabledExpansion {
             for binding in variable.bindings {
                 guard binding.accessorBlock == nil else {
                     if codable != nil {
-                        throw ExCodableMacroError.message("@ExCodable requires a stored property")
+                        throw ExCodableMacroError.message("@ExCodableKey requires a stored property")
                     }
                     continue
                 }
                 guard let name = binding.pattern.as(IdentifierPatternSyntax.self)?.identifier.text else {
                     if codable != nil {
-                        throw ExCodableMacroError.message("@ExCodable requires a named stored property")
+                        throw ExCodableMacroError.message("@ExCodableKey requires a named stored property")
                     }
                     continue
                 }
                 let type = binding.typeAnnotation?.type.trimmedDescription
                 let defaultExpr = binding.initializer?.value.trimmedDescription
                 if isLet, defaultExpr != nil, codable != nil || assignsAll {
-                    throw ExCodableMacroError.message("@ExCodableEnabled cannot assign \(name) because the let already has a default value. Remove the default; the generated initializer sets the property.")
+                    throw ExCodableMacroError.message("@ExCodable cannot assign \(name) because the let already has a default value. Remove the default; the generated initializer sets the property.")
                 }
                 var witness: String?
                 if type == nil {
                     guard defaultExpr != nil else {
-                        throw ExCodableMacroError.message("@ExCodableEnabled requires a type or a default value for \(name)")
+                        throw ExCodableMacroError.message("@ExCodable requires a type or a default value for \(name)")
                     }
                     witness = "field\(witnessCount)"
                     witnessCount += 1
@@ -169,7 +169,7 @@ private enum ExCodableEnabledExpansion {
         for attribute in variable.attributes {
             guard let attribute = attribute.as(AttributeSyntax.self) else { continue }
             let name = attribute.attributeName.trimmedDescription
-            guard name == "ExCodable" || name.hasSuffix(".ExCodable") else { continue }
+            guard name == "ExCodableKey" || name.hasSuffix(".ExCodableKey") else { continue }
             var keys: [String] = []
             var nonnull = "false"
             var throwsFlag = "false"
@@ -190,7 +190,7 @@ private enum ExCodableEnabledExpansion {
                     case nil:
                         keys.append(keyExpression(expression))
                     default:
-                        throw ExCodableMacroError.message("Unknown @ExCodable argument \(argument.label?.text ?? "")")
+                        throw ExCodableMacroError.message("Unknown @ExCodableKey argument \(argument.label?.text ?? "")")
                     }
                 }
             }

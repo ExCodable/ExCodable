@@ -8,7 +8,7 @@
 
 import Foundation
 
-/// Calls used by code that `@ExCodableEnabled` generates.
+/// Calls used by code that `@ExCodable` generates.
 public enum ExCodableRuntime {
 
     public static func converter(of type: Any.Type) -> (any ExCodableDecodingTypeConverter.Type)? {

@@ -14,8 +14,8 @@ import Foundation
 /// <#key-mapping#> <#macro#> <#coding-key#> <#subscript#>
 /// <#alternative-keys#> <#nested-keys#> <#type-conversions#>
 /// 
-/// - `ExCodable`: A macro associates JSON keys to properties.
-/// - `ExCodableEnabled`: A macro generates `init(from:)` and `encode(to:)`.
+/// - `ExCodable`: A macro generates `init(from:)` and `encode(to:)`.
+/// - `ExCodableKey`: A macro associates JSON keys to properties.
 /// - `Encodable` & `Decodable` extensions for encoding/decoding from internal/external.
 /// - `Encoder` & `Encoder` extensions for encoding/decoding properties one by one.
 /// - Supports alternative keys, nested keys, type conversions, nested optionals and default values.

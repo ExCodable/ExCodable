@@ -14,17 +14,17 @@ import ExCodable
 // let JSON: [String: any Codable] = [ "a": 1, "b": 2 ]
 // 
 // struct TestAnyCodable {
-//     @ExCodable("json")
+//     @ExCodableKey("json")
 //     var json: [String: any Codable]? = nil
 // }
 
 // MARK: ExCodable
 
-@ExCodableEnabled
+@ExCodable
 struct TestExCodable: Equatable {
-    @ExCodable
+    @ExCodableKey
     let int: Int
-    @ExCodable
+    @ExCodableKey
     let string: String?
 }
 
@@ -80,11 +80,11 @@ extension TestManualCodable: Codable {
 
 // MARK: struct
 
-@ExCodableEnabled
+@ExCodable
 struct TestStruct: Equatable {
-    @ExCodable("int")
+    @ExCodableKey("int")
     let int: Int
-    @ExCodable("string")
+    @ExCodableKey("string")
     let string: String?
     var bool: Bool!
 }
@@ -95,29 +95,29 @@ enum TestEnum: Int, Codable {
     case zero = 0, one = 1
 }
 
-@ExCodableEnabled
+@ExCodable
 struct TestStructWithEnum: Equatable {
-    @ExCodable
+    @ExCodableKey
     let `enum`: TestEnum
 }
 
 // MARK: alternative-keys
 
-@ExCodableEnabled
+@ExCodable
 struct TestAlternativeKeys: Equatable {
-    @ExCodable("int", "i")
+    @ExCodableKey("int", "i")
     let int: Int
-    @ExCodable("string", "str", "s")
+    @ExCodableKey("string", "str", "s")
     let string: String!
 }
 
 // MARK: nested-keys
 
-@ExCodableEnabled
+@ExCodable
 struct TestNestedKeys: Equatable {
-    @ExCodable
+    @ExCodableKey
     let int: Int
-    @ExCodable("nested.nested.string")
+    @ExCodableKey("nested.nested.string")
     let string: String!
 }
 
@@ -137,10 +137,10 @@ fileprivate func message(for int: Int) -> String {
     }
 }
 
-@ExCodableEnabled
+@ExCodable
 struct TestCustomEncodeDecode: Equatable {
     
-    @ExCodable(encode: { encoder, value in
+    @ExCodableKey(encode: { encoder, value in
         encoder["int"] = value <= 0 ? 0 : value
     }, decode: { decoder in
         if let int: Int = decoder["int"], int > 0 {
@@ -150,7 +150,7 @@ struct TestCustomEncodeDecode: Equatable {
     })
     let int: Int
     
-    @ExCodable(encode: { encoder, value in
+    @ExCodableKey(encode: { encoder, value in
         encoder["nested.nested.string"] = "<placeholder>"
     }, decode: { decoder in
         if let string: String = decoder["nested.nested.string"],
@@ -164,7 +164,7 @@ struct TestCustomEncodeDecode: Equatable {
     })
     let string: String?
     
-    @ExCodable(encode: { encoder, value in encoder["bool"] = value },
+    @ExCodableKey(encode: { encoder, value in encoder["bool"] = value },
                decode: { decoder -> Bool? in return decoder["bool"/*, converter: Self.self*/] })
     let bool: Bool
 }
@@ -202,11 +202,11 @@ extension TestSubscript: Codable {
 
 // MARK: type-conversions
 
-@ExCodableEnabled
+@ExCodable
 struct TestTypeConversion: Equatable {
-    @ExCodable
+    @ExCodableKey
     let intFromString: Int?
-    @ExCodable
+    @ExCodableKey
     let stringFromInt: String???
 }
 
@@ -267,11 +267,11 @@ extension TestTypeConversions: Encodable, Decodable {
 
 // MARK: custom type-conversions
 
-@ExCodableEnabled
+@ExCodable
 struct TestCustomTypeConverter: Equatable {
-    @ExCodable
+    @ExCodableKey
     let doubleFromBool: Double?
-    @ExCodable
+    @ExCodableKey
     let boolFromDouble: Bool?
 }
 
@@ -317,11 +317,11 @@ extension ExCodableGlobalDecodingTypeConverter: ExCodableDecodingTypeConverter {
 
 // MARK: class
 
-@ExCodableEnabled
+@ExCodable
 class TestClass {
-    @ExCodable
+    @ExCodableKey
     let int: Int
-    @ExCodable
+    @ExCodableKey
     let string: String?
     
     required init() {
@@ -340,10 +340,10 @@ extension TestClass: Equatable {}
 
 // MARK: subclass
 
-@ExCodableEnabled
+@ExCodable
 class TestSubclass: TestClass {
     
-    @ExCodable
+    @ExCodableKey
     let bool: Bool
     
     required init() {
@@ -364,33 +364,33 @@ class TestSubclass: TestClass {
 
 // MARK: nonnull and `throws`
 
-@ExCodableEnabled
+@ExCodable
 struct TestNonnull: Equatable {
-    @ExCodable("int", nonnull: true)
+    @ExCodableKey("int", nonnull: true)
     let nonnullInt: Int!
 }
 
-@ExCodableEnabled
+@ExCodable
 struct TestNestedNonnull: Equatable {
-    @ExCodable("nested.int", "int", nonnull: true)
+    @ExCodableKey("nested.int", "int", nonnull: true)
     let nonnullInt: Int!
 }
 
-@ExCodableEnabled
+@ExCodable
 struct TestThrows: Equatable {
-    @ExCodable("string", "nested.string", throws: true)
+    @ExCodableKey("string", "nested.string", throws: true)
     let throwsString: String!
 }
 
-@ExCodableEnabled
+@ExCodable
 struct TestNestedThrows: Equatable {
-    @ExCodable("nested.string", "string", throws: true)
+    @ExCodableKey("nested.string", "string", throws: true)
     let throwsString: String!
 }
 
-@ExCodableEnabled
+@ExCodable
 struct TestNonnullWithThrows: Equatable {
-    @ExCodable("throws", nonnull: true)
+    @ExCodableKey("throws", nonnull: true)
     let testThrows: TestThrows!
 }
 

@@ -22,5 +22,5 @@ let package = Package(
         .target(name: "ExCodable", dependencies: []),
         .testTarget(name: "ExCodableTests", dependencies: ["ExCodable"])
     ],
-    swiftLanguageModes: [.v5]
+    swiftLanguageModes: [.v6]
 )

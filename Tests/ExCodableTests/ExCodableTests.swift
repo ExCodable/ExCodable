@@ -77,24 +77,6 @@ extension TestManualCodable: Codable {
     }
 }
 
-// MARK: DEPRECATED
-
-struct TestExCodable_0_x: Equatable {
-    private(set) var int: Int = 0
-    private(set) var string: String?
-}
-
-@available(*, deprecated)
-extension TestExCodable_0_x: ExCodableDEPRECATED {
-    static let keyMapping: [KeyMap<Self>] = [
-        KeyMap(\.int, to: "int"),
-        KeyMap(\.string, to: "string")
-    ]
-    init(from decoder: Decoder) throws {
-        try decode(from: decoder, with: Self.keyMapping)
-    }
-}
-
 // MARK: struct
 
 struct TestStruct: ExAutoCodable, Equatable {
@@ -416,21 +398,6 @@ final class ExCodableTests: XCTestCase {
             XCTAssertEqual(copy, test)
             let json = try! JSONSerialization.jsonObject(with: data) as! [String: Any]
             XCTAssertEqual(NSDictionary(dictionary: json), ["int":200,"nested":["nested":["string":"OK"]]])
-        }
-        else {
-            XCTFail()
-        }
-    }
-    
-    @available(*, deprecated)
-    func testExCodable_0_x() {
-        let json = Data(#"{"int":200,"string":"OK"}"#.utf8)
-        if let test = try? TestExCodable_0_x.decoded(from: json),
-           let data = try? test.encoded() as Data,
-           let copy = try? TestExCodable_0_x.decoded(from: data) {
-            XCTAssertEqual(copy, test)
-            let json = try! JSONSerialization.jsonObject(with: data) as! [String: Any]
-            XCTAssertEqual(NSDictionary(dictionary: json), ["int":200,"string":"OK"])
         }
         else {
             XCTFail()

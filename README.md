@@ -56,7 +56,7 @@ struct TestExCodable {
 - Supports builtin and custom **type conversions**, including **nested optionals** as well.
 - Supports manual encoding/decoding using **subscripts**.
 - Supports `return nil` or `throw error` when encoding/decoding failed.
-- Supports `struct`, `class` and subclasses. `RawRepresentable` properties, including `enum`, are decoded from their raw values.
+- Supports `struct`, `class` and subclasses. `RawRepresentable` properties, including `enum` and optional `enum`, are decoded from their raw values.
 - Supports JSON `Data`, `String`, `Array` and `Dictionary`.
 - Supports **type inference**.
 - Uses JSON encoder/decoder by default, supports PList and custom encoder/decoder.

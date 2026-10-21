@@ -101,6 +101,12 @@ struct TestStructWithEnum: Equatable {
     let `enum`: TestEnum
 }
 
+@ExCodable
+struct TestStructWithOptionalEnum: Equatable {
+    @ExCodableKey
+    let `enum`: TestEnum?
+}
+
 // MARK: alternative-keys
 
 @ExCodable
@@ -501,6 +507,53 @@ final class ExCodableTests: XCTestCase {
             XCTAssertEqual(NSDictionary(dictionary: localJSON), [
                 "enum": 1
             ])
+        }
+        else {
+            XCTFail()
+        }
+    }
+    
+    func testStructWithOptionalEnumFromJSON() {
+        let json = Data(#"{"enum":1}"#.utf8)
+        if let test = try? TestStructWithOptionalEnum.decoded(from: json),
+           let data = try? test.encoded() as Data,
+           let copy = try? TestStructWithOptionalEnum.decoded(from: data) {
+            XCTAssertEqual(test, TestStructWithOptionalEnum(enum: .one))
+            XCTAssertEqual(copy, test)
+            let localJSON = try! JSONSerialization.jsonObject(with: data) as! [String: Any]
+            XCTAssertEqual(NSDictionary(dictionary: localJSON), [
+                "enum": 1
+            ])
+        }
+        else {
+            XCTFail()
+        }
+    }
+    
+    func testStructWithOptionalEnumFromJSONWithString() {
+        let json = Data(#"{"enum":"1"}"#.utf8)
+        if let test = try? TestStructWithOptionalEnum.decoded(from: json),
+           let data = try? test.encoded() as Data,
+           let copy = try? TestStructWithOptionalEnum.decoded(from: data) {
+            XCTAssertEqual(test, TestStructWithOptionalEnum(enum: .one))
+            XCTAssertEqual(copy, test)
+            let localJSON = try! JSONSerialization.jsonObject(with: data) as! [String: Any]
+            XCTAssertEqual(NSDictionary(dictionary: localJSON), [
+                "enum": 1
+            ])
+        }
+        else {
+            XCTFail()
+        }
+    }
+    
+    func testStructWithOptionalEnumFromNullOrMissingOrUnknown() {
+        if let nullJSON = try? TestStructWithOptionalEnum.decoded(from: Data(#"{"enum":null}"#.utf8)),
+           let missingJSON = try? TestStructWithOptionalEnum.decoded(from: Data(#"{}"#.utf8)),
+           let unknownJSON = try? TestStructWithOptionalEnum.decoded(from: Data(#"{"enum":"9"}"#.utf8)) {
+            XCTAssertEqual(nullJSON, TestStructWithOptionalEnum(enum: nil))
+            XCTAssertEqual(missingJSON, TestStructWithOptionalEnum(enum: nil))
+            XCTAssertEqual(unknownJSON, TestStructWithOptionalEnum(enum: nil))
         }
         else {
             XCTFail()

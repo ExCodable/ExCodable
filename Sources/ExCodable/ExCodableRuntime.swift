@@ -23,14 +23,14 @@ public enum ExCodableRuntime {
         from decoder: Decoder,
         keys: [String],
         nonnull: Bool,
-        throws shouldThrow: Bool,
+        throws: Bool,
         converter: (any ExCodableDecodingTypeConverter.Type)?,
         customDecode: ((Decoder) throws -> T?)? = nil
     ) throws -> T? {
         if let customDecode {
             return try customDecode(decoder)
         }
-        return try decoder.decode(keys, as: type, nonnull: nonnull, throws: shouldThrow, converter: converter)
+        return try decoder.decode(keys, as: type, nonnull: nonnull, throws: `throws`, converter: converter)
     }
     
     public static func decode<T: Decodable & RawRepresentable>(
@@ -38,16 +38,32 @@ public enum ExCodableRuntime {
         from decoder: Decoder,
         keys: [String],
         nonnull: Bool,
-        throws shouldThrow: Bool,
+        throws: Bool,
         converter: (any ExCodableDecodingTypeConverter.Type)?,
         customDecode: ((Decoder) throws -> T?)? = nil
     ) throws -> T? where T.RawValue: Decodable {
         if let customDecode {
             return try customDecode(decoder)
         }
-        guard let rawValue = try decoder.decode(keys, as: T.RawValue.self, nonnull: nonnull, throws: shouldThrow, converter: converter),
+        guard let rawValue = try decoder.decode(keys, as: T.RawValue.self, nonnull: nonnull, throws: `throws`, converter: converter),
               let value = T(rawValue: rawValue) else { return nil }
         return value
+    }
+    
+    public static func decode<T: Decodable & RawRepresentable>(
+        _ type: T?.Type = T?.self,
+        from decoder: Decoder,
+        keys: [String],
+        nonnull: Bool,
+        throws: Bool,
+        converter: (any ExCodableDecodingTypeConverter.Type)?,
+        customDecode: ((Decoder) throws -> T??)? = nil
+    ) throws -> T?? where T.RawValue: Decodable {
+        if let customDecode {
+            return try customDecode(decoder)
+        }
+        guard let rawValue = try decoder.decode(keys, as: T.RawValue.self, nonnull: nonnull, throws: `throws`, converter: converter) else { return nil }
+        return T(rawValue: rawValue)
     }
     
     public static func encode<T: Encodable>(
@@ -55,7 +71,7 @@ public enum ExCodableRuntime {
         to encoder: Encoder,
         for key: String,
         nonnull: Bool,
-        throws shouldThrow: Bool,
+        throws: Bool,
         customEncode: ((Encoder, T) throws -> Void)? = nil
     ) throws {
         let deepWrapped = if let optional = value as? OptionalProtocol {
@@ -70,7 +86,7 @@ public enum ExCodableRuntime {
                 try customEncode(encoder, value)
             }
             else {
-                try encoder.encode(value, for: key, nonnull: nonnull, throws: shouldThrow)
+                try encoder.encode(value, for: key, nonnull: nonnull, throws: `throws`)
             }
         }
     }

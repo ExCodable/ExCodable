@@ -25,7 +25,7 @@ ExCodable 2.0
 
 --------
 
-ExCodable 是一个 Swift 版 JSON-Model 转换工具。2.0 用 Macros 生成 `init(from:)` 和 `encode(to:)`，属性可以声明为 `let`。备选 key、嵌套 key、类型转换、`nonnull` / `throws` 都还在。
+ExCodable 是一个 Swift 版 JSON-Model 转换工具。2.0 用 Macros 生成 `init(from:)` 和 `encode(to:)`，属性可以声明为 `let`。备选 key、嵌套 key、类型转换、`default`、`nonnull` / `throws` 都还在。
 
 「若非必要，勿造轮子」。但显然，我又造了一个，所以它一定是必要的：
 
@@ -55,7 +55,7 @@ struct TestExCodable {
 - ExCodable 是对 Swift 内置的 `Codable` 的扩展，因此可以享受到诸多便利，比如与 `NSCoding`、[SwiftyJSON](https://github.com/SwiftyJSON/SwiftyJSON)、[GenericJSON](https://github.com/iwill/generic-json-swift)、[Alamofire](https://github.com/Alamofire/Alamofire) 等都能无缝对接。
 - 在类型上添加 `@ExCodable`，生成 `init(from:)`、`encode(to:)`。`struct` 还会生成成员初始化方法。
 - 在属性上添加 `@ExCodableKey` 绑定 JSON key。只有带这个注解的属性会参与 encode/decode。key 与属性同名时，可以简写为 `@ExCodableKey`。
-- 属性使用 `let`，并且不能再写默认值，因为生成的初始化方法会给它赋值。
+- 属性使用 `let`，并且不能写 `= value`，因为生成的初始化方法会给它赋值。缺 key 或 JSON `null` 需要兜底时，写在 `@ExCodableKey(default:)` 上。
 - 不通过 unsafe pointer 读写内存。
 - 支持多个候选 JSON key，依次解析。编码使用第一个 key。
 - 使用 `.` 拼接多层嵌套的 JSON key。
@@ -73,7 +73,7 @@ struct TestExCodable {
 
 ### 1、ExCodable
 
-`@ExCodable` 为 `struct` 或 `class` 生成 `Codable`。需要参与转换的属性标记 `@ExCodableKey`，用 `let` 声明，不要写默认值。
+`@ExCodable` 为 `struct` 或 `class` 生成 `Codable`。需要参与转换的属性标记 `@ExCodableKey`，用 `let` 声明，不要写 `= value`。解码兜底写在 `@ExCodableKey(default:)` 上。
 
 ```swift
 @ExCodable
@@ -293,18 +293,44 @@ extension TestManualEncodingDecoding: Codable {
 
 ```
 
-### 8、更灵活的异常处理
+### 8、默认值
+
+`@ExCodableKey` 的参数顺序是 key、`default`、`nonnull`、`throws`、`encode`、`decode`。`default` 用在解码结果为 `nil` 的时候：key 不存在、JSON 值是 `null`，或者类型不匹配被忽略。
+
+```swift
+@ExCodable
+struct TestDefault: Equatable {
+    @ExCodableKey("int", default: 0)
+    let int: Int
+    @ExCodableKey("string", default: "default")
+    let string: String
+}
+
+let missing = try TestDefault.decoded(from: Data(#"{}"#.utf8))
+// TestDefault(int: 0, string: "default")
+
+let nulls = try TestDefault.decoded(from: Data(#"{"int":null,"string":null}"#.utf8))
+// TestDefault(int: 0, string: "default")
+
+let values = try TestDefault.decoded(from: Data(#"{"int":418,"string":"I'm a teapot"}"#.utf8))
+// TestDefault(int: 418, string: "I'm a teapot")
+
+```
+
+缺 key 和 JSON `null` 是同一种缺失，都会使用 `default`。`default` 不能和 `nonnull` 或 `throws` 写在一起，宏会直接报错。
+
+### 9、更灵活的异常处理
 
 ExCodable 默认忽略 JSON-Model 转换时遇到的 `EncodingError.invalidValue`、`DecodingError.keyNotFound`、`DecodingError.valueNotFound` 和 `DecodingError.typeMismatch`，结果为 `nil`。只有 JSON 数据本身有问题时才会抛出错误。
 
-`let` 不能写默认值，所以缺 key 时不会再退回属性上的默认值：
+没有 `default` 时，缺 key 不会退回属性声明上的值：
 
 - 可选属性（包括隐式解包可选）没有解析到值时为 `nil`
 - 非可选属性没有解析到值时抛出 `DecodingError.valueNotFound`
 
 也可以在出错时终止转换：
 
-- 设置 `nonnull: true` 允许抛出 `EncodingError.invalidValue`、`DecodingError.keyNotFound` 和 `DecodingError.valueNotFound`
+- 设置 `nonnull: true` 允许抛出 `EncodingError.invalidValue` 和 `DecodingError.keyNotFound`。缺 key 和 JSON `null` 都抛出 `keyNotFound`
 - 设置 `throws: true` 允许抛出 `DecodingError.typeMismatch`
 
 ```swift
@@ -316,7 +342,7 @@ struct TestNonnullAndThrows {
 
 ```
 
-### 9、`class` 以及子类
+### 10、`class` 以及子类
 
 `class` 的初始化方法要给这些 `let` 赋值。子类同样加上 `@ExCodable`。
 
@@ -356,7 +382,7 @@ class TestSubclass: TestClass {
 
 如果 `class` 自己实现了 `==`，把 `Equatable` 声明在 extension 里。写在类型声明上时，`@ExCodable` 增加的 extension 可能让 `==` 产生歧义。
 
-### 10、类型推断
+### 11、类型推断
 
 ```swift
 @ExCodable
@@ -400,7 +426,7 @@ Swift Package Manager:
 ### 1.x 到 2.x
 
 - 把 `struct Model: ExAutoCodable` 改成 `@ExCodable struct Model`
-- 把 `@ExCodableKey var property: T = default` 改成 `@ExCodableKey let property: T`
+- 把 `@ExCodable var property: T = fallback` 改成 `@ExCodableKey(default: fallback) let property: T`。`let` 上不再写 `=`
 - 子类同样加上 `@ExCodable`
 - `class` 的初始化方法要给不再有默认值的 `let` 赋值
 - 自定义 `decode` 闭包可能要写明返回类型，例如 `{ decoder -> Bool? in ... }`

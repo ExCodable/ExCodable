@@ -38,11 +38,11 @@ ObjC 时代，最好的 JSON-Model 转换非 [YYModel](https://github.com/ibirem
 ## 主要特性
 
 ```swift
-@ExCodableEnabled
+@ExCodable
 struct TestExCodable {
-    @ExCodable
+    @ExCodableKey
     let int: Int
-    @ExCodable("nested.nested.string", "string", "str", "s")
+    @ExCodableKey("nested.nested.string", "string", "str", "s")
     let string: String?
 }
 
@@ -53,8 +53,8 @@ struct TestExCodable {
 主要特性：
 
 - ExCodable 是对 Swift 内置的 `Codable` 的扩展，因此可以享受到诸多便利，比如与 `NSCoding`、[SwiftyJSON](https://github.com/SwiftyJSON/SwiftyJSON)、[GenericJSON](https://github.com/iwill/generic-json-swift)、[Alamofire](https://github.com/Alamofire/Alamofire) 等都能无缝对接。
-- 在类型上添加 `@ExCodableEnabled`，生成 `init(from:)`、`encode(to:)`。`struct` 还会生成成员初始化方法。
-- 在属性上添加 `@ExCodable` 绑定 JSON key。只有带这个注解的属性会参与 encode/decode。key 与属性同名时，可以简写为 `@ExCodable`。
+- 在类型上添加 `@ExCodable`，生成 `init(from:)`、`encode(to:)`。`struct` 还会生成成员初始化方法。
+- 在属性上添加 `@ExCodableKey` 绑定 JSON key。只有带这个注解的属性会参与 encode/decode。key 与属性同名时，可以简写为 `@ExCodableKey`。
 - 属性使用 `let`，并且不能再写默认值，因为生成的初始化方法会给它赋值。
 - 不通过 unsafe pointer 读写内存。
 - 支持多个候选 JSON key，依次解析。编码使用第一个 key。
@@ -73,14 +73,14 @@ struct TestExCodable {
 
 ### 1、ExCodable
 
-`@ExCodableEnabled` 为 `struct` 或 `class` 生成 `Codable`。需要参与转换的属性标记 `@ExCodable`，用 `let` 声明，不要写默认值。
+`@ExCodable` 为 `struct` 或 `class` 生成 `Codable`。需要参与转换的属性标记 `@ExCodableKey`，用 `let` 声明，不要写默认值。
 
 ```swift
-@ExCodableEnabled
+@ExCodable
 struct TestStruct {
-    @ExCodable
+    @ExCodableKey
     let int: Int
-    @ExCodable("string")
+    @ExCodableKey("string")
     let string: String?
 }
 
@@ -89,9 +89,9 @@ struct TestStruct {
 ### 2、多个候选 JSON key
 
 ```swift
-@ExCodableEnabled
+@ExCodable
 struct TestAlternativeKeys {
-    @ExCodable("string", "str", "s")
+    @ExCodableKey("string", "str", "s")
     let string: String!
 }
 
@@ -100,9 +100,9 @@ struct TestAlternativeKeys {
 ### 3、多层嵌套的 JSON key
 
 ```swift
-@ExCodableEnabled
+@ExCodable
 struct TestNestedKeys {
-    @ExCodable("nested.nested.string")
+    @ExCodableKey("nested.nested.string")
     let string: String!
 }
 
@@ -117,9 +117,9 @@ enum TestEnum: Int, Codable {
     case zero = 0, one = 1
 }
 
-@ExCodableEnabled
+@ExCodable
 struct TestStructWithEnum {
-    @ExCodable("enum")
+    @ExCodableKey("enum")
     let `enum`: TestEnum
 }
 
@@ -129,14 +129,14 @@ struct TestStructWithEnum {
 
 ### 5、自定义 Encode/Decode
 
-`@ExCodable` 支持自定义 `encode` 和 `decode`，并且 `encoder`、`decoder` 支持使用 subscript 方式访问。
+`@ExCodableKey` 支持自定义 `encode` 和 `decode`，并且 `encoder`、`decoder` 支持使用 subscript 方式访问。
 
 如果闭包里没有写出值的类型，需要标明返回类型，例如 `decode: { decoder -> Bool? in ... }`。
 
 ```swift
-@ExCodableEnabled
+@ExCodable
 struct TestManualEncodeDecode {
-    @ExCodable(encode: { encoder, value in
+    @ExCodableKey(encode: { encoder, value in
         encoder["int"] = value <= 0 ? 0 : value
     }, decode: { decoder in
         if let int: Int = decoder["int"], int > 0 {
@@ -181,9 +181,9 @@ A、内置支持的类型转换：
 B、单个属性的自定义类型转换：
 
 ```swift
-@ExCodableEnabled
+@ExCodable
 struct TestCustomEncodeDecode {
-    @ExCodable(decode: { decoder in
+    @ExCodableKey(decode: { decoder in
         if let string: String = decoder["string"] {
             return string.count
         }
@@ -197,11 +197,11 @@ struct TestCustomEncodeDecode {
 C、model 中的自定义类型转换：
 
 ```swift
-@ExCodableEnabled
+@ExCodable
 struct TestCustomTypeConverter {
-    @ExCodable
+    @ExCodableKey
     let doubleFromBool: Double?
-    @ExCodable
+    @ExCodableKey
     let floatFromBool: Double?
 }
 
@@ -234,9 +234,9 @@ extension TestCustomTypeConverter: ExCodableDecodingTypeConverter {
 D、全局的自定义类型转换：
 
 ```swift
-@ExCodableEnabled
+@ExCodable
 struct TestCustomGlobalTypeConverter: Equatable {
-    @ExCodable("boolFromDouble")
+    @ExCodableKey("boolFromDouble")
     let boolFromDouble: Bool?
 }
 
@@ -308,9 +308,9 @@ ExCodable 默认忽略 JSON-Model 转换时遇到的 `EncodingError.invalidValue
 - 设置 `throws: true` 允许抛出 `DecodingError.typeMismatch`
 
 ```swift
-@ExCodableEnabled
+@ExCodable
 struct TestNonnullAndThrows {
-    @ExCodable(nonnull: true, throws: true)
+    @ExCodableKey(nonnull: true, throws: true)
     let int: Int!
 }
 
@@ -318,14 +318,14 @@ struct TestNonnullAndThrows {
 
 ### 9、`class` 以及子类
 
-`class` 的初始化方法要给这些 `let` 赋值。子类同样加上 `@ExCodableEnabled`。
+`class` 的初始化方法要给这些 `let` 赋值。子类同样加上 `@ExCodable`。
 
 ```swift
-@ExCodableEnabled
+@ExCodable
 class TestClass {
-    @ExCodable
+    @ExCodableKey
     let int: Int
-    @ExCodable
+    @ExCodableKey
     let string: String?
     required init() {
         (self.int, self.string) = (0, nil)
@@ -338,9 +338,9 @@ class TestClass {
 ```
 
 ```swift
-@ExCodableEnabled
+@ExCodable
 class TestSubclass: TestClass {
-    @ExCodable
+    @ExCodableKey
     let bool: Bool
     required init() {
         self.bool = false
@@ -354,16 +354,16 @@ class TestSubclass: TestClass {
 
 ```
 
-如果 `class` 自己实现了 `==`，把 `Equatable` 声明在 extension 里。写在类型声明上时，`@ExCodableEnabled` 增加的 extension 可能让 `==` 产生歧义。
+如果 `class` 自己实现了 `==`，把 `Equatable` 声明在 extension 里。写在类型声明上时，`@ExCodable` 增加的 extension 可能让 `==` 产生歧义。
 
 ### 10、类型推断
 
 ```swift
-@ExCodableEnabled
+@ExCodable
 struct TestStruct: Equatable {
-    @ExCodable
+    @ExCodableKey
     let int: Int
-    @ExCodable
+    @ExCodableKey
     let string: String?
 }
 
@@ -393,15 +393,15 @@ Swift Package Manager:
 .package(url: "https://github.com/ExCodable/ExCodable", from: "2.0.0")
 ```
 
-`@ExCodableEnabled` 和 `@ExCodable` 是宏。Swift Package Manager 会加载编译器插件。CocoaPods 不会，所以 CocoaPods 集成时这些宏不会展开。
+`@ExCodable` 和 `@ExCodableKey` 是宏。Swift Package Manager 会加载编译器插件。CocoaPods 不会，所以 CocoaPods 集成时这些宏不会展开。
 
 ## 升级
 
 ### 1.x 到 2.x
 
-- 把 `struct Model: ExAutoCodable` 改成 `@ExCodableEnabled struct Model`
-- 把 `@ExCodable var property: T = default` 改成 `@ExCodable let property: T`
-- 子类同样加上 `@ExCodableEnabled`
+- 把 `struct Model: ExAutoCodable` 改成 `@ExCodable struct Model`
+- 把 `@ExCodableKey var property: T = default` 改成 `@ExCodableKey let property: T`
+- 子类同样加上 `@ExCodable`
 - `class` 的初始化方法要给不再有默认值的 `let` 赋值
 - 自定义 `decode` 闭包可能要写明返回类型，例如 `{ decoder -> Bool? in ... }`
 
@@ -411,16 +411,16 @@ Swift Package Manager:
 
 - 删除 `init(from decoder: Decoder) throws`
 - 删除 `keyMapping`
-- 类型加上 `@ExCodableEnabled`
-- 用 `@ExCodable("<key>", "<alt-key>", ...)` 标记 `let` 属性，不要默认值
+- 类型加上 `@ExCodable`
+- 用 `@ExCodableKey("<key>", "<alt-key>", ...)` 标记 `let` 属性，不要默认值
 - 具体参考上面 [使用方法](#使用方法)
 
 ```swift
-@ExCodableEnabled
+@ExCodable
 struct TestExCodable {
-    @ExCodable
+    @ExCodableKey
     let int: Int
-    @ExCodable("nested.nested.string", "string", "str", "s")
+    @ExCodableKey("nested.nested.string", "string", "str", "s")
     let string: String?
 }
 

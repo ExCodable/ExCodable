@@ -2,22 +2,22 @@
 //  ExCodableRuntime.swift
 //  ExCodable
 //
-//  Created by Míng on 2021-02-10.
-//  Copyright (c) 2021 Míng <i+ExCodable@iwill.im>. Released under the MIT license.
+//  Created by Míng on 2026-10-22.
+//  Copyright (c) 2026 Míng <i+ExCodable@iwill.im>. Released under the MIT license.
 //
 
 import Foundation
 
 /// Calls used by code that `@ExCodable` generates.
 public enum ExCodableRuntime {
-
+    
     public static func converter(of type: Any.Type) -> (any ExCodableDecodingTypeConverter.Type)? {
         type as? any ExCodableDecodingTypeConverter.Type
     }
-
+    
     public static func keyString(_ key: String) -> String { key }
     public static func keyString(_ key: any CodingKey) -> String { key.stringValue }
-
+    
     public static func decode<T: Decodable>(
         _ type: T.Type = T.self,
         from decoder: Decoder,
@@ -32,7 +32,7 @@ public enum ExCodableRuntime {
         }
         return try decoder.decode(keys, as: type, nonnull: nonnull, throws: shouldThrow, converter: converter)
     }
-
+    
     public static func decode<T: Decodable & RawRepresentable>(
         _ type: T.Type = T.self,
         from decoder: Decoder,
@@ -49,7 +49,7 @@ public enum ExCodableRuntime {
               let value = T(rawValue: rawValue) else { return nil }
         return value
     }
-
+    
     public static func encode<T: Encodable>(
         _ value: T,
         to encoder: Encoder,

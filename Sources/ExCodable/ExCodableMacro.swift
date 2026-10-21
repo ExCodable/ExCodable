@@ -2,8 +2,8 @@
 //  ExCodableMacro.swift
 //  ExCodable
 //
-//  Created by Míng on 2021-02-10.
-//  Copyright (c) 2021 Míng <i+ExCodable@iwill.im>. Released under the MIT license.
+//  Created by Míng on 2026-10-22.
+//  Copyright (c) 2026 Míng <i+ExCodable@iwill.im>. Released under the MIT license.
 //
 
 import Foundation

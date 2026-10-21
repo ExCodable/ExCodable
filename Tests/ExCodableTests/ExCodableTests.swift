@@ -3,7 +3,7 @@
 //  ExCodable
 //
 //  Created by Míng on 2021-02-10.
-//  Copyright (c) 2023 Míng <i+ExCodable@iwill.im>. Released under the MIT license.
+//  Copyright (c) 2021 Míng <i+ExCodable@iwill.im>. Released under the MIT license.
 //
 
 import XCTest
@@ -742,23 +742,23 @@ final class ExCodableTests: XCTestCase {
         let decoded = try TestDefault.decoded(from: values)
         XCTAssertEqual(decoded.int, 418)
         XCTAssertEqual(decoded.string, "I'm a teapot")
-
+        
         let missing = Data(#"{}"#.utf8)
         let fallback = try TestDefault.decoded(from: missing)
         XCTAssertEqual(fallback.int, 0)
         XCTAssertEqual(fallback.string, "default")
-
+        
         let nulls = Data(#"{"int":null,"string":null}"#.utf8)
         let nullFallback = try TestDefault.decoded(from: nulls)
         XCTAssertEqual(nullFallback.int, 0)
         XCTAssertEqual(nullFallback.string, "default")
-
+        
         let data = try decoded.encoded() as Data
         let copy = try TestDefault.decoded(from: data)
         XCTAssertEqual(copy.int, decoded.int)
         XCTAssertEqual(copy.string, decoded.string)
     }
-
+    
     func testNonnullAndThrows() {
         
         let noIntData = Data(#"""

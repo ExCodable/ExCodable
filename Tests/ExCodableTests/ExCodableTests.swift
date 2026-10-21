@@ -164,8 +164,10 @@ struct TestCustomEncodeDecode: Equatable {
     })
     let string: String?
     
-    @ExCodableKey(encode: { encoder, value in encoder["bool"] = value },
-               decode: { decoder -> Bool? in return decoder["bool"/*, converter: Self.self*/] })
+    @ExCodableKey(
+        encode: { encoder, value in encoder["bool"] = value },
+        decode: { decoder -> Bool? in return decoder["bool"/*, converter: Self.self*/] }
+    )
     let bool: Bool
 }
 

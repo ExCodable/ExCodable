@@ -364,6 +364,16 @@ class TestSubclass: TestClass {
     }
 }
 
+// MARK: default
+
+@ExCodable
+struct TestDefault: Equatable {
+    @ExCodableKey("int", default: 0)
+    let int: Int
+    @ExCodableKey("string", default: "default")
+    let string: String
+}
+
 // MARK: nonnull and `throws`
 
 @ExCodable
@@ -727,6 +737,28 @@ final class ExCodableTests: XCTestCase {
         }
     }
     
+    func testDefault() throws {
+        let values = Data(#"{"int":418,"string":"I'm a teapot"}"#.utf8)
+        let decoded = try TestDefault.decoded(from: values)
+        XCTAssertEqual(decoded.int, 418)
+        XCTAssertEqual(decoded.string, "I'm a teapot")
+
+        let missing = Data(#"{}"#.utf8)
+        let fallback = try TestDefault.decoded(from: missing)
+        XCTAssertEqual(fallback.int, 0)
+        XCTAssertEqual(fallback.string, "default")
+
+        let nulls = Data(#"{"int":null,"string":null}"#.utf8)
+        let nullFallback = try TestDefault.decoded(from: nulls)
+        XCTAssertEqual(nullFallback.int, 0)
+        XCTAssertEqual(nullFallback.string, "default")
+
+        let data = try decoded.encoded() as Data
+        let copy = try TestDefault.decoded(from: data)
+        XCTAssertEqual(copy.int, decoded.int)
+        XCTAssertEqual(copy.string, decoded.string)
+    }
+
     func testNonnullAndThrows() {
         
         let noIntData = Data(#"""
@@ -735,7 +767,7 @@ final class ExCodableTests: XCTestCase {
         }
         """#.utf8)
         XCTAssertThrowsError(try TestNonnull.decoded(from: noIntData)) { error in
-            XCTAssertNotNil(error)
+            guard case DecodingError.keyNotFound = error else { return XCTFail("\(error)") }
             print("TestNonnull error: \(error)")
         }
         XCTAssertThrowsError(try TestNestedNonnull.decoded(from: noIntData)) { error in
@@ -752,7 +784,7 @@ final class ExCodableTests: XCTestCase {
         }
         """#.utf8)
         XCTAssertThrowsError(try TestNonnull.decoded(from: nullData)) { error in
-            XCTAssertNotNil(error)
+            guard case DecodingError.keyNotFound = error else { return XCTFail("\(error)") }
             print("TestNonnull error: \(error)")
         }
         XCTAssertThrowsError(try TestNestedNonnull.decoded(from: nullData)) { error in

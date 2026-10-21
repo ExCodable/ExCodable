@@ -24,6 +24,24 @@ public macro ExCodableKey(
 @attached(peer, names: arbitrary)
 public macro ExCodableKey<Value>(
     _ keys: String...,
+    default: Value,
+    nonnull: Bool? = nil,
+    throws: Bool? = nil
+) = #externalMacro(module: "ExCodableMacros", type: "ExCodableKeyMacro")
+
+@attached(peer, names: arbitrary)
+public macro ExCodableKey<Value>(
+    _ keys: String...,
+    nonnull: Bool? = nil,
+    throws: Bool? = nil,
+    encode: ((Encoder, Value) throws -> Void)?,
+    decode: ((Decoder) throws -> Value?)?
+) = #externalMacro(module: "ExCodableMacros", type: "ExCodableKeyMacro")
+
+@attached(peer, names: arbitrary)
+public macro ExCodableKey<Value>(
+    _ keys: String...,
+    default: Value,
     nonnull: Bool? = nil,
     throws: Bool? = nil,
     encode: ((Encoder, Value) throws -> Void)?,
@@ -41,6 +59,24 @@ public macro ExCodableKey<Value>(
 @attached(peer, names: arbitrary)
 public macro ExCodableKey<Value>(
     _ keys: String...,
+    default: Value,
+    nonnull: Bool? = nil,
+    throws: Bool? = nil,
+    encode: ((Encoder, Value) throws -> Void)?
+) = #externalMacro(module: "ExCodableMacros", type: "ExCodableKeyMacro")
+
+@attached(peer, names: arbitrary)
+public macro ExCodableKey<Value>(
+    _ keys: String...,
+    nonnull: Bool? = nil,
+    throws: Bool? = nil,
+    decode: ((Decoder) throws -> Value?)?
+) = #externalMacro(module: "ExCodableMacros", type: "ExCodableKeyMacro")
+
+@attached(peer, names: arbitrary)
+public macro ExCodableKey<Value>(
+    _ keys: String...,
+    default: Value,
     nonnull: Bool? = nil,
     throws: Bool? = nil,
     decode: ((Decoder) throws -> Value?)?
@@ -50,6 +86,15 @@ public macro ExCodableKey<Value>(
 public macro ExCodableKey(
     _ key: any CodingKey,
     _ keys: any CodingKey...,
+    nonnull: Bool? = nil,
+    throws: Bool? = nil
+) = #externalMacro(module: "ExCodableMacros", type: "ExCodableKeyMacro")
+
+@attached(peer, names: arbitrary)
+public macro ExCodableKey<Value>(
+    _ key: any CodingKey,
+    _ keys: any CodingKey...,
+    default: Value,
     nonnull: Bool? = nil,
     throws: Bool? = nil
 ) = #externalMacro(module: "ExCodableMacros", type: "ExCodableKeyMacro")
@@ -68,6 +113,17 @@ public macro ExCodableKey<Value>(
 public macro ExCodableKey<Value>(
     _ key: any CodingKey,
     _ keys: any CodingKey...,
+    default: Value,
+    nonnull: Bool? = nil,
+    throws: Bool? = nil,
+    encode: ((Encoder, Value) throws -> Void)?,
+    decode: ((Decoder) throws -> Value?)?
+) = #externalMacro(module: "ExCodableMacros", type: "ExCodableKeyMacro")
+
+@attached(peer, names: arbitrary)
+public macro ExCodableKey<Value>(
+    _ key: any CodingKey,
+    _ keys: any CodingKey...,
     nonnull: Bool? = nil,
     throws: Bool? = nil,
     encode: ((Encoder, Value) throws -> Void)?
@@ -77,6 +133,26 @@ public macro ExCodableKey<Value>(
 public macro ExCodableKey<Value>(
     _ key: any CodingKey,
     _ keys: any CodingKey...,
+    default: Value,
+    nonnull: Bool? = nil,
+    throws: Bool? = nil,
+    encode: ((Encoder, Value) throws -> Void)?
+) = #externalMacro(module: "ExCodableMacros", type: "ExCodableKeyMacro")
+
+@attached(peer, names: arbitrary)
+public macro ExCodableKey<Value>(
+    _ key: any CodingKey,
+    _ keys: any CodingKey...,
+    nonnull: Bool? = nil,
+    throws: Bool? = nil,
+    decode: ((Decoder) throws -> Value?)?
+) = #externalMacro(module: "ExCodableMacros", type: "ExCodableKeyMacro")
+
+@attached(peer, names: arbitrary)
+public macro ExCodableKey<Value>(
+    _ key: any CodingKey,
+    _ keys: any CodingKey...,
+    default: Value,
     nonnull: Bool? = nil,
     throws: Bool? = nil,
     decode: ((Decoder) throws -> Value?)?

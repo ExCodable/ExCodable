@@ -19,7 +19,7 @@ En | [中文](https://excodable.iwill.im/)
 
 - Uses `@ExCodable` and `@ExCodableKey` to generate `init(from:)` and `encode(to:)`.
 - Properties can be declared with `let`.
-- Keeps alternative keys, nested keys, type conversions, and `nonnull` / `throws`.
+- Keeps alternative keys, nested keys, type conversions, `default`, and `nonnull` / `throws`.
 
 ## Documentations
 
@@ -47,7 +47,7 @@ struct TestExCodable {
 - Associates JSON keys to properties via **macros**:
     - `@ExCodable` generates `init(from:)`, `encode(to:)`, and a memberwise `init` for a struct.
     - Only properties marked with `@ExCodableKey` are encoded and decoded.
-    - `let` is supported. A `let` cannot also have a default value, because the generated initializer assigns it.
+    - `let` is supported. A `let` cannot also have `= value`, because the generated initializer assigns it. Use `@ExCodableKey(default:)` when a missing or null JSON value should fall back to a value.
     - `ExCodable` did not read/write memory via unsafe pointers.
     - No need to encode and decode properties one by one.
     - In most cases, the `CodingKey` types are no longer necessary, `String` literals are preferred.
@@ -144,7 +144,7 @@ struct TestExCodable {
 
 ### 1. ExCodable
 
-`@ExCodable` generates `Codable` for a struct or class. Mark each coded property with `@ExCodableKey`. Declare those properties with `let` and without a default value.
+`@ExCodable` generates `Codable` for a struct or class. Mark each coded property with `@ExCodableKey`. Declare those properties with `let` and without `= value`. A decode fallback belongs on `@ExCodableKey(default:)`.
 
 ```swift
 @ExCodable
@@ -356,13 +356,41 @@ extension TestManualEncodingDecoding: Codable {
 
 ```
 
-### 8. `return nil` or `throw error`
+### 8. `default`
+
+`@ExCodableKey` parameters are ordered `key`, `default`, `nonnull`, `throws`, `encode`, `decode`. `default` is the value assigned when decoding returns `nil`: the key is missing, the JSON value is `null`, or a type mismatch is ignored.
+
+```swift
+@ExCodable
+struct TestDefault: Equatable {
+    @ExCodableKey("int", default: 0)
+    let int: Int
+    @ExCodableKey("string", default: "default")
+    let string: String
+}
+
+let missing = try TestDefault.decoded(from: Data(#"{}"#.utf8))
+// TestDefault(int: 0, string: "default")
+
+let nulls = try TestDefault.decoded(from: Data(#"{"int":null,"string":null}"#.utf8))
+// TestDefault(int: 0, string: "default")
+
+let values = try TestDefault.decoded(from: Data(#"{"int":418,"string":"I'm a teapot"}"#.utf8))
+// TestDefault(int: 418, string: "I'm a teapot")
+
+```
+
+A missing key and JSON `null` are the same absence, so both use `default`. `@ExCodableKey` rejects `default` written together with `nonnull` or `throws`.
+
+### 9. `return nil` or `throw error`
+
+Without `default`, a `nil` decode result becomes `nil` for an optional and throws `DecodingError.valueNotFound` for a non-optional `let`.
 
 While encoding/decoding, ExCodable ignores the `keyNotFound`, `valueNotFound`, `invalidValue` and `typeMismatch` errors and `return nil` by default, only throws JSON errors.
 
 ExCodable also supports throw errors:
 
-- Use `nonnull: true` to throw `EncodingError.invalidValue`, `DecodingError.keyNotFound`, `DecodingError.valueNotFound`.
+- Use `nonnull: true` to throw `EncodingError.invalidValue` and `DecodingError.keyNotFound`. A missing key and JSON `null` both throw `keyNotFound`.
 - Use `throws: true` to throw `DecodingError.typeMismatch`.
 
 ```swift
@@ -374,7 +402,7 @@ struct TestNonnullAndThrows {
 
 ```
 
-### 9. `class` and Subclasses
+### 10. `class` and Subclasses
 
 ```swift
 @ExCodable
@@ -412,7 +440,7 @@ class TestSubclass: TestClass {
 
 If a class implements `==`, declare `Equatable` in an extension. Writing `Equatable` on the class itself can make `==` ambiguous once `@ExCodable` adds its extension.
 
-### 10. Type Inference
+### 11. Type Inference
 
 ```swift
 @ExCodable
@@ -501,7 +529,7 @@ struct TestExCodable {
 ### 1.x to 2.x
 
 - Replace `struct Model: ExAutoCodable` with `@ExCodable struct Model`.
-- Change `@ExCodable var property: T = default` to `@ExCodableKey let property: T`.
+- Change `@ExCodable var property: T = fallback` to `@ExCodableKey(default: fallback) let property: T`. The `let` has no `=`.
 - Put `@ExCodable` on subclasses as well.
 - A class initializer must assign every `let` that no longer has a default value.
 - A custom `decode` closure may need an explicit return type, for example `{ decoder -> Bool? in ... }`.

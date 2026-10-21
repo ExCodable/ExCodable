@@ -259,13 +259,22 @@ fileprivate extension KeyedDecodingContainer {
     
     func decodeForValue<T: Decodable>(_ codingKey: Self.Key, as type: T.Type = T.self, nonnull: Bool, throws: Bool, converter: (any ExCodableDecodingTypeConverter.Type)?) throws -> T? {
         
+        // JSON null is the same absence as a missing key.
+        if contains(codingKey), try decodeNil(forKey: codingKey) {
+            if nonnull {
+                let description = "No value associated with key \(codingKey) (\"\(codingKey.stringValue)\")."
+                throw DecodingError.keyNotFound(codingKey, .init(codingPath: codingPath, debugDescription: description))
+            }
+            return nil
+        }
+        
         var caughtError: Error?
         do {
             if nonnull {
                 let value = try decode(type, forKey: codingKey)
                 if let optional = value as? OptionalProtocol, optional.wrapped == nil {
-                    let desc = "Expected to decode nonnull for \(type) but found null value instead."
-                    throw DecodingError.valueNotFound(type, .init(codingPath: [codingKey], debugDescription: desc))
+                    let description = "No value associated with key \(codingKey) (\"\(codingKey.stringValue)\")."
+                    throw DecodingError.keyNotFound(codingKey, .init(codingPath: codingPath, debugDescription: description))
                 }
                 return value
             }

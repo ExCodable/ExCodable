@@ -56,6 +56,7 @@ private enum ExCodableExpansion {
 
     private struct CodableSpec {
         var keys: [String]
+        var defaultValue: String?
         var nonnull: String
         var throwsFlag: String
         var encode: String?
@@ -171,7 +172,10 @@ private enum ExCodableExpansion {
             let name = attribute.attributeName.trimmedDescription
             guard name == "ExCodableKey" || name.hasSuffix(".ExCodableKey") else { continue }
             var keys: [String] = []
+            var defaultValue: String?
+            var hasNonnull = false
             var nonnull = "false"
+            var hasThrows = false
             var throwsFlag = "false"
             var encode: String?
             var decode: String?
@@ -179,9 +183,13 @@ private enum ExCodableExpansion {
                 for argument in arguments {
                     let expression = argument.expression
                     switch argument.label?.text {
+                    case "default":
+                        defaultValue = expression.trimmedDescription
                     case "nonnull":
+                        hasNonnull = true
                         nonnull = boolLiteral(expression)
                     case "throws":
+                        hasThrows = true
                         throwsFlag = boolLiteral(expression)
                     case "encode":
                         encode = expression.trimmedDescription
@@ -194,7 +202,10 @@ private enum ExCodableExpansion {
                     }
                 }
             }
-            return CodableSpec(keys: keys, nonnull: nonnull, throwsFlag: throwsFlag, encode: encode, decode: decode)
+            if defaultValue != nil, hasNonnull || hasThrows {
+                throw ExCodableMacroError.message("@ExCodableKey cannot use default together with nonnull or throws")
+            }
+            return CodableSpec(keys: keys, defaultValue: defaultValue, nonnull: nonnull, throwsFlag: throwsFlag, encode: encode, decode: decode)
         }
         return nil
     }
@@ -362,7 +373,7 @@ private enum ExCodableExpansion {
         }
         call += ")"
         let name = escaped(property.name)
-        if let defaultExpr = property.defaultExpr {
+        if let defaultExpr = spec.defaultValue ?? property.defaultExpr {
             return """
                     if let exCodableValue = try \(call) {
                         self.\(name) = exCodableValue

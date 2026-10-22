@@ -251,6 +251,18 @@ extension TestSubscript: Codable {
     }
 }
 
+// MARK: integer range
+
+@ExCodable
+struct TestIntegerRange: Equatable {
+    @ExCodableKey
+    let int8: Int8?
+    @ExCodableKey
+    let uInt8: UInt8?
+    @ExCodableKey
+    let uInt64: UInt64?
+}
+
 // MARK: type-conversions
 
 @ExCodable
@@ -734,6 +746,28 @@ final class ExCodableTests: XCTestCase {
         else {
             XCTFail()
         }
+    }
+    
+    func testIntegerRange() throws {
+        let fractional = try TestIntegerRange.decoded(from: Data(#"{"int8":1.9,"uInt8":1.9,"uInt64":1.9}"#.utf8))
+        XCTAssertEqual(fractional.int8, 1)
+        XCTAssertEqual(fractional.uInt8, 1)
+        XCTAssertEqual(fractional.uInt64, 1)
+        
+        let negative = try TestIntegerRange.decoded(from: Data(#"{"int8":-1.9,"uInt8":-1.5,"uInt64":-1}"#.utf8))
+        XCTAssertEqual(negative.int8, -1)
+        XCTAssertNil(negative.uInt8)
+        XCTAssertNil(negative.uInt64)
+        
+        let overflow = try TestIntegerRange.decoded(from: Data(#"{"int8":200,"uInt8":300,"uInt64":1e20}"#.utf8))
+        XCTAssertNil(overflow.int8)
+        XCTAssertNil(overflow.uInt8)
+        XCTAssertNil(overflow.uInt64)
+        
+        let strings = try TestIntegerRange.decoded(from: Data(#"{"int8":"256","uInt8":"-1","uInt64":"18446744073709551615"}"#.utf8))
+        XCTAssertNil(strings.int8)
+        XCTAssertNil(strings.uInt8)
+        XCTAssertEqual(strings.uInt64, UInt64.max)
     }
     
     func testTypeConversion() {

@@ -59,7 +59,7 @@ private enum ExCodableExpansion {
     private struct Property {
         var name: String
         var type: String?
-        var defaultExpr: String?
+        var `default`: String?
         var codable: CodableSpec?
         var witness: String?
     }
@@ -126,7 +126,6 @@ private enum ExCodableExpansion {
         guard let memberBlock = memberBlock(of: declaration) else {
             throw ExCodableMacroError.message("@ExCodable can only be applied to a struct or class")
         }
-        let assignsAll = declaration.is(StructDeclSyntax.self) && !hasInitializer(declaration)
         var properties: [Property] = []
         var witnessCount = 0
         for item in memberBlock.members {
@@ -149,19 +148,22 @@ private enum ExCodableExpansion {
                     continue
                 }
                 let type = binding.typeAnnotation?.type.trimmedDescription
-                let defaultExpr = binding.initializer?.value.trimmedDescription
-                if isLet, defaultExpr != nil, codable != nil || assignsAll {
+                let `default` = binding.initializer?.value.trimmedDescription
+                if isLet, `default` != nil, codable != nil {
                     throw ExCodableMacroError.message("@ExCodable cannot assign \(name) because the let already has a default value. Remove the default; the generated initializer sets the property.")
+                }
+                if isLet, `default` != nil {
+                    continue
                 }
                 var witness: String?
                 if type == nil {
-                    guard defaultExpr != nil else {
+                    guard `default` != nil else {
                         throw ExCodableMacroError.message("@ExCodable requires a type or a default value for \(name)")
                     }
                     witness = "field\(witnessCount)"
                     witnessCount += 1
                 }
-                properties.append(Property(name: name, type: type, defaultExpr: defaultExpr, codable: codable, witness: witness))
+                properties.append(Property(name: name, type: type, `default`: `default`, codable: codable, witness: witness))
             }
         }
         return properties
@@ -410,7 +412,7 @@ private enum ExCodableExpansion {
         let fields = witnessed.map { property in
             """
                 struct \(property.witness!): Default {
-                    static let `default` = \(property.defaultExpr!)
+                    static let `default` = \(property.`default`!)
                 }
             """
         }.joined(separator: "\n")
@@ -429,8 +431,8 @@ private enum ExCodableExpansion {
         let parameters = properties.map { property -> String in
             let label = escaped(property.name)
             if let type = property.type {
-                if let defaultExpr = property.defaultExpr {
-                    return "\(label): \(type) = \(defaultExpr)"
+                if let `default` = property.`default` {
+                    return "\(label): \(type) = \(`default`)"
                 }
                 if type.hasSuffix("!") {
                     return "\(label): \(type) = nil"
@@ -493,13 +495,13 @@ private enum ExCodableExpansion {
         }
         call += ")"
         let name = escaped(property.name)
-        if let defaultExpr = spec.`default` ?? property.defaultExpr {
+        if let `default` = spec.`default` ?? property.`default` {
             return """
                     if let exCodableValue = try \(call) {
                         self.\(name) = exCodableValue
                     }
                     else {
-                        self.\(name) = \(defaultExpr)
+                        self.\(name) = \(`default`)
                     }
             """
         }

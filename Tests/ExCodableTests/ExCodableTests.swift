@@ -107,6 +107,16 @@ struct TestStructWithObservers: Equatable {
     }
 }
 
+// MARK: fixed let
+
+@ExCodable
+struct TestFixedLet: Equatable {
+    let kind = "user"
+    let role: String = "member"
+    @ExCodableKey
+    let id: Int
+}
+
 // MARK: struct with optional types
 
 @ExCodable
@@ -575,6 +585,21 @@ final class ExCodableTests: XCTestCase {
         let encoded = try test.encoded() as Data
         let copy = try TestStructWithObservers.decoded(from: encoded)
         XCTAssertEqual(copy, test)
+    }
+    
+    func testFixedLet() throws {
+        let made = TestFixedLet(id: 7)
+        XCTAssertEqual(made.kind, "user")
+        XCTAssertEqual(made.role, "member")
+        
+        let decoded = try TestFixedLet.decoded(from: Data(#"{"id":7}"#.utf8))
+        XCTAssertEqual(decoded, made)
+        
+        let encoded = try decoded.encoded() as Data
+        let json = try JSONSerialization.jsonObject(with: encoded) as! [String: Any]
+        XCTAssertEqual(json["id"] as? Int, 7)
+        XCTAssertNil(json["kind"])
+        XCTAssertNil(json["role"])
     }
     
     func testStructWithOptionals() {

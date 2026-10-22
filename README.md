@@ -2,12 +2,10 @@
 
 [![Swift 6.4](https://img.shields.io/badge/Swift-6.4-orange.svg)](https://swift.org/)
 [![Swift Package Manager](https://img.shields.io/badge/spm-compatible-brightgreen.svg?style=flat)](https://swift.org/package-manager/)
-[![Platforms](https://img.shields.io/cocoapods/p/ExCodable.svg)](#readme)
+[![Platforms](https://img.shields.io/badge/platforms-iOS%2015%20%7C%20macOS%2012%20%7C%20tvOS%2015%20%7C%20watchOS%209-lightgrey.svg)](#readme)
 <br />
 [![Build and Test](https://github.com/ExCodable/ExCodable/actions/workflows/build-and-test.yml/badge.svg)](https://github.com/ExCodable/ExCodable/actions/workflows/build-and-test.yml)
 [![GitHub Releases (latest SemVer)](https://img.shields.io/github/v/release/ExCodable/ExCodable.svg?sort=semver)](https://github.com/ExCodable/ExCodable/releases)
-[![Deploy to CocoaPods](https://github.com/ExCodable/ExCodable/actions/workflows/deploy_to_cocoapods.yml/badge.svg)](https://github.com/ExCodable/ExCodable/actions/workflows/deploy_to_cocoapods.yml)
-[![Cocoapods](https://img.shields.io/cocoapods/v/ExCodable.svg)](https://cocoapods.org/pods/ExCodable)
 <br />
 [![LICENSE](https://img.shields.io/github/license/ExCodable/ExCodable.svg)](https://github.com/ExCodable/ExCodable/blob/master/LICENSE)
 [![GitHub stars](https://badgen.net/github/stars/ExCodable/ExCodable)](https://github.com/ExCodable/ExCodable/stargazers/)
@@ -479,7 +477,7 @@ Swift Package Manager:
 
 ```
 
-`@ExCodable` and `@ExCodableKey` are macros. Swift Package Manager loads the compiler plugin. CocoaPods does not, so the macros are not expanded in a CocoaPods build.
+2.0 is distributed with Swift Package Manager. `@ExCodable` and `@ExCodableKey` are macros, and Swift Package Manager loads the compiler plugin. CocoaPods is not supported.
 
 ## Migration
 

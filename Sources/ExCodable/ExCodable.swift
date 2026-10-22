@@ -377,6 +377,18 @@ fileprivate extension KeyedDecodingContainer {
             if      let int64  = try? decodeIfPresent(Int64.self,  forKey: codingKey) { return Float(int64) as? T } // include all Int types
             else if let string = try? decodeIfPresent(String.self, forKey: codingKey), let value = Float(string) { return value as? T }
         }
+        else if type is Float16.Type || wrappedType is Float16.Type {
+            if      let int64  = try? decodeIfPresent(Int64.self,  forKey: codingKey) { return Float16(int64) as? T } // include all Int types
+            else if let string = try? decodeIfPresent(String.self, forKey: codingKey), let value = Float16(string) { return value as? T }
+        }
+        else if type is Float32.Type || wrappedType is Float32.Type {
+            if      let int64  = try? decodeIfPresent(Int64.self,  forKey: codingKey) { return Float32(int64) as? T } // include all Int types
+            else if let string = try? decodeIfPresent(String.self, forKey: codingKey), let value = Float32(string) { return value as? T }
+        }
+        else if type is Float64.Type || wrappedType is Float64.Type {
+            if      let int64  = try? decodeIfPresent(Int64.self,  forKey: codingKey) { return Float64(int64) as? T } // include all Int types
+            else if let string = try? decodeIfPresent(String.self, forKey: codingKey), let value = Float64(string) { return value as? T }
+        }
         
         else if type is String.Type || wrappedType is String.Type {
             if      let bool   = try? decodeIfPresent(Bool.self,   forKey: codingKey) { return String(describing: bool) as? T }

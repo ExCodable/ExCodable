@@ -89,6 +89,46 @@ struct TestStruct: Equatable {
     var bool: Bool!
 }
 
+// MARK: struct with optional types
+
+@ExCodable
+struct TestStructWithOptionals: Equatable {
+    @ExCodableKey("bool")
+    var bool: Bool?
+    @ExCodableKey("int")
+    let int: Int?
+    @ExCodableKey("int8")
+    let int8: Int8?
+    @ExCodableKey("int16")
+    let int16: Int16?
+    @ExCodableKey("int32")
+    let int32: Int32?
+    @ExCodableKey("int64")
+    let int64: Int64?
+    @ExCodableKey("uInt")
+    let uInt: UInt?
+    @ExCodableKey("uInt8")
+    let uInt8: UInt8?
+    @ExCodableKey("uInt16")
+    let uInt16: UInt16?
+    @ExCodableKey("uInt32")
+    let uInt32: UInt32?
+    @ExCodableKey("uInt64")
+    let uInt64: UInt64?
+    @ExCodableKey("double")
+    let double: Double?
+    @ExCodableKey("float")
+    let float: Float?
+    @ExCodableKey("float16")
+    let float16: Float16?
+    @ExCodableKey("float32")
+    let float32: Float32?
+    @ExCodableKey("float64")
+    let float64: Float64?
+    @ExCodableKey("string")
+    let string: String?
+}
+
 // MARK: struct with enum
 
 enum TestEnum: Int, Codable {
@@ -452,7 +492,6 @@ final class ExCodableTests: XCTestCase {
            let copy2 = try? TestStruct.decoded(from: dict) {
             XCTAssertEqual(copy, test)
             XCTAssertEqual(copy2, test2)
-            
             let string = "string: \(test)"
             print(string)
             print(test)
@@ -463,14 +502,40 @@ final class ExCodableTests: XCTestCase {
         }
     }
     
+    func testStructWithOptionals() {
+        let test = TestStructWithOptionals(bool: true,
+                                           int: 1,
+                                           int8: 8,
+                                           int16: 16,
+                                           int32: 32,
+                                           int64: 64,
+                                           uInt: 1,
+                                           uInt8: 8,
+                                           uInt16: 16,
+                                           uInt32: 32,
+                                           uInt64: 64,
+                                           double: 1.123456789,
+                                           float: 1.1,
+                                           float16: 1.16,
+                                           float32: 1.32,
+                                           float64: 1.64,
+                                           string: "string")
+        if let data = try? test.encoded() as Data,
+           let copy = try? TestStructWithOptionals.decoded(from: data) {
+            XCTAssertEqual(copy, test)
+            let string = String(data: data, encoding: .utf8)
+            print("TestStructWithOptionals: \(string ?? "<nil>")")
+        }
+        else {
+            XCTFail()
+        }
+    }
+    
     func testStructWithEnum() {
         let test = TestStructWithEnum(enum: .one)
         if let data = try? test.encoded() as Data,
-           let copy1 = try? TestStructWithEnum.decoded(from: data),
-           let copy2 = try? TestStructWithEnum.decoded(from: data) {
-            XCTAssertEqual(copy1, test)
-            XCTAssertEqual(copy2, test)
-            
+           let copy = try? TestStructWithEnum.decoded(from: data) {
+            XCTAssertEqual(copy, test)
             let string = String(data: data, encoding: .utf8)
             print("TestStructWithEnum: \(string ?? "<nil>")")
         }
@@ -747,6 +812,52 @@ final class ExCodableTests: XCTestCase {
                                                       stringFromBool:   "false",
                                                       stringFromInt64:  "-123",
                                                       stringFromDouble: "12.3"))
+        }
+        else {
+            XCTFail()
+        }
+    }
+    
+    func testTypeConversionsForOptionals() {
+        let data = Data(#"""
+        {
+            "uInt8":    "8",
+            "float":    "1.1",
+            "float64":  "1.64",
+            "int8":     "8",
+            "bool":     "true",
+            "int":      "1",
+            "double":   "1.123456789",
+            "int16":    "16",
+            "uInt":     "1",
+            "float16":  "1.1601562",
+            "uInt32":   "32",
+            "int32":    "32",
+            "string":   "string",
+            "uInt16":   "16",
+            "float32":  "1.32",
+            "int64":    "64",
+            "uInt64":   "64"
+        }
+        """#.utf8)
+        if let test = try? TestStructWithOptionals.decoded(from: data) {
+            XCTAssertEqual(test, TestStructWithOptionals(bool: true,
+                                                         int: 1,
+                                                         int8: 8,
+                                                         int16: 16,
+                                                         int32: 32,
+                                                         int64: 64,
+                                                         uInt: 1,
+                                                         uInt8: 8,
+                                                         uInt16: 16,
+                                                         uInt32: 32,
+                                                         uInt64: 64,
+                                                         double: 1.123456789,
+                                                         float: 1.1,
+                                                         float16: 1.16,
+                                                         float32: 1.32,
+                                                         float64: 1.64,
+                                                         string: "string"))
         }
         else {
             XCTFail()

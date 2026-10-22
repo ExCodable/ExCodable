@@ -121,6 +121,11 @@ public extension Encoder {
             try? container.encodeIfPresent(value, forKey: codingKey)
         }
     }
+    
+    /// Gives `JSONEncoder` an empty object when every encoded value is absent.
+    internal func ensureKeyedContainer() {
+        _ = container(keyedBy: ExCodingKey.self)
+    }
 }
 
 public extension Decoder {

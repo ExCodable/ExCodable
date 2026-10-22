@@ -614,6 +614,7 @@ private enum ExCodableExpansion {
         if body.isEmpty {
             return """
             \(access)\(override)func encode(to encoder: Encoder) throws\(constraint) {
+                ExCodableRuntime.openKeyedContainer(encoder)
             }
             """
         }

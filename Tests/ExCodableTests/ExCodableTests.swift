@@ -1067,7 +1067,7 @@ final class ExCodableTests: XCTestCase {
         XCTAssertEqual(copy.string, decoded.string)
     }
     
-    func testNonnullAndThrows() {
+    func testNonnullAndThrows() throws {
         
         let noIntData = Data(#"""
         {
@@ -1157,14 +1157,19 @@ final class ExCodableTests: XCTestCase {
             print("TestNestedNonnull error: \(error)")
         }
         
-        XCTAssertThrowsError(try TestThrows(throwsString: nil).encoded() as Data) { error in
-            XCTAssertNotNil(error)
-            print("TestThrows error: \(error)")
-        }
-        XCTAssertThrowsError(try TestNestedThrows(throwsString: nil).encoded() as Data) { error in
-            XCTAssertNotNil(error)
-            print("TestNestedThrows error: \(error)")
-        }
+        let absent = try TestThrows(throwsString: nil).encoded() as Data
+        let absentJSON = try JSONSerialization.jsonObject(with: absent) as! [String: Any]
+        XCTAssertTrue(absentJSON.isEmpty)
+        
+        let nestedAbsent = try TestNestedThrows(throwsString: nil).encoded() as Data
+        let nestedAbsentJSON = try JSONSerialization.jsonObject(with: nestedAbsent) as! [String: Any]
+        XCTAssertTrue(nestedAbsentJSON.isEmpty)
+        
+        let partial = try TestStruct(int: 1, string: nil).encoded() as Data
+        let partialJSON = try JSONSerialization.jsonObject(with: partial) as! [String: Any]
+        XCTAssertEqual(partialJSON["int"] as? Int, 1)
+        XCTAssertNil(partialJSON["string"])
+        XCTAssertEqual(partialJSON.count, 1)
     }
     
     func testExCodable() {

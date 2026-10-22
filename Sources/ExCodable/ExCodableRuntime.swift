@@ -89,5 +89,13 @@ public enum ExCodableRuntime {
                 try encoder.encode(value, for: key, nonnull: nonnull, throws: `throws`)
             }
         }
+        else {
+            encoder.ensureKeyedContainer()
+        }
+    }
+    
+    /// Opens the root keyed container so an empty `encode(to:)` becomes `{}`.
+    public static func openKeyedContainer(_ encoder: Encoder) {
+        encoder.ensureKeyedContainer()
     }
 }

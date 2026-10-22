@@ -57,11 +57,33 @@ private enum ExCodableMacroError: Error, CustomStringConvertible {
 private enum ExCodableExpansion {
     
     private struct Property {
+        var access: Access
+        /// `false` for a `private` or `fileprivate` variable that already has a default.
+        /// Swift leaves those out of the memberwise initializer.
+        var memberwise: Bool
         var name: String
         var type: String?
         var `default`: String?
         var codable: CodableSpec?
         var witness: String?
+    }
+    
+    /// Access used for the generated memberwise initializer.
+    /// Swift never synthesizes a `public` or `package` memberwise initializer.
+    private enum Access: Int {
+        case `private` = 0
+        case `fileprivate` = 1
+        case `internal` = 2
+        case `package` = 3
+        case `public` = 4
+        
+        var memberwisePrefix: String {
+            switch self {
+            case .private: return "private "
+            case .fileprivate: return "fileprivate "
+            default: return ""
+            }
+        }
     }
     
     private struct CodableSpec {
@@ -80,7 +102,7 @@ private enum ExCodableExpansion {
             decls.append(DeclSyntax(stringLiteral: defaults))
         }
         if declaration.is(StructDeclSyntax.self), !hasInitializer(declaration) {
-            decls.append(DeclSyntax(stringLiteral: memberwiseInit(for: properties)))
+            decls.append(DeclSyntax(stringLiteral: memberwiseInit(for: properties, typeAccess: accessLevel(of: declaration.modifiers))))
         }
         if declaration.is(ClassDeclSyntax.self) {
             let superclass = hasSuperclass(declaration)
@@ -155,6 +177,10 @@ private enum ExCodableExpansion {
                 if isLet, `default` != nil {
                     continue
                 }
+                let access = accessLevel(of: variable.modifiers)
+                // A private or fileprivate variable with a default is already initialized.
+                // Swift does not add it to the memberwise initializer, so the initializer stays usable from other files.
+                let memberwise = !(`default` != nil && access.rawValue <= Access.fileprivate.rawValue)
                 var witness: String?
                 if type == nil {
                     guard `default` != nil else {
@@ -163,7 +189,7 @@ private enum ExCodableExpansion {
                     witness = "field\(witnessCount)"
                     witnessCount += 1
                 }
-                properties.append(Property(name: name, type: type, `default`: `default`, codable: codable, witness: witness))
+                properties.append(Property(access: access, memberwise: memberwise, name: name, type: type, default: `default`, codable: codable, witness: witness))
             }
         }
         return properties
@@ -398,12 +424,45 @@ private enum ExCodableExpansion {
     }
     
     private static func typeAccess(of declaration: some DeclGroupSyntax) -> String {
-        let names = declaration.modifiers.map(\.name.text)
-        if names.contains("open") || names.contains("public") { return "public " }
-        if names.contains("package") { return "package " }
-        if names.contains("private") { return "private " }
-        if names.contains("fileprivate") { return "fileprivate " }
-        return ""
+        switch accessLevel(of: declaration.modifiers) {
+        case .public: return "public "
+        case .package: return "package "
+        case .private: return "private "
+        case .fileprivate: return "fileprivate "
+        case .internal: return ""
+        }
+    }
+    
+    /// Getter access. `private(set)` and the other setter modifiers are ignored.
+    private static func accessLevel(of modifiers: DeclModifierListSyntax) -> Access {
+        var level = Access.internal
+        for modifier in modifiers {
+            if modifier.detail != nil { continue }
+            switch modifier.name.text {
+            case "private": level = .private
+            case "fileprivate": level = .fileprivate
+            case "internal": level = .internal
+            case "package": level = .package
+            case "public", "open": level = .public
+            default: break
+            }
+        }
+        return level
+    }
+    
+    /// `private` if any parameter is private, `fileprivate` if any is fileprivate, otherwise no wider than `internal` or the type.
+    private static func memberwiseAccess(type: Access, parameters: [Access]) -> Access {
+        var level = Access.internal
+        for parameter in parameters {
+            if parameter == .private {
+                level = .private
+                break
+            }
+            if parameter == .fileprivate {
+                level = .fileprivate
+            }
+        }
+        return type.rawValue < level.rawValue ? type : level
     }
     
     private static func defaultsEnum(for properties: [Property]) -> String? {
@@ -427,8 +486,9 @@ private enum ExCodableExpansion {
         """
     }
     
-    private static func memberwiseInit(for properties: [Property]) -> String {
-        let parameters = properties.map { property -> String in
+    private static func memberwiseInit(for properties: [Property], typeAccess: Access) -> String {
+        let included = properties.filter(\.memberwise)
+        let parameters = included.map { property -> String in
             let label = escaped(property.name)
             if let type = property.type {
                 if let `default` = property.`default` {
@@ -442,12 +502,13 @@ private enum ExCodableExpansion {
             let witness = property.witness!
             return "\(label): Self.__ExCodableMemberDefaults.\(witness).Value = Self.__ExCodableMemberDefaults.\(witness).`default`"
         }.joined(separator: ", ")
-        let assignments = properties.map { property in
+        let assignments = included.map { property in
             let name = escaped(property.name)
             return "        self.\(name) = \(name)"
         }.joined(separator: "\n")
+        let keyword = memberwiseAccess(type: typeAccess, parameters: included.map(\.access)).memberwisePrefix
         return """
-        init(\(parameters)) {
+        \(keyword)init(\(parameters)) {
         \(assignments)
         }
         """

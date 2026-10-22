@@ -31,8 +31,8 @@ struct TestExCodable: Equatable {
 // MARK: auto codable
 
 struct TestAutoCodable: Codable, Equatable {
-    private(set) var int: Int = 0
-    private(set) var string: String?
+    let int: Int
+    let string: String?
     enum CodingKeys: String, CodingKey {
         case int = "i", string = "s"
     }
@@ -41,8 +41,8 @@ struct TestAutoCodable: Codable, Equatable {
 // MARK: manual codable
 
 struct TestManualCodable: Equatable {
-    private(set) var int: Int = 0
-    private(set) var string: String?
+    let int: Int
+    let string: String?
 }
 
 extension TestManualCodable: Codable {
@@ -53,20 +53,23 @@ extension TestManualCodable: Codable {
     }
     
     init(from decoder: Decoder) throws {
-        if let container = try? decoder.container(keyedBy: Keys.self) {
-            if let int = try? container.decodeIfPresent(Int.self, forKey: Keys.int) {
-                self.int = int
-            }
-            if let nestedContainer = try? container.nestedContainer(keyedBy: Keys.self, forKey: Keys.nested),
+        let container = try? decoder.container(keyedBy: Keys.self)
+        let int = try? container?.decodeIfPresent(Int.self, forKey: Keys.int)
+        let string: String? = {
+            if let nestedContainer = try? container?.nestedContainer(keyedBy: Keys.self, forKey: Keys.nested),
                let nestedNestedContainer = try? nestedContainer.nestedContainer(keyedBy: Keys.self, forKey: Keys.nested),
                let string = try? nestedNestedContainer.decodeIfPresent(String.self, forKey: Keys.string) {
-                self.string = string
+                return string
             }
-            else if let string = (try? container.decodeIfPresent(String.self, forKey: Keys.string))
-                        ?? (try? container.decodeIfPresent(String.self, forKey: Keys.s)) {
-                self.string = string
+            else if let string = (try? container?.decodeIfPresent(String.self, forKey: Keys.string))
+                        ?? (try? container?.decodeIfPresent(String.self, forKey: Keys.s)) {
+                return string
             }
-        }
+            else {
+                return nil
+            }
+        }()
+        self.init(int: int ?? 0, string: string)
     }
     
     func encode(to encoder: Encoder) throws {

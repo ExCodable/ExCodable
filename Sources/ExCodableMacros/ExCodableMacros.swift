@@ -136,7 +136,7 @@ private enum ExCodableExpansion {
             let isLet = variable.bindingSpecifier.tokenKind == .keyword(.let)
             let codable = try codableSpec(of: variable)
             for binding in variable.bindings {
-                guard binding.accessorBlock == nil else {
+                guard isStoredBinding(binding) else {
                     if codable != nil {
                         throw ExCodableMacroError.message("@ExCodableKey requires a stored property")
                     }
@@ -165,6 +165,20 @@ private enum ExCodableExpansion {
             }
         }
         return properties
+    }
+    
+    /// `willSet` and `didSet` keep the property stored. A getter or setter does not.
+    private static func isStoredBinding(_ binding: PatternBindingSyntax) -> Bool {
+        guard let accessorBlock = binding.accessorBlock else { return true }
+        guard case .accessors(let accessors) = accessorBlock.accessors, !accessors.isEmpty else { return false }
+        return accessors.allSatisfy { accessor in
+            switch accessor.accessorSpecifier.tokenKind {
+            case .keyword(.willSet), .keyword(.didSet):
+                return true
+            default:
+                return false
+            }
+        }
     }
     
     private static func memberBlock(of declaration: some DeclGroupSyntax) -> MemberBlockSyntax? {

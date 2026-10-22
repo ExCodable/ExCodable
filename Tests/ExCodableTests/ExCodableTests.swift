@@ -92,6 +92,21 @@ struct TestStruct: Equatable {
     var bool: Bool!
 }
 
+// MARK: struct with observers
+
+@ExCodable
+struct TestStructWithObservers: Equatable {
+    @ExCodableKey
+    var count: Int {
+        willSet {}
+        didSet {}
+    }
+    @ExCodableKey
+    var name: String? {
+        didSet {}
+    }
+}
+
 // MARK: struct with optional types
 
 @ExCodable
@@ -551,6 +566,15 @@ final class ExCodableTests: XCTestCase {
         else {
             XCTFail()
         }
+    }
+    
+    func testStructWithObservers() throws {
+        let data = Data(#"{"count":3,"name":"ada"}"#.utf8)
+        let test = try TestStructWithObservers.decoded(from: data)
+        XCTAssertEqual(test, TestStructWithObservers(count: 3, name: "ada"))
+        let encoded = try test.encoded() as Data
+        let copy = try TestStructWithObservers.decoded(from: encoded)
+        XCTAssertEqual(copy, test)
     }
     
     func testStructWithOptionals() {

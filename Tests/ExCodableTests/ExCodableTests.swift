@@ -413,6 +413,41 @@ class TestSubclass: TestClass {
     }
 }
 
+// MARK: explicit Codable and generics
+
+@ExCodable
+struct TestExplicitCodable: Codable, Equatable {
+    @ExCodableKey
+    let id: Int
+}
+
+@ExCodable
+struct TestGenericBox<T: Codable> {
+    @ExCodableKey
+    let value: T
+}
+
+@ExCodable
+struct TestFreeGeneric<T> {
+    @ExCodableKey
+    let value: T
+}
+
+@ExCodable
+struct TestPartialGeneric<A: Codable, B> {
+    @ExCodableKey
+    let a: A
+    @ExCodableKey
+    let b: B
+}
+
+@ExCodable
+class TestGenericClass<T> {
+    @ExCodableKey
+    let value: T
+    init(value: T) { self.value = value }
+}
+
 // MARK: default
 
 @ExCodable
@@ -902,6 +937,28 @@ final class ExCodableTests: XCTestCase {
         else {
             XCTFail()
         }
+    }
+    
+    func testExplicitCodableAndGenerics() throws {
+        let explicit = try TestExplicitCodable.decoded(from: Data(#"{"id":7}"#.utf8))
+        XCTAssertEqual(explicit, TestExplicitCodable(id: 7))
+        let explicitData = try explicit.encoded() as Data
+        XCTAssertEqual(try TestExplicitCodable.decoded(from: explicitData), explicit)
+        
+        let box = try TestGenericBox<String>.decoded(from: Data(#"{"value":"box"}"#.utf8))
+        XCTAssertEqual(box.value, "box")
+        
+        let free = try TestFreeGeneric<Int>.decoded(from: Data(#"{"value":7}"#.utf8))
+        XCTAssertEqual(free.value, 7)
+        
+        let partial = try TestPartialGeneric<Int, String>.decoded(from: Data(#"{"a":1,"b":"two"}"#.utf8))
+        XCTAssertEqual(partial.a, 1)
+        XCTAssertEqual(partial.b, "two")
+        
+        let object = try TestGenericClass<Int>.decoded(from: Data(#"{"value":3}"#.utf8))
+        XCTAssertEqual(object.value, 3)
+        let objectData = try object.encoded() as Data
+        XCTAssertEqual(try TestGenericClass<Int>.decoded(from: objectData).value, 3)
     }
     
     func testDefault() throws {

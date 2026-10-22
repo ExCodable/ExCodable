@@ -85,8 +85,9 @@ private enum ExCodableExpansion {
         if declaration.is(ClassDeclSyntax.self) {
             let superclass = hasSuperclass(declaration)
             let access = typeAccess(of: declaration)
-            decls.append(DeclSyntax(stringLiteral: decodeInit(for: properties, kind: .class, hasSuperclass: superclass, access: access)))
-            decls.append(DeclSyntax(stringLiteral: encodeFunction(for: properties, kind: .class, hasSuperclass: superclass, access: access)))
+            let genericWhere = try genericCodableWhere(of: declaration)
+            decls.append(DeclSyntax(stringLiteral: decodeInit(for: properties, kind: .class, hasSuperclass: superclass, access: access, genericWhere: genericWhere)))
+            decls.append(DeclSyntax(stringLiteral: encodeFunction(for: properties, kind: .class, hasSuperclass: superclass, access: access, genericWhere: genericWhere)))
         }
         return decls
     }
@@ -100,16 +101,17 @@ private enum ExCodableExpansion {
         guard declaration.is(StructDeclSyntax.self) || declaration.is(ClassDeclSyntax.self) else {
             throw ExCodableMacroError.message("@ExCodable can only be applied to a struct or class")
         }
+        let genericWhere = try genericCodableWhere(of: declaration)
         if declaration.is(ClassDeclSyntax.self) {
             guard !protocols.isEmpty else { return [] }
             let conformance = protocols.map(\.trimmedDescription).joined(separator: ", ")
-            return [try ExtensionDeclSyntax(SyntaxNodeString(stringLiteral: "extension \(type.trimmedDescription): \(conformance) {}"))]
+            return [try ExtensionDeclSyntax(SyntaxNodeString(stringLiteral: "extension \(type.trimmedDescription): \(conformance)\(genericWhere) {}"))]
         }
         let properties = try properties(of: declaration, attribute: attribute)
         let access = typeAccess(of: declaration)
         let conformance = protocols.isEmpty ? "" : ": " + protocols.map(\.trimmedDescription).joined(separator: ", ")
         let source = """
-        extension \(type.trimmedDescription)\(conformance) {
+        extension \(type.trimmedDescription)\(conformance)\(genericWhere) {
         \(decodeInit(for: properties, kind: .struct, hasSuperclass: false, access: access))
         
         \(encodeFunction(for: properties, kind: .struct, hasSuperclass: false, access: access))
@@ -286,6 +288,99 @@ private enum ExCodableExpansion {
         return true
     }
     
+    private static func genericParameterClause(of declaration: some DeclGroupSyntax) -> GenericParameterClauseSyntax? {
+        if let decl = declaration.as(StructDeclSyntax.self) { return decl.genericParameterClause }
+        if let decl = declaration.as(ClassDeclSyntax.self) { return decl.genericParameterClause }
+        return nil
+    }
+    
+    private static func genericWhereClause(of declaration: some DeclGroupSyntax) -> GenericWhereClauseSyntax? {
+        if let decl = declaration.as(StructDeclSyntax.self) { return decl.genericWhereClause }
+        if let decl = declaration.as(ClassDeclSyntax.self) { return decl.genericWhereClause }
+        return nil
+    }
+    
+    private static func inheritanceClause(of declaration: some DeclGroupSyntax) -> InheritanceClauseSyntax? {
+        if let decl = declaration.as(StructDeclSyntax.self) { return decl.inheritanceClause }
+        if let decl = declaration.as(ClassDeclSyntax.self) { return decl.inheritanceClause }
+        return nil
+    }
+    
+    private static func conformanceNames(in type: TypeSyntax) -> Set<String> {
+        if let composition = type.as(CompositionTypeSyntax.self) {
+            var names: Set<String> = []
+            for element in composition.elements {
+                names.formUnion(conformanceNames(in: element.type))
+            }
+            return names
+        }
+        if let some = type.as(SomeOrAnyTypeSyntax.self) {
+            return conformanceNames(in: some.constraint)
+        }
+        if let attributed = type.as(AttributedTypeSyntax.self) {
+            return conformanceNames(in: attributed.baseType)
+        }
+        if let ident = type.as(IdentifierTypeSyntax.self) {
+            return [ident.name.text]
+        }
+        if let member = type.as(MemberTypeSyntax.self) {
+            return [member.name.text]
+        }
+        return []
+    }
+    
+    /// Type parameters that are not already constrained to `Codable`.
+    /// Value parameters (`let n: Int`) and parameter packs are left alone.
+    private static func missingCodableParameters(of declaration: some DeclGroupSyntax) -> [String] {
+        guard let parameters = genericParameterClause(of: declaration)?.parameters else { return [] }
+        var codable: Set<String> = []
+        var decodable: Set<String> = []
+        var encodable: Set<String> = []
+        func record(_ name: String, _ protocols: Set<String>) {
+            if protocols.contains("Codable") { codable.insert(name) }
+            if protocols.contains("Decodable") { decodable.insert(name) }
+            if protocols.contains("Encodable") { encodable.insert(name) }
+        }
+        var names: [String] = []
+        for parameter in parameters {
+            guard parameter.specifier == nil else { continue }
+            let name = parameter.name.text
+            names.append(name)
+            if let inherited = parameter.inheritedType {
+                record(name, conformanceNames(in: inherited))
+            }
+        }
+        if let requirements = genericWhereClause(of: declaration)?.requirements {
+            for requirement in requirements {
+                guard case .conformanceRequirement(let conformance) = requirement.requirement,
+                      let name = conformance.leftType.as(IdentifierTypeSyntax.self)?.name.text else { continue }
+                record(name, conformanceNames(in: conformance.rightType))
+            }
+        }
+        return names.filter { !(codable.contains($0) || (decodable.contains($0) && encodable.contains($0))) }
+    }
+    
+    private static func declaresCodable(_ declaration: some DeclGroupSyntax) -> Bool {
+        guard let inherited = inheritanceClause(of: declaration)?.inheritedTypes else { return false }
+        for type in inherited {
+            let names = conformanceNames(in: type.type)
+            if !names.isDisjoint(with: ["Codable", "Decodable", "Encodable"]) {
+                return true
+            }
+        }
+        return false
+    }
+    
+    private static func genericCodableWhere(of declaration: some DeclGroupSyntax) throws -> String {
+        let missing = missingCodableParameters(of: declaration)
+        guard !missing.isEmpty else { return "" }
+        if declaresCodable(declaration) {
+            let list = missing.joined(separator: ", ")
+            throw ExCodableMacroError.message("@ExCodable requires \(list) to conform to Codable. The type already declares Codable, Decodable, or Encodable, so the conformance cannot be conditional.")
+        }
+        return " where " + missing.map { "\($0): Codable" }.joined(separator: ", ")
+    }
+    
     private static func typeAccess(of declaration: some DeclGroupSyntax) -> String {
         let names = declaration.modifiers.map(\.name.text)
         if names.contains("open") || names.contains("public") { return "public " }
@@ -342,7 +437,7 @@ private enum ExCodableExpansion {
         """
     }
     
-    private static func decodeInit(for properties: [Property], kind: Kind, hasSuperclass: Bool, access: String) -> String {
+    private static func decodeInit(for properties: [Property], kind: Kind, hasSuperclass: Bool, access: String, genericWhere: String = "") -> String {
         let codable = properties.filter { $0.codable != nil }
         var lines: [String] = []
         if !codable.isEmpty {
@@ -355,7 +450,8 @@ private enum ExCodableExpansion {
             lines.append("        try super.init(from: decoder)")
         }
         let body = lines.joined(separator: "\n")
-        let signature = kind == .class ? "\(access)required init(from decoder: Decoder) throws" : "\(access)init(from decoder: Decoder) throws"
+        let constraint = kind == .class ? genericWhere : ""
+        let signature = kind == .class ? "\(access)required init(from decoder: Decoder) throws\(constraint)" : "\(access)init(from decoder: Decoder) throws"
         if body.isEmpty {
             return """
             \(signature) {
@@ -426,7 +522,7 @@ private enum ExCodableExpansion {
         return nil
     }
     
-    private static func encodeFunction(for properties: [Property], kind: Kind, hasSuperclass: Bool, access: String) -> String {
+    private static func encodeFunction(for properties: [Property], kind: Kind, hasSuperclass: Bool, access: String, genericWhere: String = "") -> String {
         let codable = properties.filter { $0.codable != nil }
         var lines: [String] = []
         for property in codable {
@@ -437,14 +533,15 @@ private enum ExCodableExpansion {
         }
         let body = lines.joined(separator: "\n")
         let override = (kind == .class && hasSuperclass) ? "override " : ""
+        let constraint = kind == .class ? genericWhere : ""
         if body.isEmpty {
             return """
-            \(access)\(override)func encode(to encoder: Encoder) throws {
+            \(access)\(override)func encode(to encoder: Encoder) throws\(constraint) {
             }
             """
         }
         return """
-        \(access)\(override)func encode(to encoder: Encoder) throws {
+        \(access)\(override)func encode(to encoder: Encoder) throws\(constraint) {
         \(body)
         }
         """

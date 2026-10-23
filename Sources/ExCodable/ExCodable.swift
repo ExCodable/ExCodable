@@ -296,6 +296,15 @@ fileprivate extension KeyedDecodingContainer {
     
     func decodeForTypeConversion<T: Decodable>(_ codingKey: Self.Key, as type: T.Type = T.self, converter specificConverter: (any ExCodableDecodingTypeConverter.Type)?) -> T? {
         
+        // `UInt64("1.2")` -> `nil`
+        // `Double("1.2")` -> `1.2`
+        // `1.2.rounded(.towardZero)` -> `1.0`
+        // `UInt64(1.0)` -> `1`
+        // !!!: BUT `UInt64(Double(UInt64.max)) != UInt64.max`
+        func value<I>(from string: String, _ closure: (Double) -> I?) -> I? {
+            return if let double = Double(string) { closure(double.rounded(.towardZero)) } else { nil }
+        }
+        
         // for nested optionals, e.g. `var int: Int??? = nil`
         let wrappedType = T?.wrappedType
         
@@ -310,74 +319,71 @@ fileprivate extension KeyedDecodingContainer {
                     case "false", "f", "no", "n", "":
                         return false as? T
                     default:
-                        if let int = Int(string) { return (int != 0) as? T }
-                        else if let double = Double(string), let int = Int(exactly: double.rounded(.towardZero)) { return (int != 0) as? T }
+                        if let int = Int(string) ?? value(from: string, { Int(exactly: $0) }) { return (int != 0) as? T }
                 }
             }
         }
         
-        // Integers that fit are decoded before conversion. Out-of-range integers make `exactly:` return nil.
-        // Double and Float also decode those integers directly. Float16 does not, past 65504.
         else if type is Int.Type || wrappedType is Int.Type {
             if      let bool   = try? decodeIfPresent(Bool.self,   forKey: codingKey) { return Int(bool ? 1 : 0) as? T }
             // else if let int64  = try? decodeIfPresent(Int64.self,  forKey: codingKey), let value = Int(exactly: int64) { return value as? T }
             else if let double = try? decodeIfPresent(Double.self, forKey: codingKey), let value = Int(exactly: double.rounded(.towardZero)) { return value as? T }
-            else if let string = try? decodeIfPresent(String.self, forKey: codingKey), let value = Int(string) { return value as? T }
+            else if let string = try? decodeIfPresent(String.self, forKey: codingKey), let value = Int(string) ?? value(from: string, { Int(exactly: $0) }) { return value as? T }
         }
         else if type is Int8.Type || wrappedType is Int8.Type {
             if      let bool   = try? decodeIfPresent(Bool.self,   forKey: codingKey) { return Int8(bool ? 1 : 0) as? T }
             // else if let int64  = try? decodeIfPresent(Int64.self,  forKey: codingKey), let value = Int8(exactly: int64) { return value as? T }
             else if let double = try? decodeIfPresent(Double.self, forKey: codingKey), let value = Int8(exactly: double.rounded(.towardZero)) { return value as? T }
-            else if let string = try? decodeIfPresent(String.self, forKey: codingKey), let value = Int8(string) { return value as? T }
+            else if let string = try? decodeIfPresent(String.self, forKey: codingKey), let value = Int8(string) ?? value(from: string, { Int8(exactly: $0) }) { return value as? T }
         }
         else if type is Int16.Type || wrappedType is Int16.Type {
             if      let bool   = try? decodeIfPresent(Bool.self,   forKey: codingKey) { return Int16(bool ? 1 : 0) as? T }
             // else if let int64  = try? decodeIfPresent(Int64.self,  forKey: codingKey), let value = Int16(exactly: int64) { return value as? T }
             else if let double = try? decodeIfPresent(Double.self, forKey: codingKey), let value = Int16(exactly: double.rounded(.towardZero)) { return value as? T }
-            else if let string = try? decodeIfPresent(String.self, forKey: codingKey), let value = Int16(string) { return value as? T }
+            else if let string = try? decodeIfPresent(String.self, forKey: codingKey), let value = Int16(string) ?? value(from: string, { Int16(exactly: $0) }) { return value as? T }
         }
         else if type is Int32.Type || wrappedType is Int32.Type {
             if      let bool   = try? decodeIfPresent(Bool.self,   forKey: codingKey) { return Int32(bool ? 1 : 0) as? T }
             // else if let int64  = try? decodeIfPresent(Int64.self,  forKey: codingKey), let value = Int32(exactly: int64) { return value as? T }
             else if let double = try? decodeIfPresent(Double.self, forKey: codingKey), let value = Int32(exactly: double.rounded(.towardZero)) { return value as? T }
-            else if let string = try? decodeIfPresent(String.self, forKey: codingKey), let value = Int32(string) { return value as? T }
+            else if let string = try? decodeIfPresent(String.self, forKey: codingKey), let value = Int32(string) ?? value(from: string, { Int32(exactly: $0) }) { return value as? T }
         }
         else if type is Int64.Type || wrappedType is Int64.Type {
             if      let bool   = try? decodeIfPresent(Bool.self,   forKey: codingKey) { return Int64(bool ? 1 : 0) as? T }
             // else if let int64  = try? decodeIfPresent(Int64.self,  forKey: codingKey), let value = Int64(exactly: int64) { return value as? T }
             else if let double = try? decodeIfPresent(Double.self, forKey: codingKey), let value = Int64(exactly: double.rounded(.towardZero)) { return value as? T }
-            else if let string = try? decodeIfPresent(String.self, forKey: codingKey), let value = Int64(string) { return value as? T }
+            else if let string = try? decodeIfPresent(String.self, forKey: codingKey), let value = Int64(string) ?? value(from: string, { Int64(exactly: $0) }) { return value as? T }
         }
         
         else if type is UInt.Type || wrappedType is UInt.Type {
             if      let bool   = try? decodeIfPresent(Bool.self,   forKey: codingKey) { return UInt(bool ? 1 : 0) as? T }
             // else if let int64  = try? decodeIfPresent(Int64.self,  forKey: codingKey), let value = UInt(exactly: int64) { return value as? T }
             else if let double = try? decodeIfPresent(Double.self, forKey: codingKey), let value = UInt(exactly: double.rounded(.towardZero)) { return value as? T }
-            else if let string = try? decodeIfPresent(String.self, forKey: codingKey), let value = UInt(string) { return value as? T }
+            else if let string = try? decodeIfPresent(String.self, forKey: codingKey), let value = UInt(string) ?? value(from: string, { UInt(exactly: $0) }) { return value as? T }
         }
         else if type is UInt8.Type || wrappedType is UInt8.Type {
             if      let bool   = try? decodeIfPresent(Bool.self,   forKey: codingKey) { return UInt8(bool ? 1 : 0) as? T }
             // else if let int64  = try? decodeIfPresent(Int64.self,  forKey: codingKey), let value = UInt8(exactly: int64) { return value as? T }
             else if let double = try? decodeIfPresent(Double.self, forKey: codingKey), let value = UInt8(exactly: double.rounded(.towardZero)) { return value as? T }
-            else if let string = try? decodeIfPresent(String.self, forKey: codingKey), let value = UInt8(string) { return value as? T }
+            else if let string = try? decodeIfPresent(String.self, forKey: codingKey), let value = UInt8(string) ?? value(from: string, { UInt8(exactly: $0) }) { return value as? T }
         }
         else if type is UInt16.Type || wrappedType is UInt16.Type {
             if      let bool   = try? decodeIfPresent(Bool.self,   forKey: codingKey) { return UInt16(bool ? 1 : 0) as? T }
             // else if let int64  = try? decodeIfPresent(Int64.self,  forKey: codingKey), let value = UInt16(exactly: int64) { return value as? T }
             else if let double = try? decodeIfPresent(Double.self, forKey: codingKey), let value = UInt16(exactly: double.rounded(.towardZero)) { return value as? T }
-            else if let string = try? decodeIfPresent(String.self, forKey: codingKey), let value = UInt16(string) { return value as? T }
+            else if let string = try? decodeIfPresent(String.self, forKey: codingKey), let value = UInt16(string) ?? value(from: string, { UInt16(exactly: $0) }) { return value as? T }
         }
         else if type is UInt32.Type || wrappedType is UInt32.Type {
             if      let bool   = try? decodeIfPresent(Bool.self,   forKey: codingKey) { return UInt32(bool ? 1 : 0) as? T }
             // else if let int64  = try? decodeIfPresent(Int64.self,  forKey: codingKey), let value = UInt32(exactly: int64) { return value as? T }
             else if let double = try? decodeIfPresent(Double.self, forKey: codingKey), let value = UInt32(exactly: double.rounded(.towardZero)) { return value as? T }
-            else if let string = try? decodeIfPresent(String.self, forKey: codingKey), let value = UInt32(string) { return value as? T }
+            else if let string = try? decodeIfPresent(String.self, forKey: codingKey), let value = UInt32(string) ?? value(from: string, { UInt32(exactly: $0) }) { return value as? T }
         }
         else if type is UInt64.Type || wrappedType is UInt64.Type {
             if      let bool   = try? decodeIfPresent(Bool.self,   forKey: codingKey) { return UInt64(bool ? 1 : 0) as? T }
             // else if let int64  = try? decodeIfPresent(Int64.self,  forKey: codingKey), let value = UInt64(exactly: int64) { return value as? T }
             else if let double = try? decodeIfPresent(Double.self, forKey: codingKey), let value = UInt64(exactly: double.rounded(.towardZero)) { return value as? T }
-            else if let string = try? decodeIfPresent(String.self, forKey: codingKey), let value = UInt64(string) { return value as? T }
+            else if let string = try? decodeIfPresent(String.self, forKey: codingKey), let value = UInt64(string) ?? value(from: string, { UInt64(exactly: $0) }) { return value as? T }
         }
         
         else if type is Double.Type || wrappedType is Double.Type {
@@ -399,18 +405,18 @@ fileprivate extension KeyedDecodingContainer {
             if      let string = try? decodeIfPresent(String.self, forKey: codingKey), let value = Double(string) { return CGFloat(value) as? T }
         }
         
-        if #available(macOS 15.0, iOS 18.0, watchOS 11.0, tvOS 18.0, visionOS 2.0, *) {
+        else if #available(macOS 15.0, iOS 18.0, watchOS 11.0, tvOS 18.0, visionOS 2.0, *) {
             if type is Int128.Type || wrappedType is Int128.Type {
                 if      let bool   = try? decodeIfPresent(Bool.self,   forKey: codingKey) { return Int128(bool ? 1 : 0) as? T }
                 // else if let int64  = try? decodeIfPresent(Int64.self,  forKey: codingKey), let value = Int128(exactly: int64) { return value as? T }
                 else if let double = try? decodeIfPresent(Double.self, forKey: codingKey), let value = Int128(exactly: double.rounded(.towardZero)) { return value as? T }
-                else if let string = try? decodeIfPresent(String.self, forKey: codingKey), let value = Int128(string) { return value as? T }
+                else if let string = try? decodeIfPresent(String.self, forKey: codingKey), let value = Int128(string) ?? value(from: string, { Int128(exactly: $0) }) { return value as? T }
             }
             else if type is UInt128.Type || wrappedType is UInt128.Type {
                 if      let bool   = try? decodeIfPresent(Bool.self,   forKey: codingKey) { return UInt128(bool ? 1 : 0) as? T }
                 // else if let int64  = try? decodeIfPresent(Int64.self,  forKey: codingKey), let value = UInt128(exactly: int64) { return value as? T }
                 else if let double = try? decodeIfPresent(Double.self, forKey: codingKey), let value = UInt128(exactly: double.rounded(.towardZero)) { return value as? T }
-                else if let string = try? decodeIfPresent(String.self, forKey: codingKey), let value = UInt128(string) { return value as? T }
+                    else if let string = try? decodeIfPresent(String.self, forKey: codingKey), let value = UInt128(string) ?? value(from: string, { UInt128(exactly: $0) }) { return value as? T }
             }
         }
         
@@ -418,6 +424,10 @@ fileprivate extension KeyedDecodingContainer {
             if      let bool   = try? decodeIfPresent(Bool.self,   forKey: codingKey) { return String(describing: bool) as? T }
             else if let int64  = try? decodeIfPresent(Int64.self,  forKey: codingKey) { return String(describing: int64) as? T }
             else if let double = try? decodeIfPresent(Double.self, forKey: codingKey) { return String(describing: double) as? T }
+            else if #available(macOS 15.0, iOS 18.0, watchOS 11.0, tvOS 18.0, visionOS 2.0, *) {
+                if      let  int128 = try? decodeIfPresent(Int128.self,  forKey: codingKey) { return String(describing:  int128) as? T }
+                else if let uInt128 = try? decodeIfPresent(UInt128.self, forKey: codingKey) { return String(describing: uInt128) as? T }
+            }
         }
         
         // converter for specific type, via `extension T: ExCodableDecodingTypeConverter`

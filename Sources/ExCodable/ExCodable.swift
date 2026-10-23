@@ -63,7 +63,6 @@ public extension Encoder {
         try? encode(value, for: stringKey, nonnull: false, throws: false)
     }
     
-    // TODO: internal -> fileprivate
     internal func encode<T: Encodable>(_ value: T?, for stringKey: String, nonnull: Bool = false, throws: Bool = false) throws {
         
         let keys = stringKey.split(separator: ".").map { ExCodingKey($0) }
@@ -103,7 +102,6 @@ public extension Encoder {
         try? encode(value, for: codingKey, nonnull: false, throws: false)
     }
     
-    // TODO: internal -> fileprivate
     internal func encode<T: Encodable, K: CodingKey>(_ value: T?, for codingKey: K, nonnull: Bool = false, throws: Bool = false) throws {
         var container = self.container(keyedBy: K.self)
         if nonnull {
@@ -148,7 +146,6 @@ public extension Decoder {
         return try? decode(stringKeys, as: type, nonnull: false, throws: false, converter: converter)
     }
     
-    // TODO: internal -> fileprivate
     internal func decode<T: Decodable>(_ stringKeys: [String], as type: T.Type = T.self, nonnull: Bool = false, throws: Bool = false, converter: (any ExCodableDecodingTypeConverter.Type)?) throws -> T? {
         return try decode(stringKeys.map { ExCodingKey($0) }, as: type, nonnull: nonnull, throws: `throws`, converter: converter)
     }
@@ -172,7 +169,6 @@ public extension Decoder {
         return try? decode(codingKeys, as: type, nonnull: false, throws: false, converter: converter)
     }
     
-    // TODO: internal -> fileprivate
     internal func decode<T: Decodable, K: CodingKey>(_ codingKeys: [K], as type: T.Type = T.self, nonnull: Bool = false, throws: Bool = false, converter: (any ExCodableDecodingTypeConverter.Type)?) throws -> T? {
         if let container = nonnull || `throws` ? try self.container(keyedBy: K.self) : try? self.container(keyedBy: K.self) {
             return try container.decodeForAlternativeKeys(codingKeys, as: type, nonnull: nonnull, throws: `throws`, converter: converter)
@@ -458,9 +454,7 @@ public protocol DataDecoder {
 extension JSONEncoder: DataEncoder {}
 extension JSONDecoder: DataDecoder {}
 
-@available(macOS 10.15, iOS 13.0, tvOS 13.0, watchOS 6.0, *)
 extension PropertyListEncoder: DataEncoder {}
-@available(macOS 10.15, iOS 13.0, tvOS 13.0, watchOS 6.0, *)
 extension PropertyListDecoder: DataDecoder {}
 
 // Encodable.encode() -> Data?

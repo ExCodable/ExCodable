@@ -389,7 +389,7 @@ fileprivate extension KeyedDecodingContainer {
             if      let string = try? decodeIfPresent(String.self, forKey: codingKey), let value = Float(string) { return value as? T }
         }
         else if type is Float16.Type || wrappedType is Float16.Type {
-            if      let int64  = try? decodeIfPresent(Int64.self,  forKey: codingKey) { return Float16(int64) as? T }
+            if      let int64  = try? decodeIfPresent(Int64.self,  forKey: codingKey) { return Float16(exactly: int64) as? T }
             else if let string = try? decodeIfPresent(String.self, forKey: codingKey), let value = Float16(string) { return value as? T }
         }
         // public typealias Float32 = Float

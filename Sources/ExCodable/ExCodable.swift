@@ -66,19 +66,18 @@ public extension Encoder {
     // TODO: internal -> fileprivate
     internal func encode<T: Encodable>(_ value: T?, for stringKey: String, nonnull: Bool = false, throws: Bool = false) throws {
         
-        let dot: Character = "."
-        guard stringKey.contains(dot), stringKey.count > 1 else {
-            try encode(value, for: ExCodingKey(stringKey), nonnull: nonnull, throws: `throws`)
+        let keys = stringKey.split(separator: ".").map { ExCodingKey($0) }
+        guard keys.count > 1 else {
+            try encode(value, for: keys.first ?? ExCodingKey(stringKey), nonnull: nonnull, throws: `throws`)
             return
         }
         
-        let keys = stringKey.split(separator: dot).map { ExCodingKey($0) }
+        let codingKey = keys.last!
         var container = self.container(keyedBy: ExCodingKey.self)
         for key in keys.dropLast() {
             container = container.nestedContainer(keyedBy: ExCodingKey.self, forKey: key)
         }
         
-        let codingKey = keys.last!
         if nonnull {
             if value.wrapped == nil {
                 let desc = "Expected to encode nonnull for \(T?.wrappedType) but found null value instead."
@@ -235,13 +234,12 @@ fileprivate extension KeyedDecodingContainer {
         catch { caughtError = error }
         
         do {
-            let dot: Character = "."
             if let exCodingKey = codingKey as? ExCodingKey, // Self.Key is ExCodingKey.Type
-               exCodingKey.intValue == nil && exCodingKey.stringValue.contains(dot) {
-                let keys = exCodingKey.stringValue.split(separator: dot).map { ExCodingKey($0) }
-                if !keys.isEmpty,
-                   let container = nestedContainer(with: keys.dropLast()),
+               exCodingKey.intValue == nil {
+                let keys = exCodingKey.stringValue.split(separator: ".").map { ExCodingKey($0) }
+                if keys.count > 1,
                    let codingKey = keys.last,
+                   let container = nestedContainer(with: keys.dropLast()),
                    let value = try container.decodeForNestedKeys(codingKey as! Self.Key, as: type, nonnull: nonnull, throws: `throws`, converter: converter) {
                     return value
                 }

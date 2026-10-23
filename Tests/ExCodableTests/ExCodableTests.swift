@@ -195,6 +195,55 @@ struct TestNestedKeys: Equatable {
     let string: String!
 }
 
+@ExCodable
+struct TestNestedSiblings: Equatable {
+    @ExCodableKey("user.name")
+    let name: String
+    @ExCodableKey("user.role")
+    let role: String
+}
+
+// !!!: NOT supported
+// @ExCodable
+// struct TestDotPathPrefixClash: Equatable {
+//     @ExCodableKey("user")
+//     let user: String
+//     @ExCodableKey("user.name")
+//     let name: String
+// }
+
+@ExCodable
+struct TestDotPathPrefixClashUser: Equatable {
+    @ExCodableKey
+    let id: Int
+}
+
+@ExCodable
+struct TestDotPathPrefixClash: Equatable {
+    @ExCodableKey("user")
+    let user: TestDotPathPrefixClashUser
+    @ExCodableKey("user.name")
+    let name: String
+}
+
+@ExCodable
+struct TestDotPathEmpty: Equatable {
+    @ExCodableKey("..")
+    let value: String
+}
+
+@ExCodable
+struct TestDotPathTrailing: Equatable {
+    @ExCodableKey("user.")
+    let name: String
+}
+
+@ExCodable
+struct TestDotPathRepeated: Equatable {
+    @ExCodableKey("a..b")
+    let name: String
+}
+
 // MARK: custom encoding/decoding
 
 fileprivate func message(for int: Int) -> String {
@@ -762,6 +811,45 @@ final class ExCodableTests: XCTestCase {
         else {
             XCTFail()
         }
+    }
+    
+    func testNestedSiblingKeys() throws {
+        let data = try TestNestedSiblings(name: "Ada", role: "admin").encoded() as Data
+        let json = try JSONSerialization.jsonObject(with: data) as! [String: Any]
+        XCTAssertEqual(NSDictionary(dictionary: json), [
+            "user": [
+                "name": "Ada",
+                "role": "admin"
+            ]
+        ])
+    }
+    
+    func testDotPathPrefixClash() throws {
+        let data = try TestDotPathPrefixClash(user: TestDotPathPrefixClashUser(id: 1), name: "Ada").encoded() as Data
+        let json = try JSONSerialization.jsonObject(with: data) as! [String: Any]
+        let user = json["user"] as? [String: Any]
+        let id = user?["id"] as? Int
+        let name = user?["name"] as? String
+        XCTAssertEqual(id, 1)
+        XCTAssertEqual(name, "Ada")
+    }
+    
+    func testDotPathEmptyKey() throws {
+        _ = try TestDotPathEmpty(value: "Ada").encoded() as Data
+    }
+    
+    func testDotPathTrailingDot() throws {
+        let data = try TestDotPathTrailing(name: "Ada").encoded() as Data
+        let json = try JSONSerialization.jsonObject(with: data) as! [String: Any]
+        XCTAssertEqual(json["user"] as? String, "Ada")
+    }
+    
+    func testDotPathRepeatedDot() throws {
+        let data = try TestDotPathRepeated(name: "Ada").encoded() as Data
+        let json = try JSONSerialization.jsonObject(with: data) as! [String: Any]
+        let a = json["a"] as? [String: Any]
+        let b = a?["b"] as? String
+        XCTAssertEqual(b, "Ada")
     }
     
     func testCustomEncodeDecode() {

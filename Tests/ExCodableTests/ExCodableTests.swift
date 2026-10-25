@@ -580,8 +580,11 @@ struct TestNonnullWithThrows: Equatable {
 
 final class ExCodableTests: XCTestCase {
     
+    func testAnything() {
+        XCTAssert(true)
+    }
+    
     func testAutoCodable() {
-        
         let test = TestAutoCodable(int: 100, string: "Continue")
         if let data = try? test.encoded() as Data,
            let copy = try? TestAutoCodable.decoded(from: data),

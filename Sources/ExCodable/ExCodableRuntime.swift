@@ -45,9 +45,12 @@ public enum ExCodableRuntime {
         if let customDecode {
             return try customDecode(decoder)
         }
-        guard let rawValue = try decoder.decode(keys, as: T.RawValue.self, nonnull: nonnull, throws: `throws`, converter: converter),
-              let value = T(rawValue: rawValue) else { return nil }
-        return value
+        // TODO: how to test
+        if let value = try decoder.decode(keys, as: T.self, nonnull: nonnull, throws: `throws`, converter: converter) {
+            return value
+        }
+        guard let rawValue = try decoder.decode(keys, as: T.RawValue.self, nonnull: nonnull, throws: `throws`, converter: converter) else { return nil }
+        return T(rawValue: rawValue)
     }
     
     public static func decode<T: Decodable & RawRepresentable>(
@@ -61,6 +64,10 @@ public enum ExCodableRuntime {
     ) throws -> T?? where T.RawValue: Decodable {
         if let customDecode {
             return try customDecode(decoder)
+        }
+        // TODO: how to test
+        if let value = try decoder.decode(keys, as: T.self, nonnull: nonnull, throws: `throws`, converter: converter) {
+            return value
         }
         guard let rawValue = try decoder.decode(keys, as: T.RawValue.self, nonnull: nonnull, throws: `throws`, converter: converter) else { return nil }
         return T(rawValue: rawValue)

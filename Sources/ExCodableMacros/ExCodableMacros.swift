@@ -135,7 +135,6 @@ private enum ExCodableExpansion {
         let source = """
         extension \(type.trimmedDescription)\(conformance)\(genericWhere) {
         \(decodeInit(for: properties, kind: .struct, hasSuperclass: false, access: access))
-        
         \(encodeFunction(for: properties, kind: .struct, hasSuperclass: false, access: access))
         }
         """
@@ -504,7 +503,7 @@ private enum ExCodableExpansion {
         }.joined(separator: ", ")
         let assignments = included.map { property in
             let name = escaped(property.name)
-            return "        self.\(name) = \(name)"
+            return "    self.\(name) = \(name)"
         }.joined(separator: "\n")
         let keyword = memberwiseAccess(type: typeAccess, parameters: included.map(\.access)).memberwisePrefix
         return """
@@ -518,13 +517,13 @@ private enum ExCodableExpansion {
         let codable = properties.filter { $0.codable != nil }
         var lines: [String] = []
         if !codable.isEmpty {
-            lines.append("        let exCodableTypeConverter = ExCodableRuntime.converter(of: Self.self)")
+            lines.append("    let exCodableTypeConverter = ExCodableRuntime.converter(of: Self.self)")
         }
         for property in codable {
             lines.append(decodeStatement(for: property))
         }
         if hasSuperclass {
-            lines.append("        try super.init(from: decoder)")
+            lines.append("    try super.init(from: decoder)")
         }
         let body = lines.joined(separator: "\n")
         let constraint = kind == .class ? genericWhere : ""
@@ -558,30 +557,30 @@ private enum ExCodableExpansion {
         let name = escaped(property.name)
         if let `default` = spec.`default` ?? property.`default` {
             return """
-                    if let exCodableValue = try \(call) {
-                        self.\(name) = exCodableValue
-                    }
-                    else {
-                        self.\(name) = \(`default`)
-                    }
+                if let exCodableValue = try \(call) {
+                    self.\(name) = exCodableValue
+                }
+                else {
+                    self.\(name) = \(`default`)
+                }
             """
         }
         if let type = property.type, type.hasSuffix("!") || type.hasSuffix("?") || type.hasPrefix("Optional<") {
             return """
-                    if let exCodableValue = try \(call) {
-                        self.\(name) = exCodableValue
-                    }
-                    else {
-                        self.\(name) = nil
-                    }
+                if let exCodableValue = try \(call) {
+                    self.\(name) = exCodableValue
+                }
+                else {
+                    self.\(name) = nil
+                }
             """
         }
         let missingType = metatype(of: property) ?? "Any.self"
         return """
-                guard let exCodableValue = try \(call) else {
-                    throw DecodingError.valueNotFound(\(missingType), DecodingError.Context(codingPath: decoder.codingPath, debugDescription: "ExCodable expected a value for \(property.name)."))
-                }
-                self.\(name) = exCodableValue
+            guard let exCodableValue = try \(call) else {
+                throw DecodingError.valueNotFound(\(missingType), DecodingError.Context(codingPath: decoder.codingPath, debugDescription: "ExCodable expected a value for \(property.name)."))
+            }
+            self.\(name) = exCodableValue
         """
     }
     
@@ -606,7 +605,7 @@ private enum ExCodableExpansion {
             lines.append(encodeStatement(for: property))
         }
         if hasSuperclass {
-            lines.append("        try super.encode(to: encoder)")
+            lines.append("    try super.encode(to: encoder)")
         }
         let body = lines.joined(separator: "\n")
         let override = (kind == .class && hasSuperclass) ? "override " : ""
@@ -633,6 +632,6 @@ private enum ExCodableExpansion {
             call += ", customEncode: \(encode)"
         }
         call += ")"
-        return "        try \(call)"
+        return "    try \(call)"
     }
 }

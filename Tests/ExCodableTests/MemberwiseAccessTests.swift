@@ -7,6 +7,8 @@
 //
 
 import XCTest
+
+// @testable
 import ExCodable
 
 final class MemberwiseAccessTests: XCTestCase {

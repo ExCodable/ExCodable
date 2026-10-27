@@ -53,20 +53,19 @@ extension TestManualCodable: Codable {
     init(from decoder: Decoder) throws {
         let container = try? decoder.container(keyedBy: Keys.self)
         let int = try? container?.decodeIfPresent(Int.self, forKey: Keys.int)
-        let string: String? = {
-            if let nestedContainer = try? container?.nestedContainer(keyedBy: Keys.self, forKey: Keys.nested),
-               let nestedNestedContainer = try? nestedContainer.nestedContainer(keyedBy: Keys.self, forKey: Keys.nested),
-               let string = try? nestedNestedContainer.decodeIfPresent(String.self, forKey: Keys.string) {
-                return string
-            }
-            else if let string = (try? container?.decodeIfPresent(String.self, forKey: Keys.string))
-                        ?? (try? container?.decodeIfPresent(String.self, forKey: Keys.s)) {
-                return string
-            }
-            else {
-                return nil
-            }
-        }()
+        let string: String? =
+        if let nestedContainer = try? container?.nestedContainer(keyedBy: Keys.self, forKey: Keys.nested),
+           let nestedNestedContainer = try? nestedContainer.nestedContainer(keyedBy: Keys.self, forKey: Keys.nested),
+           let string = try? nestedNestedContainer.decodeIfPresent(String.self, forKey: Keys.string) {
+            string
+        }
+        else if let string = (try? container?.decodeIfPresent(String.self, forKey: Keys.string))
+                    ?? (try? container?.decodeIfPresent(String.self, forKey: Keys.s)) {
+            string
+        }
+        else {
+            nil
+        }
         self.init(int: int ?? 0, string: string)
     }
     
@@ -245,16 +244,16 @@ struct TestDotPathRepeated: Equatable {
 // MARK: custom encoding/decoding
 
 fileprivate func message(for int: Int) -> String {
-    switch int {
-        case 100: return "Continue"
-        case 200: return "OK"
-        case 304: return "Not Modified"
-        case 403: return "Forbidden"
-        case 404: return "Not Found"
-        case 418: return "I'm a teapot"
-        case 500: return "Internal Server Error"
-        case 200..<400: return "success"
-        default: return "failure"
+    return switch int {
+        case 100: "Continue"
+        case 200: "OK"
+        case 304: "Not Modified"
+        case 403: "Forbidden"
+        case 404: "Not Found"
+        case 418: "I'm a teapot"
+        case 500: "Internal Server Error"
+        case 200..<400: "success"
+        default: "failure"
     }
 }
 
@@ -278,7 +277,7 @@ struct TestCustomEncodeDecode: Equatable {
            string != "<placeholder>" {
             return string
         }
-        if let int: Int = decoder["int"] {
+        else if let int: Int = decoder["int"] {
             return message(for: int)
         }
         return nil

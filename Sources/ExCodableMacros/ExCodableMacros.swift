@@ -49,7 +49,7 @@ private enum ExCodableMacroError: Error, CustomStringConvertible {
     case message(String)
     var description: String {
         switch self {
-        case .message(let message): return message
+            case .message(let message): return message
         }
     }
 }
@@ -76,12 +76,11 @@ private enum ExCodableExpansion {
         case `internal` = 2
         case `package` = 3
         case `public` = 4
-        
         var memberwisePrefix: String {
-            switch self {
-            case .private: return "private "
-            case .fileprivate: return "fileprivate "
-            default: return ""
+            return switch self {
+                case .private: "private "
+                case .fileprivate: "fileprivate "
+                default: ""
             }
         }
     }
@@ -199,11 +198,9 @@ private enum ExCodableExpansion {
         guard let accessorBlock = binding.accessorBlock else { return true }
         guard case .accessors(let accessors) = accessorBlock.accessors, !accessors.isEmpty else { return false }
         return accessors.allSatisfy { accessor in
-            switch accessor.accessorSpecifier.tokenKind {
-            case .keyword(.willSet), .keyword(.didSet):
-                return true
-            default:
-                return false
+            return switch accessor.accessorSpecifier.tokenKind {
+                case .keyword(.willSet), .keyword(.didSet): true
+                default: false
             }
         }
     }
@@ -236,22 +233,22 @@ private enum ExCodableExpansion {
                 for argument in arguments {
                     let expression = argument.expression
                     switch argument.label?.text {
-                    case "default":
-                        `default` = expression.trimmedDescription
-                    case "nonnull":
-                        hasNonnull = true
-                        nonnull = boolLiteral(expression)
-                    case "throws":
-                        hasThrows = true
-                        `throws` = boolLiteral(expression)
-                    case "encode":
-                        encode = expression.trimmedDescription
-                    case "decode":
-                        decode = expression.trimmedDescription
-                    case nil:
-                        keys.append(keyExpression(expression))
-                    default:
-                        throw ExCodableMacroError.message("Unknown @ExCodableKey argument \(argument.label?.text ?? "")")
+                        case "default":
+                            `default` = expression.trimmedDescription
+                        case "nonnull":
+                            hasNonnull = true
+                            nonnull = boolLiteral(expression)
+                        case "throws":
+                            hasThrows = true
+                            `throws` = boolLiteral(expression)
+                        case "encode":
+                            encode = expression.trimmedDescription
+                        case "decode":
+                            decode = expression.trimmedDescription
+                        case nil:
+                            keys.append(keyExpression(expression))
+                        default:
+                            throw ExCodableMacroError.message("Unknown @ExCodableKey argument \(argument.label?.text ?? "")")
                     }
                 }
             }
@@ -264,8 +261,8 @@ private enum ExCodableExpansion {
     }
     
     private static func labeledArguments(of attribute: AttributeSyntax) -> LabeledExprListSyntax? {
-        guard let arguments = attribute.arguments else { return nil }
-        if case .argumentList(let list) = arguments { return list }
+        if let arguments = attribute.arguments,
+           case .argumentList(let list) = arguments { return list }
         return nil
     }
     
@@ -287,12 +284,12 @@ private enum ExCodableExpansion {
         var result = "\""
         for scalar in value.unicodeScalars {
             switch scalar {
-            case "\\": result += "\\\\"
-            case "\"": result += "\\\""
-            case "\n": result += "\\n"
-            case "\r": result += "\\r"
-            case "\t": result += "\\t"
-            default: result.unicodeScalars.append(scalar)
+                case "\\": result += "\\\\"
+                case "\"": result += "\\\""
+                case "\n": result += "\\n"
+                case "\r": result += "\\r"
+                case "\t": result += "\\t"
+                default: result.unicodeScalars.append(scalar)
             }
         }
         result += "\""
@@ -423,12 +420,12 @@ private enum ExCodableExpansion {
     }
     
     private static func typeAccess(of declaration: some DeclGroupSyntax) -> String {
-        switch accessLevel(of: declaration.modifiers) {
-        case .public: return "public "
-        case .package: return "package "
-        case .private: return "private "
-        case .fileprivate: return "fileprivate "
-        case .internal: return ""
+        return switch accessLevel(of: declaration.modifiers) {
+            case .public: "public "
+            case .package: "package "
+            case .private: "private "
+            case .fileprivate: "fileprivate "
+            case .internal: ""
         }
     }
     
@@ -438,12 +435,12 @@ private enum ExCodableExpansion {
         for modifier in modifiers {
             if modifier.detail != nil { continue }
             switch modifier.name.text {
-            case "private": level = .private
-            case "fileprivate": level = .fileprivate
-            case "internal": level = .internal
-            case "package": level = .package
-            case "public", "open": level = .public
-            default: break
+                case "private": level = .private
+                case "fileprivate": level = .fileprivate
+                case "internal": level = .internal
+                case "package": level = .package
+                case "public", "open": level = .public
+                default: break
             }
         }
         return level

@@ -11,14 +11,15 @@ import Foundation
 /// # ExCodable
 /// 
 /// <#swift#> <#codable#> <#json#> <#model#> <#type-inference#>
-/// <#key-mapping#> <#macro#> <#coding-key#> <#subscript#>
+/// <#macro#> <#key-mapping#> <#coding-key#> <#subscript#>
 /// <#alternative-keys#> <#nested-keys#> <#type-conversions#>
+/// <#default-value#> <#custom-encoding#> <#custom-decoding#>
 /// 
 /// - `ExCodable`: A macro generates `init(from:)` and `encode(to:)`.
 /// - `ExCodableKey`: A macro associates JSON keys to properties.
 /// - `Encodable` & `Decodable` extensions for encoding/decoding from internal/external.
 /// - `Encoder` & `Encoder` extensions for encoding/decoding properties one by one.
-/// - Supports alternative keys, nested keys, type conversions, nested optionals and default values.
+/// - Supports alternative keys, nested keys, type conversions, nested optionals, default values, custom encoding, custom decoding, etc.
 /// 
 /// - seealso: [Usage](https://github.com/ExCodable/ExCodable#usage) from the `README.md`
 /// - seealso: `ExCodableTests.swift` from the `Tests`
@@ -401,7 +402,7 @@ fileprivate extension KeyedDecodingContainer {
         // public typealias Float32 = Float
         // public typealias Float64 = Double
         else if type is CGFloat.Type || wrappedType is CGFloat.Type {
-            // if      let int64  = try? decodeIfPresent(Int64.self,  forKey: codingKey) { return CGFloat(int64) as? T }
+            // if      let int64  = try? decodeIfPresent(Int64.self,  forKey: codingKey) { return CGFloat(int64) as? T } else
             if      let string = try? decodeIfPresent(String.self, forKey: codingKey), let value = Double(string) { return CGFloat(value) as? T }
         }
         
@@ -416,7 +417,7 @@ fileprivate extension KeyedDecodingContainer {
                 if      let bool   = try? decodeIfPresent(Bool.self,   forKey: codingKey) { return UInt128(bool ? 1 : 0) as? T }
                 // else if let int64  = try? decodeIfPresent(Int64.self,  forKey: codingKey), let value = UInt128(exactly: int64) { return value as? T }
                 else if let double = try? decodeIfPresent(Double.self, forKey: codingKey), let value = UInt128(exactly: double.rounded(.towardZero)) { return value as? T }
-                    else if let string = try? decodeIfPresent(String.self, forKey: codingKey), let value = UInt128(string) ?? value(from: string, { UInt128(exactly: $0) }) { return value as? T }
+                else if let string = try? decodeIfPresent(String.self, forKey: codingKey), let value = UInt128(string) ?? value(from: string, { UInt128(exactly: $0) }) { return value as? T }
             }
         }
         

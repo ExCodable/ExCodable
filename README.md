@@ -98,20 +98,19 @@ extension TestManualCodable: Codable {
     init(from decoder: Decoder) throws {
         let container = try? decoder.container(keyedBy: Keys.self)
         let int = try? container?.decodeIfPresent(Int.self, forKey: Keys.int)
-        let string: String? = {
-            if let nestedContainer = try? container?.nestedContainer(keyedBy: Keys.self, forKey: Keys.nested),
-               let nestedNestedContainer = try? nestedContainer.nestedContainer(keyedBy: Keys.self, forKey: Keys.nested),
-               let string = try? nestedNestedContainer.decodeIfPresent(String.self, forKey: Keys.string) {
-                return string
-            }
-            else if let string = (try? container?.decodeIfPresent(String.self, forKey: Keys.string))
-                        ?? (try? container?.decodeIfPresent(String.self, forKey: Keys.s)) {
-                return string
-            }
-            else {
-                return nil
-            }
-        }()
+        let string: String? =
+        if let nestedContainer = try? container?.nestedContainer(keyedBy: Keys.self, forKey: Keys.nested),
+           let nestedNestedContainer = try? nestedContainer.nestedContainer(keyedBy: Keys.self, forKey: Keys.nested),
+           let string = try? nestedNestedContainer.decodeIfPresent(String.self, forKey: Keys.string) {
+            string
+        }
+        else if let string = (try? container?.decodeIfPresent(String.self, forKey: Keys.string))
+                    ?? (try? container?.decodeIfPresent(String.self, forKey: Keys.s)) {
+            string
+        }
+        else {
+            nil
+        }
         self.init(int: int ?? 0, string: string)
     }
     

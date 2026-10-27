@@ -616,7 +616,7 @@ final class ExCodableTests: XCTestCase {
         }
         """#.utf8)
         XCTAssertThrowsError(try TestNonnull.decoded(from: nullData)) { error in
-            guard case DecodingError.keyNotFound = error else { return XCTFail("\(error)") }
+            guard case DecodingError.valueNotFound = error else { return XCTFail("\(error)") }
             print("TestNonnull error: \(error)")
         }
         XCTAssertThrowsError(try TestNestedNonnull.decoded(from: nullData)) { error in

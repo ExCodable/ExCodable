@@ -78,6 +78,7 @@ public extension Encoder {
             container = container.nestedContainer(keyedBy: ExCodingKey.self, forKey: key)
         }
         
+        // throws `EncodingError.invalidValue`
         if nonnull {
             if value.wrapped == nil {
                 let desc = "Expected to encode nonnull for \(T?.wrappedType) but found null value instead."
@@ -85,9 +86,11 @@ public extension Encoder {
             }
             try container.encode(value, forKey: codingKey)
         }
+        // throws `EncodingError.invalidValue`
         else if `throws` {
             try container.encodeIfPresent(value, forKey: codingKey)
         }
+        // NO throws
         else {
             try? container.encodeIfPresent(value, forKey: codingKey)
         }
@@ -105,6 +108,7 @@ public extension Encoder {
     
     internal func encode<T: Encodable, K: CodingKey>(_ value: T?, for codingKey: K, nonnull: Bool = false, throws: Bool = false) throws {
         var container = self.container(keyedBy: K.self)
+        // throws `EncodingError.invalidValue`
         if nonnull {
             if value.wrapped == nil {
                 let desc = "Expected to encode nonnull for \(T?.wrappedType) but found null value instead."
@@ -112,9 +116,11 @@ public extension Encoder {
             }
             try container.encode(value, forKey: codingKey)
         }
+        // throws `EncodingError.invalidValue`
         else if `throws` {
             try container.encodeIfPresent(value, forKey: codingKey)
         }
+        // NO throws
         else {
             try? container.encodeIfPresent(value, forKey: codingKey)
         }
@@ -171,7 +177,11 @@ public extension Decoder {
     }
     
     internal func decode<T: Decodable, K: CodingKey>(_ codingKeys: [K], as type: T.Type = T.self, nonnull: Bool = false, throws: Bool = false, converter: (any ExCodableDecodingTypeConverter.Type)?) throws -> T? {
-        if let container = nonnull || `throws` ? try self.container(keyedBy: K.self) : try? self.container(keyedBy: K.self) {
+        if let container = (nonnull || `throws`
+                            // throws `DecodingError.typeMismatch`
+                            ? try self.container(keyedBy: K.self)
+                            // NO throws
+                            : try? self.container(keyedBy: K.self)) {
             return try container.decodeForAlternativeKeys(codingKeys, as: type, nonnull: nonnull, throws: `throws`, converter: converter)
         }
         return nil
@@ -259,11 +269,12 @@ fileprivate extension KeyedDecodingContainer {
     
     func decodeForValue<T: Decodable>(_ codingKey: Self.Key, as type: T.Type = T.self, nonnull: Bool, throws: Bool, converter: (any ExCodableDecodingTypeConverter.Type)?) throws -> T? {
         
-        // JSON null is the same absence as a missing key.
+        // throws `DecodingError.keyNotFound`
         if contains(codingKey), try decodeNil(forKey: codingKey) {
+            // throws `DecodingError.valueNotFound`
             if nonnull {
                 let description = "No value associated with key \(codingKey) (\"\(codingKey.stringValue)\")."
-                throw DecodingError.keyNotFound(codingKey, .init(codingPath: codingPath, debugDescription: description))
+                throw DecodingError.valueNotFound(T.self, .init(codingPath: codingPath, debugDescription: description))
             }
             return nil
         }
@@ -271,16 +282,20 @@ fileprivate extension KeyedDecodingContainer {
         var caughtError: Error?
         do {
             if nonnull {
+                // throws `DecodingError.keyNotFound`, `DecodingError.valueNotFound` or `DecodingError.typeMismatch`
                 let value = try decode(type, forKey: codingKey)
+                // throws `DecodingError.valueNotFound`
                 if let optional = value as? OptionalProtocol, optional.wrapped == nil {
                     let description = "No value associated with key \(codingKey) (\"\(codingKey.stringValue)\")."
-                    throw DecodingError.keyNotFound(codingKey, .init(codingPath: codingPath, debugDescription: description))
+                    throw DecodingError.valueNotFound(T.self, .init(codingPath: codingPath, debugDescription: description))
                 }
                 return value
             }
-            if let value = `throws`
-                ? try decodeIfPresent(type, forKey: codingKey)
-                : try? decodeIfPresent(type, forKey: codingKey) {
+            if let value = (`throws`
+                            // throws `DecodingError.typeMismatch`
+                            ? try decodeIfPresent(type, forKey: codingKey)
+                            // NO throws
+                            : try? decodeIfPresent(type, forKey: codingKey)) {
                 return value
             }
         }

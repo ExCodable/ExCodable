@@ -12,9 +12,7 @@ let package = Package(
         .watchOS(.v9)
     ],
     products: [
-        .library(name: "ExCodable", targets: ["ExCodable"]),
-        // .library(name: "ExCodable-Static", type: .static, targets: ["ExCodable"]),
-        .library(name: "ExCodable-Dynamic", type: .dynamic, targets: ["ExCodable"])
+        .library(name: "ExCodable", targets: ["ExCodable"])
     ],
     dependencies: [
         .package(url: "https://github.com/swiftlang/swift-syntax.git", from: "604.0.0"),

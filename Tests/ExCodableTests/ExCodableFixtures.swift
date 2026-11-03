@@ -551,6 +551,63 @@ struct TestDefault: Equatable {
     let string: String
 }
 
+/// Every kind of property initializer that can act as a decode fallback.
+@ExCodable
+struct TestInitialValueFallback: Equatable {
+    @ExCodableKey("int8")
+    var int8: Int8 = 8
+    @ExCodableKey("uint")
+    var uint: UInt = 1
+    @ExCodableKey("double")
+    var double: Double = 2.5
+    @ExCodableKey("float16")
+    var float16: Float16 = 2.5
+    @ExCodableKey("bool")
+    var bool: Bool = true
+    @ExCodableKey("string")
+    var string: String = "initial"
+    @ExCodableKey("url")
+    var url: URL = URL(string: "https://initial.example")!
+    @ExCodableKey("uuid")
+    var uuid: UUID = UUID(uuidString: "00000000-0000-0000-0000-000000000001")!
+    @ExCodableKey("array")
+    var array: [Int] = [1, 2]
+    @ExCodableKey("dictionary")
+    var dictionary: [String: Int] = ["a": 1]
+    @ExCodableKey("enum")
+    var `enum`: TestEnum = .one
+    @ExCodableKey("nested")
+    var nested: TestNestedValue = TestNestedValue(x: 9)
+    @ExCodableKey("optional")
+    var optional: Int? = 5
+}
+
+/// Used only through `TestInitialValueFallback`; failure of any field must fall back whole.
+struct TestNestedValue: Codable, Equatable {
+    var x: Int
+}
+
+/// Same shape without initializers: a failed decode must throw instead of falling back.
+@ExCodable
+struct TestNoInitialValue: Equatable {
+    @ExCodableKey("array")
+    var array: [Int]
+}
+
+/// `nonnull` reports a missing or null value even though an initial value exists.
+@ExCodable
+struct TestInitialValueNonnull: Equatable {
+    @ExCodableKey("int", nonnull: true)
+    var int: Int = 2
+}
+
+/// `throws` reports a type mismatch even though an initial value exists.
+@ExCodable
+struct TestInitialValueThrows: Equatable {
+    @ExCodableKey("int", throws: true)
+    var int: Int = 2
+}
+
 // MARK: nonnull and `throws`
 
 @ExCodable

@@ -613,6 +613,87 @@ final class ExCodableTests: XCTestCase {
         XCTAssertEqual(copy.string, decoded.string)
     }
     
+    /// A property initializer doubles as the decode fallback for every supported type.
+    func testInitialValueFallbackForAllTypes() throws {
+        let expected = TestInitialValueFallback(
+            int8: 8, uint: 1, double: 2.5, float16: 2.5, bool: true,
+            string: "initial", url: URL(string: "https://initial.example")!,
+            uuid: UUID(uuidString: "00000000-0000-0000-0000-000000000001")!,
+            array: [1, 2], dictionary: ["a": 1], enum: .one,
+            nested: TestNestedValue(x: 9), optional: 5
+        )
+        
+        // Missing keys, JSON null, wrong JSON types and values outside a type's range must all
+        // fall back to the initializer instead of throwing.
+        let failures: [String] = [
+            "{}",
+            #"""
+            {"int8":null,"uint":null,"double":null,"float16":null,"bool":null,"string":null,
+             "url":null,"uuid":null,"array":null,"dictionary":null,"enum":null,
+             "nested":null,"optional":null}
+            """#,
+            // `url` is left out on purpose: `URL` accepts nearly any string, so a "bad" URL
+            // does not fail and therefore keeps the decoded value instead of the initial one.
+            #"""
+            {"int8":999,"uint":-1,"double":"1e400","float16":70000,"bool":"maybe","string":[],
+             "uuid":"not-a-uuid","array":"not-an-array","dictionary":1,
+             "enum":99,"nested":{"x":"bad"},"optional":"bad"}
+            """#
+        ]
+        for json in failures {
+            let decoded = try TestInitialValueFallback.decoded(from: Data(json.utf8))
+            XCTAssertEqual(decoded, expected, "initial values must survive: \(json)")
+        }
+    }
+    
+    /// JSON values that convert cleanly must still override the initializer.
+    func testInitialValueOverriddenByConvertibleJSON() throws {
+        let json = Data(#"""
+        {"int8":"16","uint":true,"double":"1.5","float16":"1.5","bool":"yes","string":1,
+         "uuid":"11111111-1111-1111-1111-111111111111","array":[3],
+         "dictionary":{"b":2},"enum":1,"nested":{"x":1},"optional":7}
+        """#.utf8)
+        let decoded = try TestInitialValueFallback.decoded(from: json)
+        XCTAssertEqual(decoded.int8, 16)
+        XCTAssertEqual(decoded.uint, 1)
+        XCTAssertEqual(decoded.double, 1.5)
+        XCTAssertEqual(decoded.float16, 1.5)
+        XCTAssertEqual(decoded.bool, true)
+        XCTAssertEqual(decoded.string, "1")
+        XCTAssertEqual(decoded.uuid, UUID(uuidString: "11111111-1111-1111-1111-111111111111"))
+        XCTAssertEqual(decoded.array, [3])
+        XCTAssertEqual(decoded.dictionary, ["b": 2])
+        XCTAssertEqual(decoded.enum, .one)
+        XCTAssertEqual(decoded.nested, TestNestedValue(x: 1))
+        XCTAssertEqual(decoded.optional, 7)
+    }
+    
+    /// Without an initializer there is nothing to fall back to, so a failure throws.
+    func testNoInitialValueThrows() {
+        XCTAssertThrowsError(try TestNoInitialValue.decoded(from: Data("{}".utf8)))
+        XCTAssertThrowsError(try TestNoInitialValue.decoded(from: Data(#"{"array":["a"]}"#.utf8)))
+    }
+    
+    /// `nonnull`/`throws` opt out of the fallback and surface the error instead.
+    func testInitialValueWithNonnullOrThrows() throws {
+        // `nonnull` keeps reporting a missing or null value, initial value notwithstanding.
+        XCTAssertThrowsError(try TestInitialValueNonnull.decoded(from: Data("{}".utf8)))
+        XCTAssertThrowsError(try TestInitialValueNonnull.decoded(from: Data(#"{"int":null}"#.utf8)))
+        XCTAssertEqual(try TestInitialValueNonnull.decoded(from: Data(#"{"int":3}"#.utf8)).int, 3)
+        
+        // `throws` keeps reporting a type mismatch, but a missing key still falls back.
+        XCTAssertThrowsError(try TestInitialValueThrows.decoded(from: Data(#"{"int":"bad"}"#.utf8)))
+        XCTAssertEqual(try TestInitialValueThrows.decoded(from: Data("{}".utf8)).int, 2)
+    }
+    
+    /// `URL` accepts almost any string, so a malformed URL does not fall back. Documented here
+    /// so the exception is intentional rather than a silent surprise.
+    func testInitialValueURLKeepsDecodedValue() throws {
+        let decoded = try TestInitialValueFallback.decoded(from: Data(#"{"url":"%%%"}"#.utf8))
+        XCTAssertEqual(decoded.url.absoluteString, "%25%25%25")
+        XCTAssertNotEqual(decoded.url, URL(string: "https://initial.example")!)
+    }
+    
     func testNonnullAndThrows() throws {
         
         let noIntData = Data(#"""

@@ -505,23 +505,23 @@ final class ExCodableTests: XCTestCase {
         }
         """#.utf8)
         if let test = try? TestStructWithOptionals.decoded(from: data) {
-            XCTAssertEqual(test, TestStructWithOptionals(bool: true,
-                                                         int: 1,
-                                                         int8: 8,
-                                                         int16: 16,
-                                                         int32: 32,
-                                                         int64: 64,
-                                                         uInt: 1,
-                                                         uInt8: 8,
-                                                         uInt16: 16,
-                                                         uInt32: 32,
-                                                         uInt64: 64,
-                                                         double: 1.123456789,
-                                                         float: 1.1,
-                                                         float16: 1.16,
-                                                         float32: 1.32,
-                                                         float64: 1.64,
-                                                         string: "string"))
+            XCTAssertEqual(test, TestStructWithOptionals(bool:      true,
+                                                         int:       1,
+                                                         int8:      8,
+                                                         int16:     16,
+                                                         int32:     32,
+                                                         int64:     64,
+                                                         uInt:      1,
+                                                         uInt8:     8,
+                                                         uInt16:    16,
+                                                         uInt32:    32,
+                                                         uInt64:    64,
+                                                         double:    1.123456789,
+                                                         float:     1.1,
+                                                         float16:   1.16, // Float16: 1.1601562 ~= 1.16
+                                                         float32:   1.32,
+                                                         float64:   1.64,
+                                                         string:    "string"))
         }
         else {
             XCTFail()

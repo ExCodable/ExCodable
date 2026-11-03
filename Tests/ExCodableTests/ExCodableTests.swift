@@ -64,12 +64,30 @@ final class ExCodableTests: XCTestCase {
     }
     
     func testStructWithObservers() throws {
+        TestObserverLog.shared.reset()
         let data = Data(#"{"count":3,"name":"ada"}"#.utf8)
         let test = try TestStructWithObservers.decoded(from: data)
         XCTAssertEqual(test, TestStructWithObservers(count: 3, name: "ada"))
+        // `init(from:)` assigns stored properties, and Swift runs no observers during
+        // initialization, so decoding must not fire `willSet` / `didSet`.
+        XCTAssertEqual(TestObserverLog.shared.events, [])
+        
         let encoded = try test.encoded() as Data
         let copy = try TestStructWithObservers.decoded(from: encoded)
         XCTAssertEqual(copy, test)
+        XCTAssertEqual(TestObserverLog.shared.events, [])
+    }
+    
+    func testStructWithObserversFireOnAssignment() {
+        var test = TestStructWithObservers(count: 0, name: nil)
+        TestObserverLog.shared.reset()
+        
+        test.count = 9
+        XCTAssertEqual(TestObserverLog.shared.events, ["count.willSet:9", "count.didSet:9"])
+        
+        TestObserverLog.shared.reset()
+        test.name = "ada"
+        XCTAssertEqual(TestObserverLog.shared.events, ["name.didSet:Optional(\"ada\")"])
     }
     
     func testFixedLet() throws {

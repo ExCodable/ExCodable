@@ -91,16 +91,24 @@ struct TestStruct: Equatable {
 
 // MARK: struct with observers
 
+/// Records property-observer calls so tests can assert they did or did not run.
+final class TestObserverLog: @unchecked Sendable {
+    static let shared = TestObserverLog()
+    private(set) var events: [String] = []
+    func record(_ event: String) { events.append(event) }
+    func reset() { events.removeAll() }
+}
+
 @ExCodable
 struct TestStructWithObservers: Equatable {
     @ExCodableKey
     var count: Int {
-        willSet {}
-        didSet {}
+        willSet { TestObserverLog.shared.record("count.willSet:\(newValue)") }
+        didSet { TestObserverLog.shared.record("count.didSet:\(count)") }
     }
     @ExCodableKey
     var name: String? {
-        didSet {}
+        didSet { TestObserverLog.shared.record("name.didSet:\(String(describing: name))") }
     }
 }
 

@@ -608,6 +608,91 @@ struct TestInitialValueThrows: Equatable {
     var int: Int = 2
 }
 
+// MARK: allKeys
+
+/// `@ExCodable` and `@ExCodable(.exCodableKeys)` must behave identically. `unmarked` really is
+/// unmarked here, and `.exCodableKeys` leaves it out of coding.
+@ExCodable
+struct TestExCodableKeysDefault: Equatable {
+    @ExCodableKey
+    var key: Int
+    var unmarked: Int = 0
+}
+
+/// Same shape as `TestExCodableKeysDefault` with the option spelled out.
+@ExCodable(.exCodableKeys)
+struct TestExCodableKeysExplicit: Equatable {
+    @ExCodableKey
+    var key: Int
+    var unmarked: Int = 0
+}
+
+@ExCodable(.allKeys)
+struct TestAllKeys: Equatable {
+    var int: Int
+    var string: String
+}
+
+/// `.allKeys` codes every stored property; only `@ExCodableExcept` opts one out.
+@ExCodable(.allKeys)
+struct TestAllKeysWithExcept: Equatable {
+    var kept: Int
+    @ExCodableExcept
+    var excluded: String = "initial"
+    /// A second property with an initial value, also coded implicitly.
+    var extra: Int = 7
+}
+
+/// Same shape as `TestAllKeysWithExcept`, but every coded property names `@ExCodableKey`
+/// explicitly, to prove the two spellings are interchangeable.
+@ExCodable(.allKeys)
+struct TestAllKeysWithExceptExplicit: Equatable {
+    @ExCodableKey
+    var kept: Int
+    @ExCodableExcept
+    var excluded: String = "initial"
+    @ExCodableKey
+    var extra: Int = 7
+}
+
+@ExCodable(.allKeys)
+struct TestAllKeysWithExplicitKey: Equatable {
+    /// No `@ExCodableKey`: still coded, because `.allKeys` includes every stored property.
+    var unmarked: Int
+    /// Explicit key with its own name and parameters; those win over the `allKeys` default.
+    @ExCodableKey("renamed", nonnull: true)
+    var renamedFrom: String
+}
+
+@ExCodable(.allKeys)
+struct TestAllKeysWithFixedLet: Equatable {
+    let kind = "user"
+    var value: Int
+}
+
+@ExCodable(.allKeys)
+class TestAllKeysClass {
+    var int: Int = 0
+    @ExCodableExcept
+    var excluded: String = "initial"
+}
+
+/// Module-qualified spelling of the same option; must behave exactly like `.allKeys`.
+@ExCodable(ExCodableOptions.allKeys)
+struct TestAllKeysQualified: Equatable {
+    var int: Int
+}
+
+/// `.exCodableKeys` + `@ExCodableExcept`: the attribute is a no-op and warns, but the type still
+/// compiles and behaves exactly as if the attribute were absent.
+@ExCodable
+struct TestExceptInExCodableKeys: Equatable {
+    @ExCodableKey
+    var key: Int
+    @ExCodableExcept
+    var excluded: Int = 3
+}
+
 // MARK: nonnull and `throws`
 
 @ExCodable

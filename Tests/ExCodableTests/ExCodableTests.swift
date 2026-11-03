@@ -694,6 +694,100 @@ final class ExCodableTests: XCTestCase {
         XCTAssertNotEqual(decoded.url, URL(string: "https://initial.example")!)
     }
     
+    func testOptionsExCodableKeysIsTheDefault() throws {
+        // `@ExCodable`, `@ExCodable()` and `@ExCodable(.exCodableKeys)` behave the same:
+        // only `@ExCodableKey` properties are coded.
+        let json = Data(#"{"key":1,"unmarked":9}"#.utf8)
+        let defaulted = try TestExCodableKeysDefault.decoded(from: json)
+        let explicit = try TestExCodableKeysExplicit.decoded(from: json)
+        XCTAssertEqual(defaulted, TestExCodableKeysDefault(key: 1, unmarked: 0))
+        XCTAssertEqual(explicit, TestExCodableKeysExplicit(key: 1, unmarked: 0))
+        XCTAssertEqual(try defaulted.encoded() as Data, try explicit.encoded() as Data)
+        XCTAssertEqual(NSDictionary(dictionary: try JSONSerialization.jsonObject(with: try defaulted.encoded() as Data) as! [String: Any]),
+                       ["key": 1])
+    }
+    
+    func testOptionsAllKeys() throws {
+        let decoded = try TestAllKeys.decoded(from: Data(#"{"int":1,"string":"x"}"#.utf8))
+        XCTAssertEqual(decoded, TestAllKeys(int: 1, string: "x"))
+        let json = try JSONSerialization.jsonObject(with: try decoded.encoded() as Data) as! [String: Any]
+        XCTAssertEqual(NSDictionary(dictionary: json), ["int": 1, "string": "x"])
+    }
+    
+    /// `.allKeys` and `ExCodableOptions.allKeys` are the only accepted spellings, and both
+    /// resolve to the same behaviour.
+    func testOptionsAllKeysQualified() throws {
+        let decoded = try TestAllKeysQualified.decoded(from: Data(#"{"int":4}"#.utf8))
+        XCTAssertEqual(decoded, TestAllKeysQualified(int: 4))
+        let json = try JSONSerialization.jsonObject(with: try decoded.encoded() as Data) as! [String: Any]
+        XCTAssertEqual(NSDictionary(dictionary: json), ["int": 4])
+    }
+    
+    func testOptionsAllKeysWithExcept() throws {
+        let json = Data(#"{"kept":1,"excluded":"from json","extra":99}"#.utf8)
+        let decoded = try TestAllKeysWithExcept.decoded(from: json)
+        // Only the property marked `@ExCodableExcept` is held back; its siblings are coded, so
+        // JSON overrides `extra`'s initializer like any other key.
+        XCTAssertEqual(decoded, TestAllKeysWithExcept(kept: 1, excluded: "initial", extra: 99))
+        let encoded = try JSONSerialization.jsonObject(with: try decoded.encoded() as Data) as! [String: Any]
+        XCTAssertEqual(NSDictionary(dictionary: encoded), ["kept": 1, "extra": 99])
+    }
+    
+    /// A property with no `@ExCodableKey` under `.allKeys` behaves exactly like one that has it.
+    func testOptionsAllKeysTreatsUnmarkedLikeExplicitKey() throws {
+        let json = Data(#"{"kept":2,"excluded":"ignored","extra":5}"#.utf8)
+        let implicit = try TestAllKeysWithExcept.decoded(from: json)
+        let explicit = try TestAllKeysWithExceptExplicit.decoded(from: json)
+        XCTAssertEqual(implicit.kept, explicit.kept)
+        XCTAssertEqual(implicit.excluded, explicit.excluded)
+        XCTAssertEqual(implicit.extra, explicit.extra)
+        // Compare parsed JSON: `JSONEncoder` does not guarantee key order across distinct types.
+        let implicitJSON = try JSONSerialization.jsonObject(with: try implicit.encoded() as Data) as! [String: Any]
+        let explicitJSON = try JSONSerialization.jsonObject(with: try explicit.encoded() as Data) as! [String: Any]
+        XCTAssertEqual(NSDictionary(dictionary: implicitJSON), NSDictionary(dictionary: explicitJSON))
+        
+        // Missing key: both keep the initial value, so the fallback is the same either way.
+        let partial = Data(#"{"kept":2}"#.utf8)
+        XCTAssertEqual(try TestAllKeysWithExcept.decoded(from: partial).extra, 7)
+        XCTAssertEqual(try TestAllKeysWithExceptExplicit.decoded(from: partial).extra, 7)
+    }
+    
+    func testOptionsAllKeysWithExplicitKey() throws {
+        // An explicit `@ExCodableKey` keeps its own keys and parameters.
+        let decoded = try TestAllKeysWithExplicitKey.decoded(from: Data(#"{"unmarked":1,"renamed":"r"}"#.utf8))
+        XCTAssertEqual(decoded, TestAllKeysWithExplicitKey(unmarked: 1, renamedFrom: "r"))
+        let json = try JSONSerialization.jsonObject(with: try decoded.encoded() as Data) as! [String: Any]
+        XCTAssertEqual(NSDictionary(dictionary: json), ["unmarked": 1, "renamed": "r"])
+        XCTAssertThrowsError(try TestAllKeysWithExplicitKey.decoded(from: Data(#"{"unmarked":1}"#.utf8)))
+    }
+    
+    func testOptionsAllKeysKeepsFixedLet() throws {
+        // A `let` with an initial value stays a fixed field, exactly as in `.exCodableKeys`.
+        let decoded = try TestAllKeysWithFixedLet.decoded(from: Data(#"{"value":2,"kind":"hacked"}"#.utf8))
+        XCTAssertEqual(decoded.kind, "user")
+        XCTAssertEqual(decoded.value, 2)
+        XCTAssertEqual(TestAllKeysWithFixedLet(value: 3).kind, "user")
+        let json = try JSONSerialization.jsonObject(with: try decoded.encoded() as Data) as! [String: Any]
+        XCTAssertEqual(NSDictionary(dictionary: json), ["value": 2])
+    }
+    
+    func testOptionsAllKeysForClass() throws {
+        let decoded = try TestAllKeysClass.decoded(from: Data(#"{"int":5,"excluded":"ignored"}"#.utf8))
+        XCTAssertEqual(decoded.int, 5)
+        XCTAssertEqual(decoded.excluded, "initial")
+        let json = try JSONSerialization.jsonObject(with: try decoded.encoded() as Data) as! [String: Any]
+        XCTAssertEqual(NSDictionary(dictionary: json), ["int": 5])
+    }
+    
+    /// `@ExCodableExcept` under `.exCodableKeys` is inert: the property stays out of coding either way,
+    /// so the only difference from omitting the attribute is the compile-time warning.
+    func testExceptInExCodableKeysIsInert() throws {
+        let decoded = try TestExceptInExCodableKeys.decoded(from: Data(#"{"key":1,"excluded":9}"#.utf8))
+        XCTAssertEqual(decoded, TestExceptInExCodableKeys(key: 1, excluded: 3))
+        let json = try JSONSerialization.jsonObject(with: try decoded.encoded() as Data) as! [String: Any]
+        XCTAssertEqual(NSDictionary(dictionary: json), ["key": 1])
+    }
+    
     func testNonnullAndThrows() throws {
         
         let noIntData = Data(#"""

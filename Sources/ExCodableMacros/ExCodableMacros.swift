@@ -49,6 +49,60 @@ public struct ExCodableKeyMacro: PeerMacro {
     }
 }
 
+/// `@ExCodableExcept` only does something in `.allKeys` mode.
+///
+/// - `.allKeys`: the property is left out of coding.
+/// - `.exCodableKeys` (default): an unmarked property is already excluded, so the attribute changes
+///   nothing and stays silent — writing it or not is the same.
+/// - No `@ExCodable` at all: nothing is generated, so the attribute is reported like a stray
+///   `@ExCodableKey` would be.
+public struct ExCodableExceptMacro: PeerMacro {
+    public static func expansion(
+        of node: AttributeSyntax,
+        providingPeersOf declaration: some DeclSyntaxProtocol,
+        in context: some MacroExpansionContext
+    ) throws -> [DeclSyntax] {
+        guard let variable = declaration.as(VariableDeclSyntax.self) else {
+            throw ExCodableMacroError.message("@ExCodableExcept can only be applied to a stored property")
+        }
+        if hasAttribute(variable, named: "ExCodableKey") {
+            throw ExCodableMacroError.message("@ExCodableExcept cannot be combined with @ExCodableKey")
+        }
+        if enclosingTypeIsNotExCodable(in: context) {
+            context.diagnose(Diagnostic(node: node, message: ExCodableExceptWithoutExCodable()))
+        }
+        return []
+    }
+}
+
+/// Whether `@ExCodable` was passed `.allKeys`.
+///
+/// The parameter type is `ExCodableOptions`, so the compiler already rejects anything else;
+/// this only has to read the case name. A case reached through a variable or a function call has
+/// no name to read, so it is reported instead of being silently treated as `.exCodableKeys`.
+private func isAllKeys(_ attribute: AttributeSyntax) throws -> Bool {
+    guard let arguments = attribute.arguments,
+          case .argumentList(let list) = arguments,
+          let expression = list.first?.expression else { return false }
+    guard let member = expression.as(MemberAccessExprSyntax.self) else {
+        throw ExCodableMacroError.message(
+            "@ExCodable cannot evaluate \(expression.trimmedDescription) at compile time. "
+            + "Write .allKeys or .exCodableKeys directly."
+        )
+    }
+    return member.declName.baseName.text == "allKeys"
+}
+
+/// Whether the property carries `@ExCodableKey` / `@ExCodableExcept`, written bare or qualified.
+private func hasAttribute(_ variable: VariableDeclSyntax, named target: String) -> Bool {
+    variable.attributes.contains { element in
+        guard let attribute = element.as(AttributeSyntax.self) else { return false }
+        var name = attribute.attributeName.trimmedDescription
+        if let dot = name.lastIndex(of: ".") { name = String(name[name.index(after: dot)...]) }
+        return name == target
+    }
+}
+
 /// Matches `@ExCodable` written as a bare attribute, with `()`, or qualified as `ExCodable.ExCodable`.
 private func isExCodableAttribute(_ attribute: AttributeSyntax) -> Bool {
     var name = attribute.attributeName.trimmedDescription
@@ -78,6 +132,15 @@ struct ExCodableKeyWithoutExCodable: DiagnosticMessage {
     var severity: DiagnosticSeverity { .warning }
 }
 
+struct ExCodableExceptWithoutExCodable: DiagnosticMessage {
+    var message: String {
+        "@ExCodableExcept has no effect because the enclosing type is not marked @ExCodable. "
+        + "Add @ExCodable (with .allKeys to use @ExCodableExcept), or remove the attribute."
+    }
+    var diagnosticID: MessageID { MessageID(domain: "ExCodable", id: "exceptWithoutExCodable") }
+    var severity: DiagnosticSeverity { .warning }
+}
+
 private enum ExCodableMacroError: Error, CustomStringConvertible {
     case message(String)
     var description: String {
@@ -90,6 +153,9 @@ private enum ExCodableMacroError: Error, CustomStringConvertible {
 private enum ExCodableExpansion {
     
     private struct Property {
+        /// `.allKeys` codes an unmarked property exactly like an empty `@ExCodableKey`.
+        static let implicitSpec = CodableSpec(keys: [], default: nil, nonnull: "false", throws: "false", encode: nil, decode: nil)
+        
         var access: Access
         /// `false` for a `private` or `fileprivate` variable that already has a default.
         /// Swift leaves those out of the memberwise initializer.
@@ -179,6 +245,7 @@ private enum ExCodableExpansion {
         guard let memberBlock = memberBlock(of: declaration) else {
             throw ExCodableMacroError.message("@ExCodable can only be applied to a struct or class")
         }
+        let allKeys = try isAllKeys(attribute)
         var properties: [Property] = []
         var witnessCount = 0
         for item in memberBlock.members {
@@ -186,23 +253,35 @@ private enum ExCodableExpansion {
             let modifiers = variable.modifiers.map(\.name.text)
             if modifiers.contains("static") || modifiers.contains("class") { continue }
             let isLet = variable.bindingSpecifier.tokenKind == .keyword(.let)
-            let codable = try codableSpec(of: variable)
+            let specified = try codableSpec(of: variable)
+            let excepted = hasAttribute(variable, named: "ExCodableExcept")
+            // `.allKeys` codes every stored property; `@ExCodableExcept` opts one back out.
+            // A `let` with an initializer stays a fixed field: re-assigning it in `init(from:)` is
+            // rejected for explicit keys, so `.allKeys` must not turn it into an implicit key either.
+            let implicit = allKeys && !excepted
+            let codable = specified ?? (implicit ? Property.implicitSpec : nil)
             for binding in variable.bindings {
                 guard isStoredBinding(binding) else {
-                    if codable != nil {
+                    if specified != nil {
                         throw ExCodableMacroError.message("@ExCodableKey requires a stored property")
+                    }
+                    if implicit {
+                        throw ExCodableMacroError.message("@ExCodable(.allKeys) can only code stored properties. Add @ExCodableExcept to the computed property if that is intended.")
                     }
                     continue
                 }
                 guard let name = binding.pattern.as(IdentifierPatternSyntax.self)?.identifier.text else {
-                    if codable != nil {
+                    if specified != nil {
                         throw ExCodableMacroError.message("@ExCodableKey requires a named stored property")
+                    }
+                    if implicit {
+                        throw ExCodableMacroError.message("@ExCodable(.allKeys) can only code named stored properties. Add @ExCodableExcept if that is intended.")
                     }
                     continue
                 }
                 let type = binding.typeAnnotation?.type.trimmedDescription
                 let `default` = binding.initializer?.value.trimmedDescription
-                if isLet, `default` != nil, codable != nil {
+                if isLet, `default` != nil, specified != nil {
                     throw ExCodableMacroError.message("@ExCodable cannot assign \(name) because the let already has a default value. Remove the default; the generated initializer sets the property.")
                 }
                 if isLet, `default` != nil {

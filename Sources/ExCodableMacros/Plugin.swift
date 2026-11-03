@@ -14,5 +14,6 @@ struct ExCodablePlugin: CompilerPlugin {
     let providingMacros: [Macro.Type] = [
         ExCodableMacro.self,
         ExCodableKeyMacro.self,
+        ExCodableExceptMacro.self,
     ]
 }

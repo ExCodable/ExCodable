@@ -81,8 +81,8 @@ struct ExCodableKeyWithoutExCodable: DiagnosticMessage {
 private enum ExCodableMacroError: Error, CustomStringConvertible {
     case message(String)
     var description: String {
-        switch self {
-            case .message(let message): return message
+        return switch self {
+            case let .message(message): message
         }
     }
 }

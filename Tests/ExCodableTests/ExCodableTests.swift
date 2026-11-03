@@ -588,24 +588,28 @@ final class ExCodableTests: XCTestCase {
     }
     
     func testDefault() throws {
-        let values = Data(#"{"int":418,"string":"I'm a teapot"}"#.utf8)
+        let values = Data(#"{"int":418,"int2":"invalid-value","string":"I'm a teapot"}"#.utf8)
         let decoded = try TestDefault.decoded(from: values)
         XCTAssertEqual(decoded.int, 418)
+        XCTAssertEqual(decoded.int2, 2)
         XCTAssertEqual(decoded.string, "I'm a teapot")
         
         let missing = Data(#"{}"#.utf8)
         let fallback = try TestDefault.decoded(from: missing)
-        XCTAssertEqual(fallback.int, 0)
+        XCTAssertEqual(fallback.int, 1)
+        XCTAssertEqual(fallback.int2, 2)
         XCTAssertEqual(fallback.string, "default")
         
         let nulls = Data(#"{"int":null,"string":null}"#.utf8)
         let nullFallback = try TestDefault.decoded(from: nulls)
-        XCTAssertEqual(nullFallback.int, 0)
+        XCTAssertEqual(nullFallback.int, 1)
+        XCTAssertEqual(nullFallback.int2, 2)
         XCTAssertEqual(nullFallback.string, "default")
         
         let data = try decoded.encoded() as Data
         let copy = try TestDefault.decoded(from: data)
         XCTAssertEqual(copy.int, decoded.int)
+        XCTAssertEqual(copy.int2, decoded.int2)
         XCTAssertEqual(copy.string, decoded.string)
     }
     

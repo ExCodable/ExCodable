@@ -543,8 +543,10 @@ class TestGenericClass<T> {
 
 @ExCodable
 struct TestDefault: Equatable {
-    @ExCodableKey("int", default: 0)
+    @ExCodableKey("int", default: 1)
     let int: Int
+    @ExCodableKey("int2")
+    var int2: Int = 2
     @ExCodableKey("string", default: "default")
     let string: String
 }

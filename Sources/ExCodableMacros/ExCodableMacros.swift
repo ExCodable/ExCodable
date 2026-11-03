@@ -7,8 +7,9 @@
 //
 
 import SwiftSyntax
-import SwiftSyntaxBuilder
 import SwiftSyntaxMacros
+import SwiftSyntaxBuilder
+import SwiftDiagnostics
 
 public struct ExCodableMacro: MemberMacro, ExtensionMacro {
     
@@ -41,8 +42,40 @@ public struct ExCodableKeyMacro: PeerMacro {
         guard declaration.is(VariableDeclSyntax.self) else {
             throw ExCodableMacroError.message("@ExCodableKey can only be applied to a stored property")
         }
+        if enclosingTypeIsNotExCodable(in: context) {
+            context.diagnose(Diagnostic(node: node, message: ExCodableKeyWithoutExCodable()))
+        }
         return []
     }
+}
+
+/// Matches `@ExCodable` written as a bare attribute, with `()`, or qualified as `ExCodable.ExCodable`.
+private func isExCodableAttribute(_ attribute: AttributeSyntax) -> Bool {
+    var name = attribute.attributeName.trimmedDescription
+    if let dot = name.lastIndex(of: ".") { name = String(name[name.index(after: dot)...]) }
+    return name == "ExCodable"
+}
+
+/// `@ExCodableKey` alone does nothing: the member and extension macros on the enclosing type are
+/// what produce `init(from:)` and `encode(to:)`. Returns `true` when no enclosing type (or none of
+/// its enclosing types, for nested declarations) carries `@ExCodable`.
+private func enclosingTypeIsNotExCodable(in context: some MacroExpansionContext) -> Bool {
+    for item in context.lexicalContext.reversed() {
+        guard let decl = item.asProtocol(DeclGroupSyntax.self) else { continue }
+        if decl.attributes.contains(where: { $0.as(AttributeSyntax.self).map(isExCodableAttribute) ?? false }) {
+            return false
+        }
+    }
+    return true
+}
+
+struct ExCodableKeyWithoutExCodable: DiagnosticMessage {
+    var message: String {
+        "@ExCodableKey has no effect because the enclosing type is not marked @ExCodable. "
+        + "Add @ExCodable to the type, or remove @ExCodableKey if the property should stay out of coding."
+    }
+    var diagnosticID: MessageID { MessageID(domain: "ExCodable", id: "keyWithoutExCodable") }
+    var severity: DiagnosticSeverity { .warning }
 }
 
 private enum ExCodableMacroError: Error, CustomStringConvertible {

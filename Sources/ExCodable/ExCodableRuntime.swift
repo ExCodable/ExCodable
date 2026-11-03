@@ -45,7 +45,7 @@ public enum ExCodableRuntime {
         if let customDecode {
             return try customDecode(decoder)
         }
-        if let value = try decoder.decode(keys, as: T.self, nonnull: nonnull, throws: `throws`, converter: converter) {
+        if let value = try? decoder.decode(keys, as: T.self, nonnull: false, throws: false, converter: converter) {
             return value
         }
         if let rawValue = try decoder.decode(keys, as: T.RawValue.self, nonnull: nonnull, throws: `throws`, converter: converter) {
@@ -66,7 +66,7 @@ public enum ExCodableRuntime {
         if let customDecode {
             return try customDecode(decoder)
         }
-        if let value = try decoder.decode(keys, as: T.self, nonnull: nonnull, throws: `throws`, converter: converter) {
+        if let value = try? decoder.decode(keys, as: T.self, nonnull: false, throws: false, converter: converter) {
             return value
         }
         if let rawValue = try decoder.decode(keys, as: T.RawValue.self, nonnull: nonnull, throws: `throws`, converter: converter) {

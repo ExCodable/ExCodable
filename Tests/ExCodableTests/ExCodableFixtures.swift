@@ -693,6 +693,19 @@ struct TestExceptInExCodableKeys: Equatable {
     var excluded: Int = 3
 }
 
+/// Keys containing characters that need escaping in a Swift string literal.
+@ExCodable
+struct TestEscapedKeys: Equatable {
+    @ExCodableKey("has\"quote")
+    var quote: Int
+    @ExCodableKey("has\\backslash")
+    var backslash: Int
+    @ExCodableKey("has\ttab")
+    var tab: Int
+    @ExCodableKey("has\nnewline")
+    var newline: Int
+}
+
 // MARK: nonnull and `throws`
 
 @ExCodable

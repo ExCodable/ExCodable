@@ -93,21 +93,20 @@ private func isAllKeys(_ attribute: AttributeSyntax) throws -> Bool {
     return member.declName.baseName.text == "allKeys"
 }
 
-/// Whether the property carries `@ExCodableKey` / `@ExCodableExcept`, written bare or qualified.
+/// The attribute name without its module qualifier, so `ExCodable.ExCodable` reads as `ExCodable`.
+private func attributeName(_ attribute: AttributeSyntax) -> String {
+    let name = attribute.attributeName.trimmedDescription
+    return name.split(separator: ".").last.map(String.init) ?? name
+}
+
 private func hasAttribute(_ variable: VariableDeclSyntax, named target: String) -> Bool {
     variable.attributes.contains { element in
-        guard let attribute = element.as(AttributeSyntax.self) else { return false }
-        var name = attribute.attributeName.trimmedDescription
-        if let dot = name.lastIndex(of: ".") { name = String(name[name.index(after: dot)...]) }
-        return name == target
+        element.as(AttributeSyntax.self).map { attributeName($0) == target } ?? false
     }
 }
 
-/// Matches `@ExCodable` written as a bare attribute, with `()`, or qualified as `ExCodable.ExCodable`.
 private func isExCodableAttribute(_ attribute: AttributeSyntax) -> Bool {
-    var name = attribute.attributeName.trimmedDescription
-    if let dot = name.lastIndex(of: ".") { name = String(name[name.index(after: dot)...]) }
-    return name == "ExCodable"
+    attributeName(attribute) == "ExCodable"
 }
 
 /// `@ExCodableKey` alone does nothing: the member and extension macros on the enclosing type are
@@ -152,10 +151,35 @@ private enum ExCodableMacroError: Error, CustomStringConvertible {
 
 private enum ExCodableExpansion {
     
+    private enum Access: Int {
+        case `private` = 0
+        case `fileprivate` = 1
+        case `internal` = 2
+        case `package` = 3
+        case `public` = 4
+        /// Keyword prefix for a declaration at this level. `internal` needs none.
+        var prefix: String {
+            return switch self {
+                case .private: "private "
+                case .fileprivate: "fileprivate "
+                case .internal: ""
+                case .package: "package "
+                case .public: "public "
+            }
+        }
+        /// Swift never synthesizes a `public` or `package` memberwise initializer, so those stay
+        /// unmarked rather than being widened or narrowed.
+        var memberwisePrefix: String {
+            return switch self {
+                case .private, .fileprivate: prefix
+                default: ""
+            }
+        }
+    }
+    
+    private enum Kind { case `struct`, `class` }
+    
     private struct Property {
-        /// `.allKeys` codes an unmarked property exactly like an empty `@ExCodableKey`.
-        static let implicitSpec = CodableSpec(keys: [], default: nil, nonnull: "false", throws: "false", encode: nil, decode: nil)
-        
         var access: Access
         /// `false` for a `private` or `fileprivate` variable that already has a default.
         /// Swift leaves those out of the memberwise initializer.
@@ -165,32 +189,15 @@ private enum ExCodableExpansion {
         var `default`: String?
         var codable: CodableSpec?
         var witness: String?
-    }
-    
-    /// Access used for the generated memberwise initializer.
-    /// Swift never synthesizes a `public` or `package` memberwise initializer.
-    private enum Access: Int {
-        case `private` = 0
-        case `fileprivate` = 1
-        case `internal` = 2
-        case `package` = 3
-        case `public` = 4
-        var memberwisePrefix: String {
-            return switch self {
-                case .private: "private "
-                case .fileprivate: "fileprivate "
-                default: ""
-            }
-        }
+        /// `.allKeys` codes an unmarked property exactly like an empty `@ExCodableKey`.
+        static let implicitSpec = CodableSpec(keys: [], default: nil, nonnull: "false", throws: "false", encode: nil, decode: nil)
     }
     
     private struct CodableSpec {
         var keys: [String]
         var `default`: String?
-        var nonnull: String
-        var `throws`: String
-        var encode: String?
-        var decode: String?
+        var nonnull, `throws`: String
+        var encode, decode: String?
     }
     
     static func members(of declaration: some DeclGroupSyntax, attribute: AttributeSyntax) throws -> [DeclSyntax] {
@@ -204,7 +211,7 @@ private enum ExCodableExpansion {
         }
         if declaration.is(ClassDeclSyntax.self) {
             let superclass = hasSuperclass(declaration)
-            let access = typeAccess(of: declaration)
+            let access = accessLevel(of: declaration.modifiers).prefix
             let genericWhere = try genericCodableWhere(of: declaration)
             decls.append(DeclSyntax(stringLiteral: decodeInit(for: properties, kind: .class, hasSuperclass: superclass, access: access, genericWhere: genericWhere)))
             decls.append(DeclSyntax(stringLiteral: encodeFunction(for: properties, kind: .class, hasSuperclass: superclass, access: access, genericWhere: genericWhere)))
@@ -228,7 +235,7 @@ private enum ExCodableExpansion {
             return [try ExtensionDeclSyntax(SyntaxNodeString(stringLiteral: "extension \(type.trimmedDescription): \(conformance)\(genericWhere) {}"))]
         }
         let properties = try properties(of: declaration, attribute: attribute)
-        let access = typeAccess(of: declaration)
+        let access = accessLevel(of: declaration.modifiers).prefix
         let conformance = protocols.isEmpty ? "" : ": " + protocols.map(\.trimmedDescription).joined(separator: ", ")
         let source = """
         extension \(type.trimmedDescription)\(conformance)\(genericWhere) {
@@ -239,12 +246,8 @@ private enum ExCodableExpansion {
         return [try ExtensionDeclSyntax(SyntaxNodeString(stringLiteral: source))]
     }
     
-    private enum Kind { case `struct`, `class` }
-    
     private static func properties(of declaration: some DeclGroupSyntax, attribute: AttributeSyntax) throws -> [Property] {
-        guard let memberBlock = memberBlock(of: declaration) else {
-            throw ExCodableMacroError.message("@ExCodable can only be applied to a struct or class")
-        }
+        let memberBlock = declaration.memberBlock
         let allKeys = try isAllKeys(attribute)
         var properties: [Property] = []
         var witnessCount = 0
@@ -317,22 +320,14 @@ private enum ExCodableExpansion {
         }
     }
     
-    private static func memberBlock(of declaration: some DeclGroupSyntax) -> MemberBlockSyntax? {
-        if let decl = declaration.as(StructDeclSyntax.self) { return decl.memberBlock }
-        if let decl = declaration.as(ClassDeclSyntax.self) { return decl.memberBlock }
-        return nil
-    }
-    
     private static func hasInitializer(_ declaration: some DeclGroupSyntax) -> Bool {
-        guard let memberBlock = memberBlock(of: declaration) else { return false }
-        return memberBlock.members.contains { $0.decl.is(InitializerDeclSyntax.self) }
+        declaration.memberBlock.members.contains { $0.decl.is(InitializerDeclSyntax.self) }
     }
     
     private static func codableSpec(of variable: VariableDeclSyntax) throws -> CodableSpec? {
         for attribute in variable.attributes {
             guard let attribute = attribute.as(AttributeSyntax.self) else { continue }
-            let name = attribute.attributeName.trimmedDescription
-            guard name == "ExCodableKey" || name.hasSuffix(".ExCodableKey") else { continue }
+            guard attributeName(attribute) == "ExCodableKey" else { continue }
             var keys: [String] = []
             var `default`: String?
             var hasNonnull = false
@@ -390,22 +385,6 @@ private enum ExCodableExpansion {
             return literal.trimmedDescription
         }
         return "ExCodableRuntime.keyString(\(expression.trimmedDescription))"
-    }
-    
-    private static func swiftString(_ value: String) -> String {
-        var result = "\""
-        for scalar in value.unicodeScalars {
-            switch scalar {
-                case "\\": result += "\\\\"
-                case "\"": result += "\\\""
-                case "\n": result += "\\n"
-                case "\r": result += "\\r"
-                case "\t": result += "\\t"
-                default: result.unicodeScalars.append(scalar)
-            }
-        }
-        result += "\""
-        return result
     }
     
     private static func bareIdentifier(_ name: String) -> String {
@@ -531,16 +510,6 @@ private enum ExCodableExpansion {
         return " where " + missing.map { "\($0): Codable" }.joined(separator: ", ")
     }
     
-    private static func typeAccess(of declaration: some DeclGroupSyntax) -> String {
-        return switch accessLevel(of: declaration.modifiers) {
-            case .public: "public "
-            case .package: "package "
-            case .private: "private "
-            case .fileprivate: "fileprivate "
-            case .internal: ""
-        }
-    }
-    
     /// Getter access. `private(set)` and the other setter modifiers are ignored.
     private static func accessLevel(of modifiers: DeclModifierListSyntax) -> Access {
         var level = Access.internal
@@ -652,7 +621,7 @@ private enum ExCodableExpansion {
     
     private static func decodeStatement(for property: Property) -> String {
         let spec = property.codable!
-        let keys = spec.keys.isEmpty ? [swiftString(bareIdentifier(property.name))] : spec.keys
+        let keys = spec.keys.isEmpty ? [StringLiteralExprSyntax(content: bareIdentifier(property.name)).description] : spec.keys
         let keyList = keys.joined(separator: ", ")
         var call = "ExCodableRuntime.decode("
         if spec.decode == nil, let metatype = metatype(of: property) {
@@ -735,7 +704,7 @@ private enum ExCodableExpansion {
     
     private static func encodeStatement(for property: Property) -> String {
         let spec = property.codable!
-        let key = spec.keys.first ?? swiftString(bareIdentifier(property.name))
+        let key = spec.keys.first ?? StringLiteralExprSyntax(content: bareIdentifier(property.name)).description
         var call = "ExCodableRuntime.encode(self.\(escaped(property.name)), to: encoder, for: \(key), nonnull: \(spec.nonnull), throws: \(spec.`throws`)"
         if let encode = spec.encode {
             call += ", customEncode: \(encode)"

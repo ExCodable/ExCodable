@@ -6,8 +6,8 @@
 //  Copyright (c) 2026 Míng <i+ExCodable@iwill.im>. Released under the MIT license.
 //
 
-import SwiftCompilerPlugin
 import SwiftSyntaxMacros
+import SwiftCompilerPlugin
 
 @main
 struct ExCodablePlugin: CompilerPlugin {

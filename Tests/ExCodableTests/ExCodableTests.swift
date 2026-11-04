@@ -788,6 +788,15 @@ final class ExCodableTests: XCTestCase {
         XCTAssertEqual(NSDictionary(dictionary: json), ["key": 1])
     }
     
+    /// Keys are emitted as Swift string literals, so quotes, backslashes and control characters
+    /// must survive the round trip instead of producing broken generated code.
+    func testEscapedKeys() throws {
+        let json = Data(#"{"has\"quote":1,"has\\backslash":2,"has\ttab":3,"has\nnewline":4}"#.utf8)
+        let decoded = try TestEscapedKeys.decoded(from: json)
+        XCTAssertEqual(decoded, TestEscapedKeys(quote: 1, backslash: 2, tab: 3, newline: 4))
+        XCTAssertEqual(try TestEscapedKeys.decoded(from: try decoded.encoded() as Data), decoded)
+    }
+    
     func testNonnullAndThrows() throws {
         
         let noIntData = Data(#"""

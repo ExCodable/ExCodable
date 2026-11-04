@@ -6,8 +6,6 @@
 //  Copyright (c) 2026 Míng <i+ExCodable@iwill.im>. Released under the MIT license.
 //
 
-import Foundation
-
 // @ExCodable() == @ExCodable(.exCodableKeys)
 // @ExCodable(.allKeys) + @ExCodableExcept
 public enum ExCodableOptions {

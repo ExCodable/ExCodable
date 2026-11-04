@@ -742,3 +742,40 @@ struct TestRequiredAndStrictType: Equatable {
     @ExCodableKey("throws")
     let testStrictType: TestStrictType!
 }
+
+@MainActor
+@ExCodable
+struct TestMainActorStruct: Equatable {
+    @ExCodableKey
+    var int: Int
+    @ExCodableKey("string")
+    var string: String?
+}
+
+@MainActor
+@ExCodable
+class TestMainActorClass {
+    @ExCodableKey
+    var int: Int
+}
+
+@MainActor
+@ExCodable
+class TestMainActorSubclass: TestMainActorClass {
+    @ExCodableKey
+    var string: String?
+}
+
+/// An attributed first inherited type is a protocol, never a superclass.
+@ExCodable
+final class TestUncheckedSendableClass: @unchecked Sendable {
+    @ExCodableKey
+    var int: Int
+}
+
+@ExCodable
+final class TestAnyInheritedClass: CustomStringConvertible, @unchecked Sendable {
+    @ExCodableKey
+    var int: Int
+    var description: String { "\(int)" }
+}

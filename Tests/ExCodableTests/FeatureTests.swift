@@ -1060,6 +1060,29 @@ final class FeatureTests: XCTestCase {
         }
     }
     
+    /// `@MainActor` types get an isolated `Codable` conformance from the macro.
+    @MainActor
+    func testMainActor() throws {
+        let value = try TestMainActorStruct.decoded(from: Data(#"{"int":1,"string":"a"}"#.utf8))
+        XCTAssertEqual(value, TestMainActorStruct(int: 1, string: "a"))
+        let data: Data = try value.encoded()
+        XCTAssertEqual(try TestMainActorStruct.decoded(from: data), value)
+        
+        let subclass = try TestMainActorSubclass.decoded(from: Data(#"{"int":2,"string":"b"}"#.utf8))
+        XCTAssertEqual(subclass.int, 2)
+        XCTAssertEqual(subclass.string, "b")
+        let subclassData: Data = try subclass.encoded()
+        let copy = try TestMainActorSubclass.decoded(from: subclassData)
+        XCTAssertEqual(copy.int, 2)
+        XCTAssertEqual(copy.string, "b")
+    }
+    
+    /// An attributed inherited type such as `@unchecked Sendable` is a protocol, not a superclass.
+    func testAttributedInheritedTypeIsNotSuperclass() throws {
+        XCTAssertEqual(try TestUncheckedSendableClass.decoded(from: Data(#"{"int":3}"#.utf8)).int, 3)
+        XCTAssertEqual(try TestAnyInheritedClass.decoded(from: Data(#"{"int":4}"#.utf8)).int, 4)
+    }
+    
     func testElapsed() {
         let start = DispatchTime.now().uptimeNanoseconds
         

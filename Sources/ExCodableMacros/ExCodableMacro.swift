@@ -243,14 +243,17 @@ private enum ExCodableExpansion {
             throw ExCodableMacroError.message("@ExCodable can only be applied to a struct or class")
         }
         let genericWhere = try genericCodableWhere(of: declaration)
+        // On a `@MainActor` type the generated members are main actor-isolated, so the conformance must be too.
+        // Without it the compiler rejects the conformance as crossing into main actor-isolated code.
+        let isolation = isMainActor(declaration) ? "@MainActor " : ""
+        let names = protocols.map { isolation + $0.trimmedDescription }
         if declaration.is(ClassDeclSyntax.self) {
             guard !protocols.isEmpty else { return [] }
-            let conformance = protocols.map(\.trimmedDescription).joined(separator: ", ")
-            return [try ExtensionDeclSyntax(SyntaxNodeString(stringLiteral: "extension \(type.trimmedDescription): \(conformance)\(genericWhere) {}"))]
+            return [try ExtensionDeclSyntax(SyntaxNodeString(stringLiteral: "extension \(type.trimmedDescription): \(names.joined(separator: ", "))\(genericWhere) {}"))]
         }
         let properties = try properties(of: declaration, attribute: attribute)
         let access = accessLevel(of: declaration.modifiers).prefix
-        let conformance = protocols.isEmpty ? "" : ": " + protocols.map(\.trimmedDescription).joined(separator: ", ")
+        let conformance = names.isEmpty ? "" : ": " + names.joined(separator: ", ")
         let source = """
         extension \(type.trimmedDescription)\(conformance)\(genericWhere) {
         \(decodeInit(for: properties, kind: .struct, hasSuperclass: false, access: access))
@@ -331,6 +334,15 @@ private enum ExCodableExpansion {
                 case .keyword(.willSet), .keyword(.didSet): true
                 default: false
             }
+        }
+    }
+    
+    /// Only `@MainActor` is recognized: any other global actor is an arbitrary name that a macro cannot tell
+    /// from an unrelated attribute. For those, declare the isolated conformance yourself, for example
+    /// `struct S: @MyActor Codable`.
+    private static func isMainActor(_ declaration: some DeclGroupSyntax) -> Bool {
+        declaration.attributes.contains { element in
+            element.as(AttributeSyntax.self).map { attributeName($0) == "MainActor" } ?? false
         }
     }
     
@@ -431,6 +443,11 @@ private enum ExCodableExpansion {
     private static func hasSuperclass(_ declaration: some DeclGroupSyntax) -> Bool {
         guard let classDecl = declaration.as(ClassDeclSyntax.self),
               let inherited = classDecl.inheritanceClause?.inheritedTypes.first?.type else { return false }
+        // A superclass is a bare type name. An attribute (`@MainActor Codable`, `@unchecked Sendable`) or a
+        // specifier (`any P`, `~Copyable`) only appears on a protocol.
+        if inherited.is(AttributedTypeSyntax.self) || inherited.is(SomeOrAnyTypeSyntax.self) || inherited.is(SuppressedTypeSyntax.self) {
+            return false
+        }
         if let identifier = inherited.as(IdentifierTypeSyntax.self), protocolNames.contains(identifier.name.text) {
             return false
         }

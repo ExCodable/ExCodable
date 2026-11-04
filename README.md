@@ -150,6 +150,8 @@ Limitations the macro does not check:
 
 - Keys are not validated. If two properties use the same key, decoding gives both the same value, and encoding keeps only the last one, so the other value is lost. An empty key `@ExCodableKey("")` is accepted as well. Keep keys unique and non-empty.
 - If the type body already declares `init(from:)` or `encode(to:)`, the generated one is a redeclaration and the compiler reports "invalid redeclaration". A type that needs a hand-written `init(from:)` or `encode(to:)` should not use `@ExCodable`.
+- On a `@MainActor` type the macro declares the conformance as `@MainActor Decodable, @MainActor Encodable`, so decoding and encoding must run on the main actor. Only `@MainActor` is recognized. For another global actor, write the isolated conformance yourself, for example `struct S: @MyActor Codable`.
+- A `@MainActor` struct, class or subclass nested inside a non-isolated `@ExCodable` type is not protected: the compiler accepts it, and the inner `init(from:)` runs on whatever thread decodes the outer type. Swift has the same gap without the macro. Mark the outer type `@MainActor` too, and the compiler then rejects decoding it off the main actor.
 
 ```swift
 @ExCodable

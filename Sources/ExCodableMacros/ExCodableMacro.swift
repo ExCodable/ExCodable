@@ -153,6 +153,9 @@ struct ExCodableExceptWithoutExCodable: DiagnosticMessage {
 private enum ExCodableMacroError: Error, CustomStringConvertible {
     case message(String)
     var description: String {
+        // if case .message(let message) = self {
+        //     return message
+        // }
         return switch self {
             case let .message(message): message
         }
@@ -562,6 +565,12 @@ private enum ExCodableExpansion {
         return type.rawValue < level.rawValue ? type : level
     }
     
+    /// Interpolating an empty string into a multi-line literal leaves a line with no indentation,
+    /// so an empty body must drop the line instead of rendering a blank one.
+    private static func block(_ content: String) -> String {
+        content.isEmpty ? "" : "\n\(content)"
+    }
+    
     private static func defaultsEnum(for properties: [Property]) -> String? {
         let witnessed = properties.filter { $0.witness != nil }
         guard !witnessed.isEmpty else { return nil }
@@ -577,8 +586,7 @@ private enum ExCodableExpansion {
             protocol Default {
                 associatedtype Value
                 static var `default`: Value { get }
-            }
-        \(fields)
+            }\(block(fields))
         }
         """
     }
@@ -605,8 +613,7 @@ private enum ExCodableExpansion {
         }.joined(separator: "\n")
         let keyword = memberwiseAccess(type: typeAccess, parameters: included.map(\.access)).memberwisePrefix
         return """
-        \(keyword)init(\(parameters)) {
-        \(assignments)
+        \(keyword)init(\(parameters)) {\(block(assignments))
         }
         """
     }
@@ -633,8 +640,7 @@ private enum ExCodableExpansion {
             """
         }
         return """
-        \(signature) {
-        \(body)
+        \(signature) {\(block(body))
         }
         """
     }
@@ -654,8 +660,17 @@ private enum ExCodableExpansion {
         call += ")"
         let name = escaped(property.name)
         if let `default` = spec.`default` ?? property.`default` {
+            // A default value is exactly "absorb a failed decode", so the call is wrapped in `try?`.
+            // `nonnull`/`strictType` are explicit "must not fail" opt-ins, and neither can be written
+            // together with `default:` — but a property *initializer* can coexist with them, so the
+            // stricter options still win there.
+            // `nonnull` rejects an absent value outright, so it must not be absorbed. `strictType`
+            // only tightens type checks and a missing key may still fall back, but `try?` would also
+            // swallow the type mismatch, so the call stays `try` there too.
+            let strict = spec.nonnull == "true" || spec.`strictType` == "true"
+            let attempt = strict ? "try \(call)" : "try? \(call)"
             return """
-                if let exCodableValue = try \(call) {
+                if let exCodableValue = \(attempt) {
                     self.\(name) = exCodableValue
                 }
                 else {
@@ -716,8 +731,7 @@ private enum ExCodableExpansion {
             """
         }
         return """
-        \(access)\(override)func encode(to encoder: Encoder) throws\(constraint) {
-        \(body)
+        \(access)\(override)func encode(to encoder: Encoder) throws\(constraint) {\(block(body))
         }
         """
     }

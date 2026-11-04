@@ -38,7 +38,7 @@ final class ExCodableMacroTests: XCTestCase {
             struct S {
                 var v: Int
             }
-
+            
             extension S {
                 init(from decoder: Decoder) throws {
                     let exCodableTypeConverter = ExCodableRuntime.converter(of: Self.self)
@@ -80,7 +80,7 @@ final class ExCodableMacroTests: XCTestCase {
             struct S {
                 var v: Int
             }
-
+            
             extension S {
                 init(from decoder: Decoder) throws {
                     let exCodableTypeConverter = ExCodableRuntime.converter(of: Self.self)
@@ -117,6 +117,7 @@ final class ExCodableMacroTests: XCTestCase {
                 var v: Int
             }
             """,
+            // !!!: 麻蛋这里无缩进空行无法删除
             expandedSource: """
             struct S {
                 var v: Int
@@ -125,7 +126,7 @@ final class ExCodableMacroTests: XCTestCase {
                     self.`v` = `v`
                 }
             }
-
+            
             extension S {
                 init(from decoder: Decoder) throws {
                     let exCodableTypeConverter = ExCodableRuntime.converter(of: Self.self)

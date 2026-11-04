@@ -146,6 +146,11 @@ struct TestExCodable {
 
 `@ExCodable` generates `Codable` for a struct or class. Mark each coded property with `@ExCodableKey`. Declare those properties with `let` and without `= value`. A decode fallback belongs on `@ExCodableKey(default:)`.
 
+Limitations the macro does not check:
+
+- Keys are not validated. If two properties use the same key, decoding gives both the same value, and encoding keeps only the last one, so the other value is lost. An empty key `@ExCodableKey("")` is accepted as well. Keep keys unique and non-empty.
+- If the type body already declares `init(from:)` or `encode(to:)`, the generated one is a redeclaration and the compiler reports "invalid redeclaration". A type that needs a hand-written `init(from:)` or `encode(to:)` should not use `@ExCodable`.
+
 ```swift
 @ExCodable
 struct TestStruct {
@@ -357,7 +362,7 @@ A missing key and JSON `null` are the same absence, so both use `default`. `@ExC
 
 Without `default`, a `nil` decode result becomes `nil` for an optional and throws `DecodingError.valueNotFound` for a non-optional `let`.
 
-While encoding/decoding, ExCodable ignores the `keyNotFound`, `valueNotFound`, `invalidValue` and `typeMismatch` errors and `return nil` by default, only throws JSON errors.
+An optional property ignores the `keyNotFound`, `valueNotFound`, `invalidValue` and `typeMismatch` errors and becomes `nil`. Errors that `JSONDecoder` or `JSONEncoder` raise on their own, such as malformed JSON, are always thrown.
 
 Whether a property is required follows its declaration: a non-optional property is required, an optional one is not.
 
@@ -409,7 +414,25 @@ class TestSubclass: TestClass {
 
 ```
 
-If a class implements `==`, declare `Equatable` in an extension. Writing `Equatable` on the class itself can make `==` ambiguous once `@ExCodable` adds its extension.
+A type that uses a macro cannot declare `Equatable` (or `Hashable`, `Comparable`) on the type itself when the conformance needs a hand-written `==`. The compiler reports `type 'X' does not conform to protocol 'Equatable'` with several matching `==` candidates, even though `==` is written once. Put the conformance in an extension instead:
+
+```swift
+@ExCodable
+final class TestClass {
+    @ExCodableKey var int: Int
+    init(int: Int) { self.int = int }
+}
+
+extension TestClass: Equatable {
+    static func == (lhs: TestClass, rhs: TestClass) -> Bool { lhs.int == rhs.int }
+}
+```
+
+This is a Swift compiler limitation, not something ExCodable generates: attaching any macro to a type breaks `Equatable` / `Comparable` conformance synthesis, even a macro that expands to nothing. See [swiftlang/swift#72040](https://github.com/swiftlang/swift/issues/72040).
+
+- Classes always need a hand-written `==`, so a class is always affected.
+- Structs are affected only when `Equatable` cannot be synthesized, for example with a tuple property. When the compiler can synthesize it, nothing changes.
+- A macro on a property is enough: `@ExCodableKey` alone triggers it, without `@ExCodable` on the type.
 
 ### 11. Type Inference
 
@@ -453,49 +476,7 @@ Swift Package Manager:
 
 ### 0.x to 1.x
 
-When you update to ExCodable 1.0.
-
-Step 1: Update your code to use the old API - **DEPRECATED** but quick.
-
-- Replace protocol `ExCodable` with `ExCodableDEPRECATED`.
-- Add `static` to func `decodeForTypeConversion(_:codingKey:as:)` of protocol `KeyedDecodingContainerCustomTypeConversion`.
-
-```swift
-struct TestExCodable {
-    private(set) var int: Int = 0
-    private(set) var string: String?
-}
-
-extension TestExCodable: ExCodableDEPRECATED {
-    static let keyMapping: [KeyMap<Self>] = [
-        KeyMap(\.int, to: "int"),
-        KeyMap(\.string, to: "nested.nested.string", "string", "str", "s")
-    ]
-    init(from decoder: Decoder) throws {
-        try decode(from: decoder, with: Self.keyMapping)
-    }
-}
-
-```
-
-Step 2: Upgrade your models to the current API one by one - SUGGESTED:
-
-- Replace `protocol` `ExCodable` with `@ExCodable`.
-- Remove initializer `init(from decoder: Decoder) throws`.
-- Remove `static` properties `keyMapping`.
-- Use `@ExCodableKey("<key>", "<alt-key>", ...)` on `let` properties.
-- See [Usage](#usage) for more details.
-
-```swift
-@ExCodable
-struct TestExCodable {
-    @ExCodableKey
-    let int: Int
-    @ExCodableKey("nested.nested.string", "string", "str", "s")
-    let string: String?
-}
-
-```
+The 0.x/1.0 compatibility API (`ExCodableDEPRECATED`, `KeyMap`, `KeyedDecodingContainerCustomTypeConversion`) was removed in 2.0. Migrate to 1.x first, or go straight to the macros as described below.
 
 ### 1.x to 2.x
 

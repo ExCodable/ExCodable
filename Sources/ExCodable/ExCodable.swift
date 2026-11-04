@@ -394,7 +394,11 @@ fileprivate extension KeyedDecodingContainer {
     }
 }
 
-public protocol ExCodableDecodingTypeConverter {
+/// Converts a decoded value of a different JSON type into `T`.
+///
+/// `SendableMetatype` lets a converter be kept in a global or passed across tasks without a Swift 6
+/// concurrency diagnostic. Unlike `Sendable`, it does not require the conforming type's instances to be `Sendable`.
+public protocol ExCodableDecodingTypeConverter: SendableMetatype {
     static func decode<T: Decodable, K: CodingKey>(_ container: KeyedDecodingContainer<K>, codingKey: K, as type: T.Type) -> T?
 }
 

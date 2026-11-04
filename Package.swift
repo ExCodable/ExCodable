@@ -28,7 +28,14 @@ let package = Package(
                 .product(name: "SwiftCompilerPlugin", package: "swift-syntax"),
             ]
         ),
-        .testTarget(name: "ExCodableTests", dependencies: ["ExCodable"])
+        .testTarget(
+            name: "ExCodableTests",
+            dependencies: [
+                "ExCodable",
+                "ExCodableMacros",
+                .product(name: "SwiftSyntaxMacrosTestSupport", package: "swift-syntax")
+            ]
+        )
     ],
     swiftLanguageModes: [.v6]
 )

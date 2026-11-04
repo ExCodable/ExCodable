@@ -25,7 +25,7 @@ public macro ExCodable(_ options: ExCodableOptions = .exCodableKeys) = #external
 public macro ExCodableKey(
     _ keys: String...,
     nonnull: Bool? = nil,
-    throws: Bool? = nil
+    strictType: Bool? = nil
 ) = #externalMacro(module: "ExCodableMacros", type: "ExCodableKeyMacro")
 
 @attached(peer, names: arbitrary)
@@ -33,7 +33,7 @@ public macro ExCodableKey<Value>(
     _ keys: String...,
     default: Value? = nil,
     nonnull: Bool? = nil,
-    throws: Bool? = nil,
+    strictType: Bool? = nil,
     encode: ((Encoder, Value) throws -> Void)? = nil,
     decode: ((Decoder) throws -> Value?)? = nil
 ) = #externalMacro(module: "ExCodableMacros", type: "ExCodableKeyMacro")

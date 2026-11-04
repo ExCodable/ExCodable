@@ -604,7 +604,7 @@ struct TestInitialValueNonnull: Equatable {
 /// `throws` reports a type mismatch even though an initial value exists.
 @ExCodable
 struct TestInitialValueThrows: Equatable {
-    @ExCodableKey("int", throws: true)
+    @ExCodableKey("int", strictType: true)
     var int: Int = 2
 }
 
@@ -722,13 +722,13 @@ struct TestNestedNonnull: Equatable {
 
 @ExCodable
 struct TestThrows: Equatable {
-    @ExCodableKey("string", "nested.string", throws: true)
+    @ExCodableKey("string", "nested.string", strictType: true)
     let throwsString: String!
 }
 
 @ExCodable
 struct TestNestedThrows: Equatable {
-    @ExCodableKey("nested.string", "string", throws: true)
+    @ExCodableKey("nested.string", "string", strictType: true)
     let throwsString: String!
 }
 

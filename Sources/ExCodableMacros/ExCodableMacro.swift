@@ -200,17 +200,18 @@ private enum ExCodableExpansion {
         var codable: CodableSpec?
         var witness: String?
         /// `.allKeys` codes an unmarked property exactly like an empty `@ExCodableKey`.
-        static let implicitSpec = CodableSpec(keys: [], default: nil, nonnull: "false", throws: "false", encode: nil, decode: nil)
+        static let implicitSpec = CodableSpec(keys: [], default: nil, nonnull: "false", strictType: "false", encode: nil, decode: nil)
     }
     
     private struct CodableSpec {
         var keys: [String]
         var `default`: String?
-        var nonnull, `throws`: String
+        var nonnull, `strictType`: String
         var encode, decode: String?
     }
     
     static func members(of declaration: some DeclGroupSyntax, attribute: AttributeSyntax) throws -> [DeclSyntax] {
+        try checkContradictions(of: declaration)
         let properties = try properties(of: declaration, attribute: attribute)
         var decls: [DeclSyntax] = []
         if let defaults = defaultsEnum(for: properties) {
@@ -340,10 +341,8 @@ private enum ExCodableExpansion {
             guard attributeName(attribute) == "ExCodableKey" else { continue }
             var keys: [String] = []
             var `default`: String?
-            var hasNonnull = false
             var nonnull = "false"
-            var hasThrows = false
-            var `throws` = "false"
+            var `strictType` = "false"
             var encode: String?
             var decode: String?
             if let arguments = labeledArguments(of: attribute) {
@@ -353,11 +352,9 @@ private enum ExCodableExpansion {
                         case "default":
                             `default` = expression.trimmedDescription
                         case "nonnull":
-                            hasNonnull = true
                             nonnull = boolLiteral(expression)
-                        case "throws":
-                            hasThrows = true
-                            `throws` = boolLiteral(expression)
+                        case "strictType":
+                            `strictType` = boolLiteral(expression)
                         case "encode":
                             encode = expression.trimmedDescription
                         case "decode":
@@ -369,12 +366,25 @@ private enum ExCodableExpansion {
                     }
                 }
             }
-            if `default` != nil, hasNonnull || hasThrows {
-                throw ExCodableMacroError.message("@ExCodableKey cannot use default together with nonnull or throws")
-            }
-            return CodableSpec(keys: keys, default: `default`, nonnull: nonnull, throws: `throws`, encode: encode, decode: decode)
+            return CodableSpec(keys: keys, default: `default`, nonnull: nonnull, strictType: `strictType`, encode: encode, decode: decode)
         }
         return nil
+    }
+    
+    /// A default value exists to absorb a failed decode; `nonnull` and `strictType` both say "do not
+    /// absorb this failure", which would leave the default unreachable and the declaration
+    /// self-contradictory. Only an explicit `true` conflicts — `nonnull: false` means "off".
+    ///
+    /// Checked once per type by `members`, never from `codableSpec`: `@ExCodable` expands twice
+    /// (member and extension macros), so validating during parsing would report everything twice.
+    private static func checkContradictions(of declaration: some DeclGroupSyntax) throws {
+        for item in declaration.memberBlock.members {
+            guard let variable = item.decl.as(VariableDeclSyntax.self),
+                  let spec = try codableSpec(of: variable) else { continue }
+            if spec.`default` != nil, spec.nonnull == "true" || spec.`strictType` == "true" {
+                throw ExCodableMacroError.message("@ExCodableKey cannot use default together with nonnull or strictType")
+            }
+        }
     }
     
     private static func labeledArguments(of attribute: AttributeSyntax) -> LabeledExprListSyntax? {
@@ -637,7 +647,7 @@ private enum ExCodableExpansion {
         if spec.decode == nil, let metatype = metatype(of: property) {
             call += "\(metatype), "
         }
-        call += "from: decoder, keys: [\(keyList)], nonnull: \(spec.nonnull), throws: \(spec.`throws`), converter: exCodableTypeConverter"
+        call += "from: decoder, keys: [\(keyList)], nonnull: \(spec.nonnull), strictType: \(spec.`strictType`), converter: exCodableTypeConverter"
         if let decode = spec.decode {
             call += ", customDecode: \(decode)"
         }
@@ -715,7 +725,7 @@ private enum ExCodableExpansion {
     private static func encodeStatement(for property: Property) -> String {
         let spec = property.codable!
         let key = spec.keys.first ?? StringLiteralExprSyntax(content: bareIdentifier(property.name)).description
-        var call = "ExCodableRuntime.encode(self.\(escaped(property.name)), to: encoder, for: \(key), nonnull: \(spec.nonnull), throws: \(spec.`throws`)"
+        var call = "ExCodableRuntime.encode(self.\(escaped(property.name)), to: encoder, for: \(key), nonnull: \(spec.nonnull), strictType: \(spec.`strictType`)"
         if let encode = spec.encode {
             call += ", customEncode: \(encode)"
         }

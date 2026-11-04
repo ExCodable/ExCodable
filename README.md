@@ -17,7 +17,7 @@ En | [中文](https://excodable.iwill.im/)
 
 - Uses `@ExCodable` and `@ExCodableKey` to generate `init(from:)` and `encode(to:)`.
 - Properties can be declared with `let`.
-- Keeps alternative keys, nested keys, type conversions, `default`, and `nonnull` / `throws`.
+- Keeps alternative keys, nested keys, type conversions, `default`, and `nonnull` / `strictType`.
 
 ## Documentations
 
@@ -358,7 +358,7 @@ extension TestManualEncodingDecoding: Codable {
 
 ### 8. `default`
 
-`@ExCodableKey` parameters are ordered `key`, `default`, `nonnull`, `throws`, `encode`, `decode`. `default` is the value assigned when decoding returns `nil`: the key is missing, the JSON value is `null`, or a type mismatch is ignored.
+`@ExCodableKey` parameters are ordered `key`, `default`, `nonnull`, `strictType`, `encode`, `decode`. `default` is the value assigned when decoding returns `nil`: the key is missing, the JSON value is `null`, or a type mismatch is ignored.
 
 ```swift
 @ExCodable
@@ -380,7 +380,7 @@ let values = try TestDefault.decoded(from: Data(#"{"int":418,"string":"I'm a tea
 
 ```
 
-A missing key and JSON `null` are the same absence, so both use `default`. `@ExCodableKey` rejects `default` written together with `nonnull` or `throws`.
+A missing key and JSON `null` are the same absence, so both use `default`. `@ExCodableKey` rejects `default` written together with `nonnull`.
 
 ### 9. `return nil` or `throw error`
 
@@ -391,12 +391,12 @@ While encoding/decoding, ExCodable ignores the `keyNotFound`, `valueNotFound`, `
 ExCodable also supports throw errors:
 
 - Use `nonnull: true` to throw `EncodingError.invalidValue` and `DecodingError.keyNotFound`. A missing key and JSON `null` both throw `keyNotFound`.
-- Use `throws: true` to throw `DecodingError.typeMismatch`.
+- Use `strictType: true` to throw `DecodingError.typeMismatch`.
 
 ```swift
 @ExCodable
 struct TestNonnullAndThrows {
-    @ExCodableKey(nonnull: true, throws: true)
+    @ExCodableKey(nonnull: true, strictType: true)
     let int: Int!
 }
 

@@ -416,7 +416,7 @@ private enum ExCodableExpansion {
            literal.segments.allSatisfy({ if case .stringSegment = $0 { return true } else { return false } }) {
             return literal.trimmedDescription
         }
-        return "ExCodableRuntime.keyString(\(expression.trimmedDescription))"
+        return "ExCodableRuntime._keyString(\(expression.trimmedDescription))"
     }
     
     private static func bareIdentifier(_ name: String) -> String {
@@ -636,7 +636,7 @@ private enum ExCodableExpansion {
         let codable = properties.filter { $0.codable != nil }
         var lines: [String] = []
         if !codable.isEmpty {
-            lines.append("    let exCodableTypeConverter = ExCodableRuntime.converter(of: Self.self)")
+            lines.append("    let exCodableTypeConverter = ExCodableRuntime._converter(of: Self.self)")
         }
         for property in codable {
             lines.append(decodeStatement(for: property))
@@ -666,7 +666,7 @@ private enum ExCodableExpansion {
         let `default` = spec.`default` ?? property.`default`
         let optional = isOptional(property) || `default` != nil
         let name = escaped(property.name)
-        var call = "ExCodableRuntime.decode("
+        var call = "ExCodableRuntime._decode("
         if spec.decode == nil, let metatype = metatype(of: property) {
             call += "\(metatype), "
         }
@@ -724,7 +724,7 @@ private enum ExCodableExpansion {
         if body.isEmpty {
             return """
             \(access)\(override)func encode(to encoder: Encoder) throws\(constraint) {
-                ExCodableRuntime.openKeyedContainer(encoder)
+                ExCodableRuntime._openKeyedContainer(encoder)
             }
             """
         }
@@ -738,7 +738,7 @@ private enum ExCodableExpansion {
         let spec = property.codable!
         let key = spec.keys.first ?? StringLiteralExprSyntax(content: bareIdentifier(property.name)).description
         let optional = isOptional(property)
-        var call = "ExCodableRuntime.encode(self.\(escaped(property.name)), to: encoder, for: \(key), optional: \(optional), strictType: \(spec.`strictType`)"
+        var call = "ExCodableRuntime._encode(self.\(escaped(property.name)), to: encoder, for: \(key), optional: \(optional), strictType: \(spec.`strictType`)"
         if let encode = spec.encode {
             call += ", customEncode: \(encode)"
         }

@@ -8,17 +8,22 @@
 
 import Foundation
 
-/// Calls used by code that `@ExCodable` generates.
+/// Calls used by code that `@ExCodable` generates. Do not call these directly: they may change without notice.
+///
+/// The members are `public` only because the generated code is compiled in the user's module.
+/// `@_spi` cannot be used here, since it would require every file that uses `@ExCodable` to carry
+/// `@_spi(...) import ExCodable`. The leading underscore and `@_documentation` mark them as internal.
+@_documentation(visibility: private)
 public enum ExCodableRuntime {
     
-    public static func converter(of type: Any.Type) -> (any ExCodableDecodingTypeConverter.Type)? {
+    public static func _converter(of type: Any.Type) -> (any ExCodableDecodingTypeConverter.Type)? {
         type as? any ExCodableDecodingTypeConverter.Type
     }
     
-    public static func keyString(_ key: String) -> String { key }
-    public static func keyString(_ key: any CodingKey) -> String { key.stringValue }
+    public static func _keyString(_ key: String) -> String { key }
+    public static func _keyString(_ key: any CodingKey) -> String { key.stringValue }
     
-    public static func decode<T: Decodable>(
+    public static func _decode<T: Decodable>(
         _ type: T.Type = T.self,
         from decoder: Decoder,
         keys: [String],
@@ -33,7 +38,7 @@ public enum ExCodableRuntime {
         return try decoder.decode(keys, as: type, optional: optional, strictType: `strictType`, converter: converter)
     }
     
-    public static func decode<T: Decodable & RawRepresentable>(
+    public static func _decode<T: Decodable & RawRepresentable>(
         _ type: T.Type = T.self,
         from decoder: Decoder,
         keys: [String],
@@ -54,7 +59,7 @@ public enum ExCodableRuntime {
         return nil
     }
     
-    public static func decode<T: Decodable & RawRepresentable>(
+    public static func _decode<T: Decodable & RawRepresentable>(
         _ type: T?.Type = T?.self,
         from decoder: Decoder,
         keys: [String],
@@ -75,7 +80,7 @@ public enum ExCodableRuntime {
         return nil
     }
     
-    public static func encode<T: Encodable>(
+    public static func _encode<T: Encodable>(
         _ value: T,
         to encoder: Encoder,
         for key: String,
@@ -104,7 +109,7 @@ public enum ExCodableRuntime {
     }
     
     /// Opens the root keyed container so an empty `encode(to:)` becomes `{}`.
-    public static func openKeyedContainer(_ encoder: Encoder) {
+    public static func _openKeyedContainer(_ encoder: Encoder) {
         encoder.ensureKeyedContainer()
     }
 }

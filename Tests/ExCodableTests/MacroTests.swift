@@ -49,11 +49,11 @@ final class ExCodableMacroTests: XCTestCase {
             
             extension S {
                 init(from decoder: Decoder) throws {
-                    let exCodableTypeConverter = ExCodableRuntime.converter(of: Self.self)
-                    self.`v` = try ExCodableRuntime.decode((Int).self, from: decoder, keys: ["v"], optional: true, strictType: true, converter: exCodableTypeConverter) ?? 1
+                    let exCodableTypeConverter = ExCodableRuntime._converter(of: Self.self)
+                    self.`v` = try ExCodableRuntime._decode((Int).self, from: decoder, keys: ["v"], optional: true, strictType: true, converter: exCodableTypeConverter) ?? 1
                 }
                 func encode(to encoder: Encoder) throws {
-                    try ExCodableRuntime.encode(self.`v`, to: encoder, for: "v", optional: false, strictType: true)
+                    try ExCodableRuntime._encode(self.`v`, to: encoder, for: "v", optional: false, strictType: true)
                 }
             }
             """,
@@ -91,11 +91,11 @@ final class ExCodableMacroTests: XCTestCase {
             
             extension S {
                 init(from decoder: Decoder) throws {
-                    let exCodableTypeConverter = ExCodableRuntime.converter(of: Self.self)
-                    self.`v` = try ExCodableRuntime.decode((Int).self, from: decoder, keys: ["v"], optional: true, strictType: false, converter: exCodableTypeConverter) ?? 1
+                    let exCodableTypeConverter = ExCodableRuntime._converter(of: Self.self)
+                    self.`v` = try ExCodableRuntime._decode((Int).self, from: decoder, keys: ["v"], optional: true, strictType: false, converter: exCodableTypeConverter) ?? 1
                 }
                 func encode(to encoder: Encoder) throws {
-                    try ExCodableRuntime.encode(self.`v`, to: encoder, for: "v", optional: false, strictType: false)
+                    try ExCodableRuntime._encode(self.`v`, to: encoder, for: "v", optional: false, strictType: false)
                 }
             }
             """,
@@ -128,11 +128,11 @@ final class ExCodableMacroTests: XCTestCase {
             
             extension S: @MainActor Decodable, @MainActor Encodable {
                 init(from decoder: Decoder) throws {
-                    let exCodableTypeConverter = ExCodableRuntime.converter(of: Self.self)
-                    self.`v` = try ExCodableRuntime.decode((Int).self, from: decoder, keys: ["v"], optional: false, strictType: false, converter: exCodableTypeConverter)!
+                    let exCodableTypeConverter = ExCodableRuntime._converter(of: Self.self)
+                    self.`v` = try ExCodableRuntime._decode((Int).self, from: decoder, keys: ["v"], optional: false, strictType: false, converter: exCodableTypeConverter)!
                 }
                 func encode(to encoder: Encoder) throws {
-                    try ExCodableRuntime.encode(self.`v`, to: encoder, for: "v", optional: false, strictType: false)
+                    try ExCodableRuntime._encode(self.`v`, to: encoder, for: "v", optional: false, strictType: false)
                 }
             }
             """,
@@ -155,12 +155,12 @@ final class ExCodableMacroTests: XCTestCase {
                 var v: Int
             
                 required init(from decoder: Decoder) throws {
-                    let exCodableTypeConverter = ExCodableRuntime.converter(of: Self.self)
-                    self.`v` = try ExCodableRuntime.decode((Int).self, from: decoder, keys: ["v"], optional: false, strictType: false, converter: exCodableTypeConverter)!
+                    let exCodableTypeConverter = ExCodableRuntime._converter(of: Self.self)
+                    self.`v` = try ExCodableRuntime._decode((Int).self, from: decoder, keys: ["v"], optional: false, strictType: false, converter: exCodableTypeConverter)!
                 }
             
                 func encode(to encoder: Encoder) throws {
-                    try ExCodableRuntime.encode(self.`v`, to: encoder, for: "v", optional: false, strictType: false)
+                    try ExCodableRuntime._encode(self.`v`, to: encoder, for: "v", optional: false, strictType: false)
                 }
             }
             """,

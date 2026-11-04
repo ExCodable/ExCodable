@@ -1,5 +1,5 @@
 //
-//  ExCodableMacros.swift
+//  ExCodableMacro.swift
 //  ExCodable
 //
 //  Created by Míng on 2026-10-22.
@@ -10,6 +10,16 @@ import SwiftSyntax
 import SwiftSyntaxMacros
 import SwiftSyntaxBuilder
 import SwiftDiagnostics
+import SwiftCompilerPlugin
+
+@main
+struct ExCodablePlugin: CompilerPlugin {
+    let providingMacros: [Macro.Type] = [
+        ExCodableMacro.self,
+        ExCodableKeyMacro.self,
+        ExCodableExceptMacro.self,
+    ]
+}
 
 public struct ExCodableMacro: MemberMacro, ExtensionMacro {
     

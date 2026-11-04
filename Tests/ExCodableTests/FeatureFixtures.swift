@@ -779,3 +779,81 @@ final class TestAnyInheritedClass: CustomStringConvertible, @unchecked Sendable 
     var int: Int
     var description: String { "\(int)" }
 }
+
+/// Collections and `Date` have no builtin element conversion. A `decode` closure does it.
+@ExCodable
+struct TestCollectionConversion: Equatable {
+    @ExCodableKey(decode: { decoder -> [Int]? in
+        // ["1", "2"] or [1, 2]
+        if let strings: [String] = decoder["ints"] {
+            return strings.compactMap { Int($0) }
+        }
+        return decoder["ints"]
+    })
+    let ints: [Int]
+    
+    @ExCodableKey(decode: { decoder -> [String: Int]? in
+        // {"a": "1"} or {"a": 1}
+        if let strings: [String: String] = decoder["scores"] {
+            return strings.compactMapValues { Int($0) }
+        }
+        return decoder["scores"]
+    })
+    let scores: [String: Int]
+    
+    @ExCodableKey(encode: { encoder, date in
+        encoder["date"] = ISO8601DateFormatter().string(from: date)
+    }, decode: { decoder -> Date? in
+        // seconds since 1970 or "2026-11-04T12:00:00Z"
+        // Check the number first: the builtin conversion also turns a number into a string.
+        if let seconds: Double = decoder["date"] {
+            return Date(timeIntervalSince1970: seconds)
+        }
+        if let string: String = decoder["date"] {
+            return ISO8601DateFormatter().date(from: string)
+        }
+        return nil
+    })
+    let date: Date
+}
+
+/// A `decode` closure that returns `nil` for a required property throws instead of crashing.
+@ExCodable
+struct TestCustomDecodeReturnsNil {
+    @ExCodableKey(decode: { _ -> Int? in nil })
+    let required: Int
+    @ExCodableKey(decode: { _ -> Int? in nil })
+    let optional: Int?
+    @ExCodableKey(default: 7, decode: { _ -> Int? in nil })
+    let defaulted: Int
+}
+
+/// A required property that is nil throws before the custom `encode` closure runs.
+@ExCodable
+struct TestCustomEncodeNilRequired {
+    @ExCodableKey(encode: { (encoder: Encoder, value: Int!) in
+        encoder["required"] = value
+    })
+    var required: Int!
+}
+
+/// A custom `encode` closure may open any container, not only a keyed one.
+@ExCodable
+struct TestCustomEncodeSingleValueContainer {
+    @ExCodableKey(encode: { (encoder: Encoder, value: String) in
+        var container = encoder.singleValueContainer()
+        try container.encode(value)
+    })
+    var value: String
+}
+
+@ExCodable
+struct TestCustomEncodeUnkeyedContainer {
+    @ExCodableKey(encode: { (encoder: Encoder, value: [Int]) in
+        var container = encoder.unkeyedContainer()
+        for element in value {
+            try container.encode(element)
+        }
+    })
+    var value: [Int]
+}

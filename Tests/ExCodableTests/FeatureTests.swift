@@ -1083,6 +1083,56 @@ final class FeatureTests: XCTestCase {
         XCTAssertEqual(try TestAnyInheritedClass.decoded(from: Data(#"{"int":4}"#.utf8)).int, 4)
     }
     
+    func testCollectionConversionByClosure() throws {
+        let expected = Date(timeIntervalSince1970: 1_793_793_600)
+        let strings = #"{"ints":["1","2","x"],"scores":{"a":"1","b":"2"},"date":"2026-11-04T12:00:00Z"}"#
+        let fromStrings = try TestCollectionConversion.decoded(from: Data(strings.utf8))
+        XCTAssertEqual(fromStrings.ints, [1, 2])
+        XCTAssertEqual(fromStrings.scores, ["a": 1, "b": 2])
+        XCTAssertEqual(fromStrings.date, expected)
+        
+        let numbers = #"{"ints":[1,2],"scores":{"a":1},"date":1793793600}"#
+        let fromNumbers = try TestCollectionConversion.decoded(from: Data(numbers.utf8))
+        XCTAssertEqual(fromNumbers.ints, [1, 2])
+        XCTAssertEqual(fromNumbers.scores, ["a": 1])
+        XCTAssertEqual(fromNumbers.date, expected)
+        
+        let data: Data = try fromStrings.encoded()
+        let json = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
+        XCTAssertEqual(json["date"] as? String, "2026-11-04T12:00:00Z")
+        XCTAssertEqual(try TestCollectionConversion.decoded(from: data).date, expected)
+    }
+    
+    func testCustomDecodeReturningNil() throws {
+        XCTAssertThrowsError(try TestCustomDecodeReturnsNil.decoded(from: Data("{}".utf8))) { error in
+            guard case DecodingError.valueNotFound = error else {
+                return XCTFail("expected valueNotFound, got \(error)")
+            }
+        }
+    }
+    
+    func testCustomEncodeNilRequired() {
+        XCTAssertThrowsError(try TestCustomEncodeNilRequired(required: nil).encoded() as Data) { error in
+            guard case EncodingError.invalidValue = error else {
+                return XCTFail("expected invalidValue, got \(error)")
+            }
+        }
+        let data: Data = try! TestCustomEncodeNilRequired(required: 5).encoded()
+        XCTAssertEqual(String(data: data, encoding: .utf8), #"{"required":5}"#)
+    }
+    
+    /// The generated `encode(to:)` must not open a keyed container after the closure has opened a single value container.
+    /// JSONEncoder stops the process with a precondition failure when two different containers are opened on one encoder.
+    func testCustomEncodeWithSingleValueContainer() throws {
+        let data: Data = try TestCustomEncodeSingleValueContainer(value: "a").encoded()
+        XCTAssertEqual(String(data: data, encoding: .utf8), #""a""#)
+    }
+    
+    func testCustomEncodeWithUnkeyedContainer() throws {
+        let data: Data = try TestCustomEncodeUnkeyedContainer(value: [1, 2]).encoded()
+        XCTAssertEqual(String(data: data, encoding: .utf8), "[1,2]")
+    }
+    
     func testElapsed() {
         let start = DispatchTime.now().uptimeNanoseconds
         

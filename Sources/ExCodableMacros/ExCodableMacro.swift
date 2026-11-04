@@ -647,16 +647,18 @@ private enum ExCodableExpansion {
         let body = lines.joined(separator: "\n")
         let constraint = kind == .class ? genericWhere : ""
         let signature = kind == .class ? "\(access)required init(from decoder: Decoder) throws\(constraint)" : "\(access)init(from decoder: Decoder) throws"
-        if body.isEmpty {
-            return """
+        return if body.isEmpty {
+            """
             \(signature) {
             }
             """
         }
-        return """
-        \(signature) {\(block(body))
+        else {
+            """
+            \(signature) {\(block(body))
+            }
+            """
         }
-        """
     }
     
     private static func decodeStatement(for property: Property) -> String {
@@ -721,17 +723,19 @@ private enum ExCodableExpansion {
         let body = lines.joined(separator: "\n")
         let override = (kind == .class && hasSuperclass) ? "override " : ""
         let constraint = kind == .class ? genericWhere : ""
-        if body.isEmpty {
-            return """
+        return if body.isEmpty {
+            """
             \(access)\(override)func encode(to encoder: Encoder) throws\(constraint) {
                 ExCodableRuntime._openKeyedContainer(encoder)
             }
             """
         }
-        return """
-        \(access)\(override)func encode(to encoder: Encoder) throws\(constraint) {\(block(body))
+        else {
+            """
+            \(access)\(override)func encode(to encoder: Encoder) throws\(constraint) {\(block(body))
+            }
+            """
         }
-        """
     }
     
     private static func encodeStatement(for property: Property) -> String {

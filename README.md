@@ -264,6 +264,47 @@ struct TestCustomEncodeDecode {
 
 ```
 
+Collections and `Date`: the builtin conversions apply to a single value only. `["1", "2"]` does not decode as `[Int]`, `{"a": "1"}` does not decode as `[String: Int]`, and a string does not decode as `Date`, so these throw `typeMismatch` for a required property and become `nil` for an optional one. Convert them with a `decode` closure. A closure that returns `nil` for a required property throws `DecodingError.valueNotFound`. For an optional property the value is `nil`, and for a property with `default` the default is used. The `Date` below also has an `encode` closure that writes an ISO 8601 string:
+
+```swift
+@ExCodable
+struct TestCollectionConversion {
+    @ExCodableKey(decode: { decoder -> [Int]? in
+        // ["1", "2"] or [1, 2]
+        if let strings: [String] = decoder["ints"] {
+            return strings.compactMap { Int($0) }
+        }
+        return decoder["ints"]
+    })
+    let ints: [Int]
+    
+    @ExCodableKey(decode: { decoder -> [String: Int]? in
+        // {"a": "1"} or {"a": 1}
+        if let strings: [String: String] = decoder["scores"] {
+            return strings.compactMapValues { Int($0) }
+        }
+        return decoder["scores"]
+    })
+    let scores: [String: Int]
+    
+    @ExCodableKey(encode: { encoder, date in
+        encoder["date"] = ISO8601DateFormatter().string(from: date)
+    }, decode: { decoder -> Date? in
+        // seconds since 1970 or "2026-11-04T12:00:00Z"
+        // Check the number first: the builtin conversion also turns a number into a string.
+        if let seconds: Double = decoder["date"] {
+            return Date(timeIntervalSince1970: seconds)
+        }
+        if let string: String = decoder["date"] {
+            return ISO8601DateFormatter().date(from: string)
+        }
+        return nil
+    })
+    let date: Date
+}
+
+```
+
 Custom type conversions for specific model:
 
 ```swift

@@ -67,7 +67,7 @@ public extension Encoder {
         }
         
         let codingKey = keys.last!
-        var container = self.container(keyedBy: ExCodingKey.self)
+        var container = container(keyedBy: ExCodingKey.self)
         for key in keys.dropLast() {
             container = container.nestedContainer(keyedBy: ExCodingKey.self, forKey: key)
         }
@@ -95,7 +95,7 @@ public extension Encoder {
     }
     
     internal func encode<T: Encodable, K: CodingKey>(_ value: T?, for codingKey: K, optional: Bool = true, strictType: Bool = false) throws {
-        var container = self.container(keyedBy: K.self)
+        var container = container(keyedBy: K.self)
         // throws `EncodingError.invalidValue`
         if !optional {
             if value.wrapped == nil {
@@ -143,9 +143,9 @@ public extension Decoder {
     internal func decode<T: Decodable, K: CodingKey>(_ codingKeys: [K], as type: T.Type = T.self, optional: Bool = true, strictType: Bool = false, converter: (any ExCodableDecodingTypeConverter.Type)?) throws -> T? {
         if let container = (!optional || `strictType`
                             // throws `DecodingError.typeMismatch`
-                            ? try self.container(keyedBy: K.self)
+                            ? try container(keyedBy: K.self)
                             // NO throws
-                            : try? self.container(keyedBy: K.self)) {
+                            : try? container(keyedBy: K.self)) {
             return try container.decodeForAlternativeKeys(codingKeys, as: type, optional: optional, strictType: `strictType`, converter: converter)
         }
         return nil

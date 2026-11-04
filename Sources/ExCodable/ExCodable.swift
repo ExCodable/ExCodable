@@ -390,12 +390,6 @@ fileprivate extension KeyedDecodingContainer {
             return value
         }
         
-        // global converter for all types, via `extension ExCodableGlobalDecodingTypeConverter: ExCodableDecodingTypeConverter`
-        if let globalConverter = ExCodableGlobalDecodingTypeConverter.self as? ExCodableDecodingTypeConverter.Type,
-           let value = globalConverter.decode(self, codingKey: codingKey, as: type) {
-            return value
-        }
-        
         return nil
     }
 }
@@ -403,7 +397,6 @@ fileprivate extension KeyedDecodingContainer {
 public protocol ExCodableDecodingTypeConverter {
     static func decode<T: Decodable, K: CodingKey>(_ container: KeyedDecodingContainer<K>, codingKey: K, as type: T.Type) -> T?
 }
-public struct ExCodableGlobalDecodingTypeConverter {}
 
 // MARK: - Encodable & Decodable - external
 

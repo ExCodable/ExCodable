@@ -294,35 +294,6 @@ extension TestCustomTypeConverter: ExCodableDecodingTypeConverter {
 
 ```
 
-Custom type conversions for global:
-
-```swift
-@ExCodable
-struct TestCustomGlobalTypeConverter: Equatable {
-    @ExCodableKey("boolFromDouble")
-    let boolFromDouble: Bool?
-}
-
-extension ExCodableGlobalDecodingTypeConverter: ExCodableDecodingTypeConverter {
-    
-    public static func decode<T: Decodable, _K: CodingKey>(_ container: KeyedDecodingContainer<_K>, codingKey: _K, as type: T.Type) -> T? {
-        
-        // for nested optionals, e.g. `var int: Int??? = nil`
-        let wrappedType = T?.wrappedType
-        
-        // decode Bool from Double
-        if type is Bool.Type || wrappedType is Bool.Type {
-            if let double = try? container.decodeIfPresent(Double.self, forKey: codingKey) {
-                return (double != 0) as? T
-            }
-        }
-        
-        return nil
-    }
-}
-
-```
-
 ### 7. Manual Encoding/Decoding using Subscripts
 
 A type without `ExCodable`:

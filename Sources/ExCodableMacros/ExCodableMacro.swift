@@ -203,13 +203,13 @@ private enum ExCodableExpansion {
         var codable: CodableSpec?
         var witness: String?
         /// `.allKeys` codes an unmarked property exactly like an empty `@ExCodableKey`.
-        static let implicitSpec = CodableSpec(keys: [], default: nil, nonnull: "false", strictType: "false", encode: nil, decode: nil)
+        static let implicitSpec = CodableSpec(keys: [], default: nil, strictType: "false", encode: nil, decode: nil)
     }
     
     private struct CodableSpec {
         var keys: [String]
         var `default`: String?
-        var nonnull, `strictType`: String
+        var `strictType`: String
         var encode, decode: String?
     }
     
@@ -344,7 +344,6 @@ private enum ExCodableExpansion {
             guard attributeName(attribute) == "ExCodableKey" else { continue }
             var keys: [String] = []
             var `default`: String?
-            var nonnull = "false"
             var `strictType` = "false"
             var encode: String?
             var decode: String?
@@ -354,8 +353,6 @@ private enum ExCodableExpansion {
                     switch argument.label?.text {
                         case "default":
                             `default` = expression.trimmedDescription
-                        case "nonnull":
-                            nonnull = boolLiteral(expression)
                         case "strictType":
                             `strictType` = boolLiteral(expression)
                         case "encode":
@@ -369,23 +366,23 @@ private enum ExCodableExpansion {
                     }
                 }
             }
-            return CodableSpec(keys: keys, default: `default`, nonnull: nonnull, strictType: `strictType`, encode: encode, decode: decode)
+            return CodableSpec(keys: keys, default: `default`, strictType: `strictType`, encode: encode, decode: decode)
         }
         return nil
     }
     
-    /// A default value exists to absorb a failed decode; `nonnull` and `strictType` both say "do not
-    /// absorb this failure", which would leave the default unreachable and the declaration
-    /// self-contradictory. Only an explicit `true` conflicts — `nonnull: false` means "off".
+    /// A default value exists to absorb a failed decode; `strictType` says "do not absorb this
+    /// failure", which would leave the default unreachable and the declaration self-contradictory.
     ///
     /// Checked once per type by `members`, never from `codableSpec`: `@ExCodable` expands twice
     /// (member and extension macros), so validating during parsing would report everything twice.
     private static func checkContradictions(of declaration: some DeclGroupSyntax) throws {
         for item in declaration.memberBlock.members {
             guard let variable = item.decl.as(VariableDeclSyntax.self),
-                  let spec = try codableSpec(of: variable) else { continue }
-            if spec.`default` != nil, spec.nonnull == "true" || spec.`strictType` == "true" {
-                throw ExCodableMacroError.message("@ExCodableKey cannot use default together with nonnull or strictType")
+                  let spec = try codableSpec(of: variable),
+                  spec.`strictType` == "true" else { continue }
+            if spec.`default` != nil || variable.bindings.contains(where: { $0.initializer != nil }) {
+                throw ExCodableMacroError.message("@ExCodableKey cannot use a default value together with strictType")
             }
         }
     }
@@ -649,52 +646,36 @@ private enum ExCodableExpansion {
         let spec = property.codable!
         let keys = spec.keys.isEmpty ? [StringLiteralExprSyntax(content: bareIdentifier(property.name)).description] : spec.keys
         let keyList = keys.joined(separator: ", ")
+        let `default` = spec.`default` ?? property.`default`
+        let optional = isOptional(property) || `default` != nil
+        let name = escaped(property.name)
         var call = "ExCodableRuntime.decode("
         if spec.decode == nil, let metatype = metatype(of: property) {
             call += "\(metatype), "
         }
-        call += "from: decoder, keys: [\(keyList)], nonnull: \(spec.nonnull), strictType: \(spec.`strictType`), converter: exCodableTypeConverter"
+        call += "from: decoder, keys: [\(keyList)], optional: \(optional), strictType: \(spec.`strictType`), converter: exCodableTypeConverter"
         if let decode = spec.decode {
             call += ", customDecode: \(decode)"
         }
         call += ")"
-        let name = escaped(property.name)
-        if let `default` = spec.`default` ?? property.`default` {
-            // A default value is exactly "absorb a failed decode", so the call is wrapped in `try?`.
-            // `nonnull`/`strictType` are explicit "must not fail" opt-ins, and neither can be written
-            // together with `default:` — but a property *initializer* can coexist with them, so the
-            // stricter options still win there.
-            // `nonnull` rejects an absent value outright, so it must not be absorbed. `strictType`
-            // only tightens type checks and a missing key may still fall back, but `try?` would also
-            // swallow the type mismatch, so the call stays `try` there too.
-            let strict = spec.nonnull == "true" || spec.`strictType` == "true"
-            let attempt = strict ? "try \(call)" : "try? \(call)"
-            return """
-                if let exCodableValue = \(attempt) {
-                    self.\(name) = exCodableValue
-                }
-                else {
-                    self.\(name) = \(`default`)
-                }
-            """
+        return if let `default` {
+            "    self.\(name) = try \(call) ?? \(`default`)"
         }
-        if let type = property.type, type.hasSuffix("!") || type.hasSuffix("?") || type.hasPrefix("Optional<") {
-            return """
-                if let exCodableValue = try \(call) {
-                    self.\(name) = exCodableValue
-                }
-                else {
-                    self.\(name) = nil
-                }
-            """
+        else if isOptional(property) {
+            "    self.\(name) = try \(call) ?? nil // !!!: flattens `T??` back to `T`"
         }
-        let missingType = metatype(of: property) ?? "Any.self"
-        return """
-            guard let exCodableValue = try \(call) else {
-                throw DecodingError.valueNotFound(\(missingType), DecodingError.Context(codingPath: decoder.codingPath, debugDescription: "ExCodable expected a value for \(property.name)."))
-            }
-            self.\(name) = exCodableValue
-        """
+        else {
+            "    self.\(name) = try \(call)!"
+        } 
+    }
+    
+    /// A property is optional when its type is written with `?` or spelled `Optional<...>`.
+    ///
+    /// `!` counts as required: an implicitly unwrapped optional promises a value, and treating it as
+    /// optional would silently disable the very check the declaration asks for.
+    private static func isOptional(_ property: Property) -> Bool {
+        guard let type = property.type else { return false }
+        return type.hasSuffix("?") || type.hasPrefix("Optional<")
     }
     
     private static func metatype(of property: Property) -> String? {
@@ -739,7 +720,8 @@ private enum ExCodableExpansion {
     private static func encodeStatement(for property: Property) -> String {
         let spec = property.codable!
         let key = spec.keys.first ?? StringLiteralExprSyntax(content: bareIdentifier(property.name)).description
-        var call = "ExCodableRuntime.encode(self.\(escaped(property.name)), to: encoder, for: \(key), nonnull: \(spec.nonnull), strictType: \(spec.`strictType`)"
+        let optional = isOptional(property)
+        var call = "ExCodableRuntime.encode(self.\(escaped(property.name)), to: encoder, for: \(key), optional: \(optional), strictType: \(spec.`strictType`)"
         if let encode = spec.encode {
             call += ", customEncode: \(encode)"
         }

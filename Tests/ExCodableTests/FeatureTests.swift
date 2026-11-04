@@ -1,5 +1,5 @@
 //
-//  ExCodableTests.swift
+//  FeatureTests.swift
 //  ExCodable
 //
 //  Created by Míng on 2021-02-10.
@@ -11,7 +11,7 @@ import XCTest
 // @testable
 import ExCodable
 
-final class ExCodableTests: XCTestCase {
+final class FeatureTests: XCTestCase {
     
     func testAnything() {
         XCTAssert(true)
@@ -595,16 +595,16 @@ final class ExCodableTests: XCTestCase {
         XCTAssertEqual(decoded.string, "I'm a teapot")
         
         let missing = Data(#"{}"#.utf8)
-        let fallback = try TestDefault.decoded(from: missing)
-        XCTAssertEqual(fallback.int, 1)
-        XCTAssertEqual(fallback.int2, 2)
-        XCTAssertEqual(fallback.string, "default")
+        let `default` = try TestDefault.decoded(from: missing)
+        XCTAssertEqual(`default`.int, 1)
+        XCTAssertEqual(`default`.int2, 2)
+        XCTAssertEqual(`default`.string, "default")
         
         let nulls = Data(#"{"int":null,"string":null}"#.utf8)
-        let nullFallback = try TestDefault.decoded(from: nulls)
-        XCTAssertEqual(nullFallback.int, 1)
-        XCTAssertEqual(nullFallback.int2, 2)
-        XCTAssertEqual(nullFallback.string, "default")
+        let nullToDefault = try TestDefault.decoded(from: nulls)
+        XCTAssertEqual(nullToDefault.int, 1)
+        XCTAssertEqual(nullToDefault.int2, 2)
+        XCTAssertEqual(nullToDefault.string, "default")
         
         let data = try decoded.encoded() as Data
         let copy = try TestDefault.decoded(from: data)
@@ -613,9 +613,9 @@ final class ExCodableTests: XCTestCase {
         XCTAssertEqual(copy.string, decoded.string)
     }
     
-    /// A property initializer doubles as the decode fallback for every supported type.
-    func testInitialValueFallbackForAllTypes() throws {
-        let expected = TestInitialValueFallback(
+    /// A property initializer doubles as the default value when decode failed for every supported type.
+    func testInitialDefaultValueForAllTypes() throws {
+        let expected = TestInitialDefaultValue(
             int8: 8, uint: 1, double: 2.5, float16: 2.5, bool: true,
             string: "initial", url: URL(string: "https://initial.example")!,
             uuid: UUID(uuidString: "00000000-0000-0000-0000-000000000001")!,
@@ -641,7 +641,7 @@ final class ExCodableTests: XCTestCase {
             """#
         ]
         for json in failures {
-            let decoded = try TestInitialValueFallback.decoded(from: Data(json.utf8))
+            let decoded = try TestInitialDefaultValue.decoded(from: Data(json.utf8))
             XCTAssertEqual(decoded, expected, "initial values must survive: \(json)")
         }
     }
@@ -653,7 +653,7 @@ final class ExCodableTests: XCTestCase {
          "uuid":"11111111-1111-1111-1111-111111111111","array":[3],
          "dictionary":{"b":2},"enum":1,"nested":{"x":1},"optional":7}
         """#.utf8)
-        let decoded = try TestInitialValueFallback.decoded(from: json)
+        let decoded = try TestInitialDefaultValue.decoded(from: json)
         XCTAssertEqual(decoded.int8, 16)
         XCTAssertEqual(decoded.uint, 1)
         XCTAssertEqual(decoded.double, 1.5)
@@ -674,22 +674,18 @@ final class ExCodableTests: XCTestCase {
         XCTAssertThrowsError(try TestNoInitialValue.decoded(from: Data(#"{"array":["a"]}"#.utf8)))
     }
     
-    /// `nonnull`/`throws` opt out of the fallback and surface the error instead.
-    func testInitialValueWithNonnullOrThrows() throws {
-        // `nonnull` keeps reporting a missing or null value, initial value notwithstanding.
-        XCTAssertThrowsError(try TestInitialValueNonnull.decoded(from: Data("{}".utf8)))
-        XCTAssertThrowsError(try TestInitialValueNonnull.decoded(from: Data(#"{"int":null}"#.utf8)))
-        XCTAssertEqual(try TestInitialValueNonnull.decoded(from: Data(#"{"int":3}"#.utf8)).int, 3)
-        
-        // `throws` keeps reporting a type mismatch, but a missing key still falls back.
-        XCTAssertThrowsError(try TestInitialValueThrows.decoded(from: Data(#"{"int":"bad"}"#.utf8)))
-        XCTAssertEqual(try TestInitialValueThrows.decoded(from: Data("{}".utf8)).int, 2)
+    /// An initial value absorbs a failed decode, even though the property is required.
+    func testInitialValueWithRequiredOrStrictType() throws {
+        for json in ["{}", #"{"int":null}"#, #"{"int":"bad"}"#] {
+            XCTAssertEqual(try TestInitialValueRequired.decoded(from: Data(json.utf8)).int, 2, json)
+        }
+        XCTAssertEqual(try TestInitialValueRequired.decoded(from: Data(#"{"int":3}"#.utf8)).int, 3)
     }
     
     /// `URL` accepts almost any string, so a malformed URL does not fall back. Documented here
     /// so the exception is intentional rather than a silent surprise.
     func testInitialValueURLKeepsDecodedValue() throws {
-        let decoded = try TestInitialValueFallback.decoded(from: Data(#"{"url":"%%%"}"#.utf8))
+        let decoded = try TestInitialDefaultValue.decoded(from: Data(#"{"url":"%%%"}"#.utf8))
         XCTAssertEqual(decoded.url.absoluteString, "%25%25%25")
         XCTAssertNotEqual(decoded.url, URL(string: "https://initial.example")!)
     }
@@ -746,7 +742,7 @@ final class ExCodableTests: XCTestCase {
         let explicitJSON = try JSONSerialization.jsonObject(with: try explicit.encoded() as Data) as! [String: Any]
         XCTAssertEqual(NSDictionary(dictionary: implicitJSON), NSDictionary(dictionary: explicitJSON))
         
-        // Missing key: both keep the initial value, so the fallback is the same either way.
+        // Missing key: both keep the initial value, so the default value is the same either way.
         let partial = Data(#"{"kept":2}"#.utf8)
         XCTAssertEqual(try TestAllKeysWithExcept.decoded(from: partial).extra, 7)
         XCTAssertEqual(try TestAllKeysWithExceptExplicit.decoded(from: partial).extra, 7)
@@ -797,20 +793,105 @@ final class ExCodableTests: XCTestCase {
         XCTAssertEqual(try TestEscapedKeys.decoded(from: try decoded.encoded() as Data), decoded)
     }
     
-    func testNonnullAndThrows() throws {
+    func testDecodingError() {
+        let noKeyData = Data(#"{}"#.utf8)
+        let typeMismatchData = Data(#"{"v":"abc"}"#.utf8)
+        
+        XCTAssertThrowsError(try TestMatrixRequiredPermissive.decoded(from: noKeyData)) { error in
+            if case DecodingError.keyNotFound(let codingKey, let context) = error {
+                print("DecodingError.keyNotFound(\(codingKey), \(context))")
+            }
+            else {
+                print("NOT DecodingError.keyNotFound: \(error)")
+                XCTFail()
+            }
+        }
+        
+        XCTAssertThrowsError(try TestMatrixRequiredStrict.decoded(from: noKeyData)) { error in
+            if case DecodingError.keyNotFound(let codingKey, let context) = error {
+                print("DecodingError.keyNotFound(\(codingKey), \(context))")
+            }
+            else {
+                print("NOT DecodingError.keyNotFound: \(error)")
+                XCTFail()
+            }
+        }
+        
+        XCTAssertThrowsError(try TestMatrixRequiredPermissive.decoded(from: typeMismatchData)) { error in
+            if case DecodingError.typeMismatch(let codingKey, let context) = error {
+                print("DecodingError.typeMismatch(\(codingKey), \(context))")
+            }
+            else {
+                print("NOT DecodingError.typeMismatch: \(error)")
+                XCTFail()
+            }
+        }
+    }
+    
+    /// Pins the error reported for every combination of optionality and `strictType`.
+    ///
+    /// - Required (non-optional) is always strict about presence: a missing key or `null` fails.
+    /// - Optional absorbs both, unless `strictType` asks for a type error to surface.
+    /// - A value that converts (`"1"` for `Int`) is never an error, strict or not.
+    func testErrorMatrix() throws {
+        typealias Case = (json: String, required: String?, optional: String?)
+        // `nil` means "decodes successfully". An optional property has `nil` to fall back on, so
+        // `strictType` never makes it report a missing value — only a type error.
+        let cases: [Case] = [
+            ("{}",                        "keyNotFound",   nil),
+            (#"{"v":null}"#,              "valueNotFound", nil),
+            (#"{"v":"abc"}"#,             "typeMismatch",  "typeMismatch"),
+            (#"{"v":"1"}"#,               nil,             nil),
+            (#"{"v":1}"#,                 nil,             nil),
+        ]
+        
+        func thrown<T: Decodable>(_ type: T.Type, _ json: String) -> String? {
+            do {
+                let // ???: `let` to forbid warning: `'catch' block is unreachable because no errors are thrown in 'do' block`
+                _ = try T.decoded(from: Data(json.utf8))
+                return nil
+            }
+            catch let error as DecodingError {
+                return switch error {
+                    case .keyNotFound: "keyNotFound"
+                    case .valueNotFound: "valueNotFound"
+                    case .typeMismatch: "typeMismatch"
+                    case .dataCorrupted: "dataCorrupted"
+                    @unknown default: "unknown"
+                }
+            }
+            catch {
+                return String(describing: error)
+            }
+        }
+        
+        for (json, requiredError, optionalError) in cases {
+            XCTAssertEqual(thrown(TestMatrixRequiredPermissive.self, json), requiredError,
+                           "required/permissive \(json)")
+            XCTAssertEqual(thrown(TestMatrixRequiredStrict.self, json), requiredError,
+                           "required/strict \(json)")
+            // An optional property only reports the type mismatch `strictType` asks for.
+            XCTAssertEqual(thrown(TestMatrixOptionalPermissive.self, json), nil,
+                           "optional/permissive \(json)")
+            XCTAssertEqual(thrown(TestMatrixOptionalStrict.self, json), optionalError,
+                           "optional/strict \(json)")
+        }
+    }
+    
+    func testRequiredAndStrictType() throws {
         
         let noIntData = Data(#"""
         {
             "noInt": true
         }
         """#.utf8)
-        XCTAssertThrowsError(try TestNonnull.decoded(from: noIntData)) { error in
+        XCTAssertThrowsError(try TestRequired.decoded(from: noIntData)) { error in
             guard case DecodingError.keyNotFound = error else { return XCTFail("\(error)") }
-            print("TestNonnull error: \(error)")
+            print("TestRequired error: \(error)")
         }
-        XCTAssertThrowsError(try TestNestedNonnull.decoded(from: noIntData)) { error in
+        XCTAssertThrowsError(try TestNestedRequired.decoded(from: noIntData)) { error in
             XCTAssertNotNil(error)
-            print("TestNestedNonnull error: \(error)")
+            print("TestNestedRequired error: \(error)")
         }
         
         let nullData = Data(#"""
@@ -821,16 +902,16 @@ final class ExCodableTests: XCTestCase {
             }
         }
         """#.utf8)
-        XCTAssertThrowsError(try TestNonnull.decoded(from: nullData)) { error in
+        XCTAssertThrowsError(try TestRequired.decoded(from: nullData)) { error in
             guard case DecodingError.valueNotFound = error else { return XCTFail("\(error)") }
-            print("TestNonnull error: \(error)")
+            print("TestRequired error: \(error)")
         }
-        XCTAssertThrowsError(try TestNestedNonnull.decoded(from: nullData)) { error in
+        XCTAssertThrowsError(try TestNestedRequired.decoded(from: nullData)) { error in
             XCTAssertNotNil(error)
-            print("TestNestedNonnull error: \(error)")
+            print("TestNestedRequired error: \(error)")
         }
         
-        let nonnullData = Data(#"""
+        let requiredData = Data(#"""
         {
             "int": 1,
             "nested": {
@@ -838,8 +919,8 @@ final class ExCodableTests: XCTestCase {
             }
         }
         """#.utf8)
-        XCTAssertEqual(try TestNonnull.decoded(from: nonnullData), TestNonnull(nonnullInt: 1))
-        XCTAssertEqual(try TestNestedNonnull.decoded(from: nonnullData), TestNestedNonnull(nonnullInt: 1))
+        XCTAssertEqual(try TestRequired.decoded(from: requiredData), TestRequired(requiredInt: 1))
+        XCTAssertEqual(try TestNestedRequired.decoded(from: requiredData), TestNestedRequired(requiredInt: 1))
         
         let throwsData = Data(#"""
         {
@@ -849,51 +930,47 @@ final class ExCodableTests: XCTestCase {
             }
         }
         """#.utf8)
-        XCTAssertThrowsError(try TestThrows.decoded(from: throwsData)) { error in
+        XCTAssertThrowsError(try TestStrictType.decoded(from: throwsData)) { error in
             XCTAssertNotNil(error)
-            print("TestThrows error: \(error)")
+            print("TestStrictType error: \(error)")
         }
-        XCTAssertThrowsError(try TestNestedThrows.decoded(from: throwsData)) { error in
+        XCTAssertThrowsError(try TestNestedStrictType.decoded(from: throwsData)) { error in
             XCTAssertNotNil(error)
-            print("TestNestedThrows error: \(error)")
+            print("TestNestedStrictType error: \(error)")
         }
         
-        let noThrowsData = Data(#"""
+        let permissiveData = Data(#"""
         {
             "string": 123
         }
         """#.utf8)
-        XCTAssertEqual(try TestThrows.decoded(from: noThrowsData), TestThrows(throwsString: "123"))
-        XCTAssertEqual(try TestNestedThrows.decoded(from: noThrowsData), TestNestedThrows(throwsString: "123"))
+        XCTAssertEqual(try TestStrictType.decoded(from: permissiveData), TestStrictType(strictTypeString: "123"))
+        XCTAssertEqual(try TestNestedStrictType.decoded(from: permissiveData), TestNestedStrictType(strictTypeString: "123"))
         
-        let nonnullWithThrowsData = Data(#"""
+        let requiredAndStrictTypeData = Data(#"""
         {
             "throws": {
                 "string": []
             }
         }
         """#.utf8)
-        XCTAssertThrowsError(try TestNonnullWithThrows.decoded(from: nonnullWithThrowsData)) { error in
+        XCTAssertThrowsError(try TestRequiredAndStrictType.decoded(from: requiredAndStrictTypeData)) { error in
             XCTAssertNotNil(error)
-            print("TestNonnullWithThrows error: \(error)")
+            print("TestRequiredAndStrictType error: \(error)")
         }
         
-        XCTAssertThrowsError(try TestNonnull(nonnullInt: nil).encoded() as Data) { error in
+        XCTAssertThrowsError(try TestRequired(requiredInt: nil).encoded() as Data) { error in
             XCTAssertNotNil(error)
-            print("TestNonnull error: \(error)")
+            print("TestRequired error: \(error)")
         }
-        XCTAssertThrowsError(try TestNestedNonnull(nonnullInt: nil).encoded() as Data) { error in
+        XCTAssertThrowsError(try TestNestedRequired(requiredInt: nil).encoded() as Data) { error in
             XCTAssertNotNil(error)
-            print("TestNestedNonnull error: \(error)")
+            print("TestNestedRequired error: \(error)")
         }
         
-        let absent = try TestThrows(throwsString: nil).encoded() as Data
-        let absentJSON = try JSONSerialization.jsonObject(with: absent) as! [String: Any]
-        XCTAssertTrue(absentJSON.isEmpty)
-        
-        let nestedAbsent = try TestNestedThrows(throwsString: nil).encoded() as Data
-        let nestedAbsentJSON = try JSONSerialization.jsonObject(with: nestedAbsent) as! [String: Any]
-        XCTAssertTrue(nestedAbsentJSON.isEmpty)
+        // `String!` is required, so encoding nil must fail rather than silently drop the key.
+        XCTAssertThrowsError(try TestStrictType(strictTypeString: nil).encoded() as Data)
+        XCTAssertThrowsError(try TestNestedStrictType(strictTypeString: nil).encoded() as Data)
         
         let partial = try TestStruct(int: 1, string: nil).encoded() as Data
         let partialJSON = try JSONSerialization.jsonObject(with: partial) as! [String: Any]

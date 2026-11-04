@@ -1,5 +1,5 @@
 //
-//  ExCodableFixtures.swift
+//  FeatureFixtures.swift
 //  ExCodable
 //
 //  Created by Míng on 2026-10-26.
@@ -315,16 +315,12 @@ extension TestSubscript: Codable {
     init(from decoder: Decoder) throws {
         // - seealso:
         // string = decoder.decode(Keys.string, as: String.self, converter: Self.self)!
-        // string = try decoder.decodeThrows(Keys.string, as: String.self, converter: Self.self)!
-        // string = try decoder.decodeNonnullThrows(Keys.string, as: String.self, converter: Self.self)
         int = decoder[Keys.int/*, converter: Self.self*/] ?? 0
         string = decoder[Keys.string/*, converter: Self.self*/] ?? ""
     }
     func encode(to encoder: Encoder) throws {
         // - seealso:
         // encoder.encode(string, for: Keys.string)
-        // try encoder.encodeThrows(string, for: Keys.string)
-        // try encoder.encodeNonnullThrows(string, for: Keys.string)
         encoder[Keys.int] = int
         encoder[Keys.string] = string
     }
@@ -551,9 +547,9 @@ struct TestDefault: Equatable {
     let string: String
 }
 
-/// Every kind of property initializer that can act as a decode fallback.
+/// Every kind of property initializer that can act as a default value when decode failed.
 @ExCodable
-struct TestInitialValueFallback: Equatable {
+struct TestInitialDefaultValue: Equatable {
     @ExCodableKey("int8")
     var int8: Int8 = 8
     @ExCodableKey("uint")
@@ -582,7 +578,7 @@ struct TestInitialValueFallback: Equatable {
     var optional: Int? = 5
 }
 
-/// Used only through `TestInitialValueFallback`; failure of any field must fall back whole.
+/// Used only through `TestInitialDefaultValue`; failure of any field must fall back whole.
 struct TestNestedValue: Codable, Equatable {
     var x: Int
 }
@@ -594,19 +590,13 @@ struct TestNoInitialValue: Equatable {
     var array: [Int]
 }
 
-/// `nonnull` reports a missing or null value even though an initial value exists.
+/// A non-optional property reports a missing or null value even though an initial value exists.
 @ExCodable
-struct TestInitialValueNonnull: Equatable {
-    @ExCodableKey("int", nonnull: true)
+struct TestInitialValueRequired: Equatable {
+    @ExCodableKey("int")
     var int: Int = 2
 }
 
-/// `throws` reports a type mismatch even though an initial value exists.
-@ExCodable
-struct TestInitialValueThrows: Equatable {
-    @ExCodableKey("int", strictType: true)
-    var int: Int = 2
-}
 
 // MARK: allKeys
 
@@ -660,7 +650,7 @@ struct TestAllKeysWithExplicitKey: Equatable {
     /// No `@ExCodableKey`: still coded, because `.allKeys` includes every stored property.
     var unmarked: Int
     /// Explicit key with its own name and parameters; those win over the `allKeys` default.
-    @ExCodableKey("renamed", nonnull: true)
+    @ExCodableKey("renamed")
     var renamedFrom: String
 }
 
@@ -706,34 +696,60 @@ struct TestEscapedKeys: Equatable {
     var newline: Int
 }
 
-// MARK: nonnull and `throws`
+// MARK: optional and strictType
 
+/// The four combinations of optionality and `strictType`, used to pin down which error each
+/// case reports. `Required` means "declared non-optional", so a missing value must fail.
 @ExCodable
-struct TestNonnull: Equatable {
-    @ExCodableKey("int", nonnull: true)
-    let nonnullInt: Int!
+struct TestMatrixRequiredPermissive: Equatable {
+    @ExCodableKey("v")
+    var v: Int
 }
 
 @ExCodable
-struct TestNestedNonnull: Equatable {
-    @ExCodableKey("nested.int", "int", nonnull: true)
-    let nonnullInt: Int!
+struct TestMatrixRequiredStrict: Equatable {
+    @ExCodableKey("v", strictType: true)
+    var v: Int
 }
 
 @ExCodable
-struct TestThrows: Equatable {
+struct TestMatrixOptionalPermissive: Equatable {
+    @ExCodableKey("v")
+    var v: Int?
+}
+
+@ExCodable
+struct TestMatrixOptionalStrict: Equatable {
+    @ExCodableKey("v", strictType: true)
+    var v: Int?
+}
+
+@ExCodable
+struct TestRequired: Equatable {
+    @ExCodableKey("int")
+    let requiredInt: Int!
+}
+
+@ExCodable
+struct TestNestedRequired: Equatable {
+    @ExCodableKey("nested.int", "int")
+    let requiredInt: Int!
+}
+
+@ExCodable
+struct TestStrictType: Equatable {
     @ExCodableKey("string", "nested.string", strictType: true)
-    let throwsString: String!
+    let strictTypeString: String!
 }
 
 @ExCodable
-struct TestNestedThrows: Equatable {
+struct TestNestedStrictType: Equatable {
     @ExCodableKey("nested.string", "string", strictType: true)
-    let throwsString: String!
+    let strictTypeString: String!
 }
 
 @ExCodable
-struct TestNonnullWithThrows: Equatable {
-    @ExCodableKey("throws", nonnull: true)
-    let testThrows: TestThrows!
+struct TestRequiredAndStrictType: Equatable {
+    @ExCodableKey("throws")
+    let testStrictType: TestStrictType!
 }

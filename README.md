@@ -17,7 +17,7 @@ En | [中文](https://excodable.iwill.im/)
 
 - Uses `@ExCodable` and `@ExCodableKey` to generate `init(from:)` and `encode(to:)`.
 - Properties can be declared with `let`.
-- Keeps alternative keys, nested keys, type conversions, `default`, and `nonnull` / `strictType`.
+- Keeps alternative keys, nested keys, type conversions, `default`, and optional / `strictType`.
 
 ## Documentations
 
@@ -358,7 +358,7 @@ extension TestManualEncodingDecoding: Codable {
 
 ### 8. `default`
 
-`@ExCodableKey` parameters are ordered `key`, `default`, `nonnull`, `strictType`, `encode`, `decode`. `default` is the value assigned when decoding returns `nil`: the key is missing, the JSON value is `null`, or a type mismatch is ignored.
+`@ExCodableKey` parameters are ordered `key`, `default`, `strictType`, `encode`, `decode`. `default` is the value assigned when decoding returns `nil`: the key is missing, the JSON value is `null`, or a type mismatch is ignored.
 
 ```swift
 @ExCodable
@@ -380,7 +380,7 @@ let values = try TestDefault.decoded(from: Data(#"{"int":418,"string":"I'm a tea
 
 ```
 
-A missing key and JSON `null` are the same absence, so both use `default`. `@ExCodableKey` rejects `default` written together with `nonnull`.
+A missing key and JSON `null` are the same absence, so both use `default`. `@ExCodableKey` rejects `default` written together with `strictType`.
 
 ### 9. `return nil` or `throw error`
 
@@ -388,16 +388,16 @@ Without `default`, a `nil` decode result becomes `nil` for an optional and throw
 
 While encoding/decoding, ExCodable ignores the `keyNotFound`, `valueNotFound`, `invalidValue` and `typeMismatch` errors and `return nil` by default, only throws JSON errors.
 
-ExCodable also supports throw errors:
+Whether a property is required follows its declaration: a non-optional property is required, an optional one is not.
 
-- Use `nonnull: true` to throw `EncodingError.invalidValue` and `DecodingError.keyNotFound`. A missing key and JSON `null` both throw `keyNotFound`.
-- Use `strictType: true` to throw `DecodingError.typeMismatch`.
+- A required property throws `DecodingError.keyNotFound` for a missing key, `DecodingError.valueNotFound` for a JSON `null`, and `EncodingError.invalidValue` when encoding a nil value.
+- `strictType: true` additionally throws `DecodingError.typeMismatch` instead of falling back to a permissive conversion.
 
 ```swift
 @ExCodable
-struct TestNonnullAndThrows {
-    @ExCodableKey(nonnull: true, strictType: true)
-    let int: Int!
+struct TestRequiredAndStrictType {
+    @ExCodableKey(strictType: true)
+    let int: Int
 }
 
 ```

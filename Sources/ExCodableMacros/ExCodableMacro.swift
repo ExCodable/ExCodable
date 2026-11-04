@@ -685,7 +685,7 @@ private enum ExCodableExpansion {
         }
         else {
             "    self.\(name) = try \(call)!"
-        } 
+        }
     }
     
     /// A property is optional when its type is written with `?` or spelled `Optional<...>`.

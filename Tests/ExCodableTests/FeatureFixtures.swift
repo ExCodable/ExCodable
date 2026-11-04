@@ -857,3 +857,28 @@ struct TestCustomEncodeUnkeyedContainer {
     })
     var value: [Int]
 }
+
+// MARK: an enum value that is not a case
+
+enum TestStringEnum: String, Codable {
+    case one, two
+}
+
+@ExCodable struct TestEnumRequired { @ExCodableKey var v: TestEnum }
+@ExCodable struct TestEnumRequiredStrict { @ExCodableKey(strictType: true) var v: TestEnum }
+@ExCodable struct TestEnumOptional { @ExCodableKey var v: TestEnum? }
+@ExCodable struct TestEnumOptionalStrict { @ExCodableKey(strictType: true) var v: TestEnum? }
+@ExCodable struct TestEnumDefault { @ExCodableKey(default: TestEnum.one) var v: TestEnum }
+
+@ExCodable struct TestStringEnumRequired { @ExCodableKey var v: TestStringEnum }
+@ExCodable struct TestStringEnumRequiredStrict { @ExCodableKey(strictType: true) var v: TestStringEnum }
+@ExCodable struct TestStringEnumOptional { @ExCodableKey var v: TestStringEnum? }
+@ExCodable struct TestStringEnumOptionalStrict { @ExCodableKey(strictType: true) var v: TestStringEnum? }
+@ExCodable struct TestStringEnumDefault { @ExCodableKey(default: TestStringEnum.one) var v: TestStringEnum }
+
+// MARK: a nested key reports the error of the value, not of the missing path
+
+@ExCodable struct TestNestedEnumRequired { @ExCodableKey("a.b") var v: TestEnum }
+@ExCodable struct TestNestedEnumOptionalStrict { @ExCodableKey("a.b", strictType: true) var v: TestEnum? }
+@ExCodable struct TestNestedStringRequired { @ExCodableKey("a.b") var v: String }
+@ExCodable struct TestNestedAlternativeKeys { @ExCodableKey("x.y", "a.b") var v: TestEnum }

@@ -411,6 +411,9 @@ Whether a property is required follows its declaration: a non-optional property 
 
 - A required property throws `DecodingError.keyNotFound` for a missing key, `DecodingError.valueNotFound` for a JSON `null`, and `EncodingError.invalidValue` when encoding a nil value.
 - `strictType: true` additionally throws `DecodingError.typeMismatch` instead of falling back to a permissive conversion.
+- `strictType` is about the JSON type only. An enum value of the right type that is not a case, such as `9` for `enum E: Int { case zero, one }`, is a value error: an optional property becomes `nil`, a required property throws `DecodingError.valueNotFound`, and `default` is used. `strictType` does not change that.
+- For a nested key such as `"a.b"`, the error describes the value when the path exists. `keyNotFound` means `a` or `b` is really missing.
+- Other types report a bad value in their own way. `Data`, `URL`, `UUID`, `Int8` and the elements of a collection throw `DecodingError.dataCorrupted` from their own `init(from:)`. A required property, or an optional one with `strictType: true`, passes that error on. Without `strictType` an optional property becomes `nil`.
 
 ```swift
 @ExCodable

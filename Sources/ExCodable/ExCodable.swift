@@ -168,9 +168,19 @@ extension ExCodingKey: CodingKey {
 
 fileprivate extension KeyedDecodingContainer {
     
+    private func pickErrors(_ earlierError: Error?, _ error: Error) -> Error {
+        guard let earlierError else { return error }
+        // `keyNotFound` only says that an attempt found nothing, while any other error says that a value was found and it was wrong.
+        // So an earlier `keyNotFound` gives way to a new error, and otherwise the first error stays.
+        if case DecodingError.keyNotFound = earlierError {
+            return error
+        }
+        return earlierError
+    }
+    
     func decodeForAlternativeKeys<T: Decodable>(_ codingKeys: [Self.Key], as type: T.Type = T.self, optional: Bool, strictType: Bool, converter: (any ExCodableDecodingTypeConverter.Type)?) throws -> T? {
         
-        var caughtError: Error?
+        var earlierError: Error?
         
         do {
             let codingKey = codingKeys.first!
@@ -178,7 +188,7 @@ fileprivate extension KeyedDecodingContainer {
                 return value
             }
         }
-        catch { caughtError = error }
+        catch { earlierError = error }
         
         do {
             let codingKeys = Array(codingKeys.dropFirst())
@@ -187,22 +197,22 @@ fileprivate extension KeyedDecodingContainer {
                 return value
             }
         }
-        catch { caughtError = caughtError ?? error }
+        catch { earlierError = pickErrors(earlierError, error) }
         
-        if let caughtError { throw caughtError }
+        if let earlierError { throw earlierError }
         return nil
     }
     
     func decodeForNestedKeys<T: Decodable>(_ codingKey: Self.Key, as type: T.Type = T.self, optional: Bool, strictType: Bool, converter: (any ExCodableDecodingTypeConverter.Type)?) throws -> T? {
         
-        var caughtError: Error?
+        var earlierError: Error?
         
         do {
             if let value = try decodeForValue(codingKey, as: type, optional: optional, strictType: `strictType`, converter: converter) {
                 return value
             }
         }
-        catch { caughtError = error }
+        catch { earlierError = error }
         
         do {
             if let exCodingKey = codingKey as? ExCodingKey, // Self.Key is ExCodingKey.Type
@@ -216,9 +226,9 @@ fileprivate extension KeyedDecodingContainer {
                 }
             }
         }
-        catch { caughtError = caughtError ?? error }
+        catch { earlierError = pickErrors(earlierError, error) }
         
-        if let caughtError { throw caughtError }
+        if let earlierError { throw earlierError }
         return nil
     }
     
@@ -233,7 +243,7 @@ fileprivate extension KeyedDecodingContainer {
     
     func decodeForValue<T: Decodable>(_ codingKey: Self.Key, as type: T.Type = T.self, optional: Bool, strictType: Bool, converter: (any ExCodableDecodingTypeConverter.Type)?) throws -> T? {
         
-        var caughtError: Error?
+        var earlierError: Error?
         do {
             if let value = (`strictType`
                             // throws `DecodingError.typeMismatch`
@@ -253,14 +263,14 @@ fileprivate extension KeyedDecodingContainer {
                 return value
             }
         }
-        catch { caughtError = error }
+        catch { earlierError = error }
         
         if contains(codingKey),
            let value = decodeForTypeConversion(codingKey, as: type, converter: converter) {
             return value
         }
         
-        if let caughtError { throw caughtError }
+        if let earlierError { throw earlierError }
         return nil
     }
     

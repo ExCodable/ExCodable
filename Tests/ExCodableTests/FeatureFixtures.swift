@@ -882,3 +882,62 @@ enum TestStringEnum: String, Codable {
 @ExCodable struct TestNestedEnumOptionalStrict { @ExCodableKey("a.b", strictType: true) var v: TestEnum? }
 @ExCodable struct TestNestedStringRequired { @ExCodableKey("a.b") var v: String }
 @ExCodable struct TestNestedAlternativeKeys { @ExCodableKey("x.y", "a.b") var v: TestEnum }
+
+// MARK: a number that does not fit the type
+
+@ExCodable struct TestNumberIntRequired { @ExCodableKey var v: Int }
+@ExCodable struct TestNumberIntOptional { @ExCodableKey var v: Int? }
+@ExCodable struct TestNumberIntOptionalStrict { @ExCodableKey(strictType: true) var v: Int? }
+@ExCodable struct TestNumberIntDefault { @ExCodableKey(default: Int(1)) var v: Int }
+@ExCodable struct TestNumberInt8Required { @ExCodableKey var v: Int8 }
+@ExCodable struct TestNumberInt8Optional { @ExCodableKey var v: Int8? }
+@ExCodable struct TestNumberInt8OptionalStrict { @ExCodableKey(strictType: true) var v: Int8? }
+@ExCodable struct TestNumberInt8Default { @ExCodableKey(default: Int8(1)) var v: Int8 }
+@ExCodable struct TestNumberInt16Required { @ExCodableKey var v: Int16 }
+@ExCodable struct TestNumberInt16Optional { @ExCodableKey var v: Int16? }
+@ExCodable struct TestNumberInt16OptionalStrict { @ExCodableKey(strictType: true) var v: Int16? }
+@ExCodable struct TestNumberInt16Default { @ExCodableKey(default: Int16(1)) var v: Int16 }
+@ExCodable struct TestNumberInt32Required { @ExCodableKey var v: Int32 }
+@ExCodable struct TestNumberInt32Optional { @ExCodableKey var v: Int32? }
+@ExCodable struct TestNumberInt32OptionalStrict { @ExCodableKey(strictType: true) var v: Int32? }
+@ExCodable struct TestNumberInt32Default { @ExCodableKey(default: Int32(1)) var v: Int32 }
+@ExCodable struct TestNumberInt64Required { @ExCodableKey var v: Int64 }
+@ExCodable struct TestNumberInt64Optional { @ExCodableKey var v: Int64? }
+@ExCodable struct TestNumberInt64OptionalStrict { @ExCodableKey(strictType: true) var v: Int64? }
+@ExCodable struct TestNumberInt64Default { @ExCodableKey(default: Int64(1)) var v: Int64 }
+@ExCodable struct TestNumberUIntRequired { @ExCodableKey var v: UInt }
+@ExCodable struct TestNumberUIntOptional { @ExCodableKey var v: UInt? }
+@ExCodable struct TestNumberUIntOptionalStrict { @ExCodableKey(strictType: true) var v: UInt? }
+@ExCodable struct TestNumberUIntDefault { @ExCodableKey(default: UInt(1)) var v: UInt }
+@ExCodable struct TestNumberUInt8Required { @ExCodableKey var v: UInt8 }
+@ExCodable struct TestNumberUInt8Optional { @ExCodableKey var v: UInt8? }
+@ExCodable struct TestNumberUInt8OptionalStrict { @ExCodableKey(strictType: true) var v: UInt8? }
+@ExCodable struct TestNumberUInt8Default { @ExCodableKey(default: UInt8(1)) var v: UInt8 }
+@ExCodable struct TestNumberUInt16Required { @ExCodableKey var v: UInt16 }
+@ExCodable struct TestNumberUInt16Optional { @ExCodableKey var v: UInt16? }
+@ExCodable struct TestNumberUInt16OptionalStrict { @ExCodableKey(strictType: true) var v: UInt16? }
+@ExCodable struct TestNumberUInt16Default { @ExCodableKey(default: UInt16(1)) var v: UInt16 }
+@ExCodable struct TestNumberUInt32Required { @ExCodableKey var v: UInt32 }
+@ExCodable struct TestNumberUInt32Optional { @ExCodableKey var v: UInt32? }
+@ExCodable struct TestNumberUInt32OptionalStrict { @ExCodableKey(strictType: true) var v: UInt32? }
+@ExCodable struct TestNumberUInt32Default { @ExCodableKey(default: UInt32(1)) var v: UInt32 }
+@ExCodable struct TestNumberUInt64Required { @ExCodableKey var v: UInt64 }
+@ExCodable struct TestNumberUInt64Optional { @ExCodableKey var v: UInt64? }
+@ExCodable struct TestNumberUInt64OptionalStrict { @ExCodableKey(strictType: true) var v: UInt64? }
+@ExCodable struct TestNumberUInt64Default { @ExCodableKey(default: UInt64(1)) var v: UInt64 }
+@ExCodable struct TestNumberFloatRequired { @ExCodableKey var v: Float }
+@ExCodable struct TestNumberFloatOptional { @ExCodableKey var v: Float? }
+@ExCodable struct TestNumberFloatOptionalStrict { @ExCodableKey(strictType: true) var v: Float? }
+@ExCodable struct TestNumberFloatDefault { @ExCodableKey(default: Float(1)) var v: Float }
+@ExCodable struct TestNumberDoubleRequired { @ExCodableKey var v: Double }
+@ExCodable struct TestNumberDoubleOptional { @ExCodableKey var v: Double? }
+@ExCodable struct TestNumberDoubleOptionalStrict { @ExCodableKey(strictType: true) var v: Double? }
+@ExCodable struct TestNumberDoubleDefault { @ExCodableKey(default: Double(1)) var v: Double }
+@ExCodable struct TestNumberFloat16Required { @ExCodableKey var v: Float16 }
+@ExCodable struct TestNumberFloat16Optional { @ExCodableKey var v: Float16? }
+@ExCodable struct TestNumberFloat16OptionalStrict { @ExCodableKey(strictType: true) var v: Float16? }
+@ExCodable struct TestNumberFloat16Default { @ExCodableKey(default: Float16(1)) var v: Float16 }
+@ExCodable struct TestNumberDecimalRequired { @ExCodableKey var v: Decimal }
+@ExCodable struct TestNumberDecimalOptional { @ExCodableKey var v: Decimal? }
+@ExCodable struct TestNumberDecimalOptionalStrict { @ExCodableKey(strictType: true) var v: Decimal? }
+@ExCodable struct TestNumberDecimalDefault { @ExCodableKey(default: Decimal(1)) var v: Decimal }

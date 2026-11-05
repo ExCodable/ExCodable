@@ -14,6 +14,38 @@ import ExCodable
 final class FeatureTests: XCTestCase {
     
     func testAnything() {
+        
+        func test(_ string: String) {
+            print("parsing: \(string)")
+            
+            if let match = string.wholeMatch(of: /([+-]?[0-9]+)\.?[0-9]*/) {
+                print("    match if: \(Int64(match.1) ?? -1)")
+            }
+            else {
+                print("    match else: -1")
+            }
+            
+            if let start = string.firstIndex(of: ".") {
+                print("    prefix if: \(Int64(string.prefix(upTo: start)) ?? -1)")
+            }
+            else {
+                print("    prefix else: \(Int64(string) ?? -1)")
+            }
+            
+            print("    prefix 2: \(Int64(string.prefix(upTo: string.firstIndex(of: ".") ?? string.endIndex)) ?? -1)")
+        }
+        
+        test("1234567890")
+        test("1234567890.123")
+        test("1234567890.")
+        test(".123")
+        test("0.123")
+        test("+1234567890.123")
+        test("-1234567890.123")
+        test("a1234567890.123")
+        test("1234567890.123b")
+        test("a1234567890.123b")
+        
         XCTAssert(true)
     }
     

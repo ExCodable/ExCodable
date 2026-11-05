@@ -209,7 +209,7 @@ private enum ExCodableExpansion {
     private struct CodableSpec {
         var keys: [String]
         var `default`: String?
-        var `strictType`: String
+        var strictType: String
         var encode, decode: String?
     }
     
@@ -356,7 +356,7 @@ private enum ExCodableExpansion {
             guard attributeName(attribute) == "ExCodableKey" else { continue }
             var keys: [String] = []
             var `default`: String?
-            var `strictType` = "false"
+            var strictType = "false"
             var encode: String?
             var decode: String?
             if let arguments = labeledArguments(of: attribute) {
@@ -366,7 +366,7 @@ private enum ExCodableExpansion {
                         case "default":
                             `default` = expression.trimmedDescription
                         case "strictType":
-                            `strictType` = boolLiteral(expression)
+                            strictType = boolLiteral(expression)
                         case "encode":
                             encode = expression.trimmedDescription
                         case "decode":
@@ -378,7 +378,7 @@ private enum ExCodableExpansion {
                     }
                 }
             }
-            return CodableSpec(keys: keys, default: `default`, strictType: `strictType`, encode: encode, decode: decode)
+            return CodableSpec(keys: keys, default: `default`, strictType: strictType, encode: encode, decode: decode)
         }
         return nil
     }
@@ -392,7 +392,7 @@ private enum ExCodableExpansion {
         for item in declaration.memberBlock.members {
             guard let variable = item.decl.as(VariableDeclSyntax.self),
                   let spec = try codableSpec(of: variable),
-                  spec.`strictType` == "true" else { continue }
+                  spec.strictType == "true" else { continue }
             if spec.`default` != nil || variable.bindings.contains(where: { $0.initializer != nil }) {
                 throw ExCodableMacroError.message("@ExCodableKey cannot use a default value together with strictType")
             }
@@ -672,7 +672,7 @@ private enum ExCodableExpansion {
         if spec.decode == nil, let metatype = metatype(of: property) {
             call += "\(metatype), "
         }
-        call += "from: decoder, keys: [\(keyList)], optional: \(optional), strictType: \(spec.`strictType`), converter: exCodableTypeConverter"
+        call += "from: decoder, keys: [\(keyList)], optional: \(optional), strictType: \(spec.strictType), converter: exCodableTypeConverter"
         if let decode = spec.decode {
             call += ", customDecode: \(decode)"
         }
@@ -742,7 +742,7 @@ private enum ExCodableExpansion {
         let spec = property.codable!
         let key = spec.keys.first ?? StringLiteralExprSyntax(content: bareIdentifier(property.name)).description
         let optional = isOptional(property)
-        var call = "ExCodableRuntime._encode(self.\(escaped(property.name)), to: encoder, for: \(key), optional: \(optional), strictType: \(spec.`strictType`)"
+        var call = "ExCodableRuntime._encode(self.\(escaped(property.name)), to: encoder, for: \(key), optional: \(optional), strictType: \(spec.strictType)"
         if let encode = spec.encode {
             call += ", customEncode: \(encode)"
         }

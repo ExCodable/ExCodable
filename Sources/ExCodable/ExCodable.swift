@@ -62,7 +62,7 @@ public extension Encoder {
         
         let keys = stringKey.split(separator: ".").map { ExCodingKey($0) }
         guard keys.count > 1 else {
-            try encode(value, for: keys.first ?? ExCodingKey(stringKey), optional: optional, strictType: `strictType`)
+            try encode(value, for: keys.first ?? ExCodingKey(stringKey), optional: optional, strictType: strictType)
             return
         }
         
@@ -81,7 +81,7 @@ public extension Encoder {
             try container.encode(value, forKey: codingKey)
         }
         // throws `EncodingError.invalidValue`
-        else if `strictType` {
+        else if strictType {
             try container.encodeIfPresent(value, forKey: codingKey)
         }
         // NO throws
@@ -105,7 +105,7 @@ public extension Encoder {
             try container.encode(value, forKey: codingKey)
         }
         // throws `EncodingError.invalidValue`
-        else if `strictType` {
+        else if strictType {
             try container.encodeIfPresent(value, forKey: codingKey)
         }
         // NO throws
@@ -130,7 +130,7 @@ public extension Decoder {
     }
     
     internal func decode<T: Decodable>(_ stringKeys: [String], as type: T.Type = T.self, optional: Bool = true, strictType: Bool = false, converter: (any ExCodableDecodingTypeConverter.Type)?) throws -> T? {
-        return try decode(stringKeys.map { ExCodingKey($0) }, as: type, optional: optional, strictType: `strictType`, converter: converter)
+        return try decode(stringKeys.map { ExCodingKey($0) }, as: type, optional: optional, strictType: strictType, converter: converter)
     }
     
     func decode<T: Decodable, K: CodingKey>(_ codingKeys: K ..., as type: T.Type = T.self, converter: (any ExCodableDecodingTypeConverter.Type)?) -> T? {
@@ -141,12 +141,12 @@ public extension Decoder {
     }
     
     internal func decode<T: Decodable, K: CodingKey>(_ codingKeys: [K], as type: T.Type = T.self, optional: Bool = true, strictType: Bool = false, converter: (any ExCodableDecodingTypeConverter.Type)?) throws -> T? {
-        if let container = (!optional || `strictType`
+        if let container = (!optional || strictType
                             // throws `DecodingError.typeMismatch`
                             ? try container(keyedBy: K.self)
                             // NO throws
                             : try? container(keyedBy: K.self)) {
-            return try container.decodeForAlternativeKeys(codingKeys, as: type, optional: optional, strictType: `strictType`, converter: converter)
+            return try container.decodeForKeys(codingKeys, as: type, optional: optional, strictType: strictType, converter: converter)
         }
         return nil
     }
@@ -168,68 +168,41 @@ extension ExCodingKey: CodingKey {
 
 fileprivate extension KeyedDecodingContainer {
     
-    private func pickErrors(_ earlierError: Error?, _ error: Error) -> Error {
-        guard let earlierError else { return error }
-        // `keyNotFound` only says that an attempt found nothing, while any other error says that a value was found and it was wrong.
-        // So an earlier `keyNotFound` gives way to a new error, and otherwise the first error stays.
-        if case DecodingError.keyNotFound = earlierError {
-            return error
-        }
-        return earlierError
-    }
-    
-    func decodeForAlternativeKeys<T: Decodable>(_ codingKeys: [Self.Key], as type: T.Type = T.self, optional: Bool, strictType: Bool, converter: (any ExCodableDecodingTypeConverter.Type)?) throws -> T? {
+    func decodeForKeys<T: Decodable>(_ codingKeys: [Self.Key], as type: T.Type = T.self, optional: Bool, strictType: Bool, converter: (any ExCodableDecodingTypeConverter.Type)?) throws -> T? {
         
-        var earlierError: Error?
+        let codingKey = codingKeys.first!
+        var prevError: Error?
+        
+        do { if let value = try decodeForKey(codingKey, as: type, optional: optional, strictType: strictType, converter: converter) {
+            return value
+        }}
+        catch { prevError = which(prevError, error) }
+        
+        do { if let value = try decodeForNestedKey(codingKey, as: type, optional: optional, strictType: strictType, converter: converter) {
+            return value
+        }}
+        catch { prevError = which(prevError, error) }
         
         do {
-            let codingKey = codingKeys.first!
-            if let value = try decodeForNestedKeys(codingKey, as: type, optional: optional, strictType: `strictType`, converter: converter) {
+            let alternativeKeys = Array(codingKeys.dropFirst())
+            if !alternativeKeys.isEmpty,
+               let value = try decodeForKeys(alternativeKeys, as: type, optional: optional, strictType: strictType, converter: converter) {
                 return value
             }
         }
-        catch { earlierError = error }
+        catch { prevError = which(prevError, error) }
         
-        do {
-            let codingKeys = Array(codingKeys.dropFirst())
-            if !codingKeys.isEmpty,
-               let value = try decodeForAlternativeKeys(codingKeys, as: type, optional: optional, strictType: `strictType`, converter: converter) {
-                return value
-            }
-        }
-        catch { earlierError = pickErrors(earlierError, error) }
-        
-        if let earlierError { throw earlierError }
+        if let prevError { throw prevError }
         return nil
     }
     
-    func decodeForNestedKeys<T: Decodable>(_ codingKey: Self.Key, as type: T.Type = T.self, optional: Bool, strictType: Bool, converter: (any ExCodableDecodingTypeConverter.Type)?) throws -> T? {
-        
-        var earlierError: Error?
-        
-        do {
-            if let value = try decodeForValue(codingKey, as: type, optional: optional, strictType: `strictType`, converter: converter) {
-                return value
-            }
-        }
-        catch { earlierError = error }
-        
-        do {
-            if let exCodingKey = codingKey as? ExCodingKey, // Self.Key is ExCodingKey.Type
-               exCodingKey.intValue == nil {
-                let keys = exCodingKey.stringValue.split(separator: ".").map { ExCodingKey($0) }
-                if keys.count > 1,
-                   let codingKey = keys.last,
-                   let container = nestedContainer(with: keys.dropLast()),
-                   let value = try container.decodeForNestedKeys(codingKey as! Self.Key, as: type, optional: optional, strictType: `strictType`, converter: converter) {
-                    return value
-                }
-            }
-        }
-        catch { earlierError = pickErrors(earlierError, error) }
-        
-        if let earlierError { throw earlierError }
-        return nil
+    func decodeForNestedKey<T: Decodable>(_ codingKey: Self.Key, as type: T.Type = T.self, optional: Bool, strictType: Bool, converter: (any ExCodableDecodingTypeConverter.Type)?) throws -> T? {
+        // Self.Key is ExCodingKey.Type
+        guard let exCodingKey = codingKey as? ExCodingKey, exCodingKey.intValue == nil else { return nil }
+        let keys = exCodingKey.stringValue.split(separator: ".").map { ExCodingKey($0) }
+        guard keys.count > 1, let codingKey = keys.last, let container = nestedContainer(with: keys.dropLast()),
+           let value = try container.decodeForKey(codingKey as! Self.Key, as: type, optional: optional, strictType: strictType, converter: converter) else { return nil }
+        return value
     }
     
     private func nestedContainer(with keys: [ExCodingKey]) -> Self? {
@@ -241,50 +214,42 @@ fileprivate extension KeyedDecodingContainer {
         return container
     }
     
-    func decodeForValue<T: Decodable>(_ codingKey: Self.Key, as type: T.Type = T.self, optional: Bool, strictType: Bool, converter: (any ExCodableDecodingTypeConverter.Type)?) throws -> T? {
-        
-        var earlierError: Error?
+    func decodeForKey<T: Decodable>(_ codingKey: Self.Key, as type: T.Type = T.self, optional: Bool, strictType: Bool, converter: (any ExCodableDecodingTypeConverter.Type)?) throws -> T? {
+        var prevError: Error?
         do {
-            if let value = (`strictType`
-                            // throws `DecodingError.typeMismatch`
-                            ? try decodeIfPresent(type, forKey: codingKey)
-                            // NO throws
-                            : try? decodeIfPresent(type, forKey: codingKey)) {
-                return value
-            }
-            else if !optional {
-                // throws `DecodingError.keyNotFound`, `DecodingError.valueNotFound` or `DecodingError.typeMismatch`
+            
+            if !optional {
+                // throws `DecodingError.keyNotFound`, `DecodingError.valueNotFound`, `DecodingError.typeMismatch`, `DecodingError.dataCorrupted` and numberIsNotRepresentableInSwift(parsed: ...), etc.
                 let value = try decode(type, forKey: codingKey)
-                // throws `DecodingError.valueNotFound`
+                // throws `DecodingError.valueNotFound` for `Optional.none`
                 if let optional = value as? OptionalProtocol, optional.wrapped == nil {
                     let description = "Value not found with key \(codingKey) (\"\(codingKey.stringValue)\")."
                     throw DecodingError.valueNotFound(T.self, .init(codingPath: codingPath, debugDescription: description))
                 }
                 return value
             }
+            
+            if let value = (strictType
+                            // throws `DecodingError.typeMismatch`
+                            ? try decodeIfPresent(type, forKey: codingKey)
+                            // NO throws
+                            : try? decodeIfPresent(type, forKey: codingKey)) {
+                return value
+            }
         }
-        catch { earlierError = error }
+        catch { prevError = which(prevError, error) }
         
-        if contains(codingKey),
-           let value = decodeForTypeConversion(codingKey, as: type, converter: converter) {
-            return value
+        if contains(codingKey) {
+            if let value = decodeForTypeConversion(codingKey, as: type, converter: converter) {
+                return value
+            }
         }
         
-        if let earlierError { throw earlierError }
+        if let prevError { throw prevError }
         return nil
     }
     
     func decodeForTypeConversion<T: Decodable>(_ codingKey: Self.Key, as type: T.Type = T.self, converter specificConverter: (any ExCodableDecodingTypeConverter.Type)?) -> T? {
-        
-        // `UInt64("1.2")` -> `nil`
-        // `Double("1.2")` -> `1.2`
-        // `1.2.rounded(.towardZero)` -> `1.0`
-        // `UInt64(1.0)` -> `1`
-        // !!!: BUT `UInt64(Double(UInt64.max)) != UInt64.max`
-        func value<I>(from string: String, _ closure: (Double) -> I?) -> I? {
-            return if let double = Double(string) { closure(double.rounded(.towardZero)) } else { nil }
-        }
-        
         // for nested optionals, e.g. `var int: Int??? = nil`
         let wrappedType = T?.wrappedType
         
@@ -299,95 +264,95 @@ fileprivate extension KeyedDecodingContainer {
                     case "false", "f", "no", "n", "":
                         return false as? T
                     default:
-                        if let int = Int(string) ?? value(from: string, { Int(exactly: $0) }) { return (int != 0) as? T }
+                        if let int = Int(string) ?? parseToInt64(string, to: { Int(exactly: $0) }) { return (int != 0) as? T }
                 }
             }
         }
         
         else if type is Int.Type || wrappedType is Int.Type {
-            if      let bool   = try? decodeIfPresent(Bool.self,   forKey: codingKey) { return Int(bool ? 1 : 0) as? T }
-            else if let double = try? decodeIfPresent(Double.self, forKey: codingKey), let value = Int(exactly: double.rounded(.towardZero)) { return value as? T }
-            else if let string = try? decodeIfPresent(String.self, forKey: codingKey), let value = Int(string) ?? value(from: string, { Int(exactly: $0) }) { return value as? T }
+            if      let bool    = try? decodeIfPresent(Bool.self,    forKey: codingKey) { return Int(bool ? 1 : 0) as? T }
+            else if let decimal = try? decodeIfPresent(Decimal.self, forKey: codingKey), let int64 = roundToInt64(decimal), let value = Int(exactly: int64) { return value as? T }
+            else if let string  = try? decodeIfPresent(String.self,  forKey: codingKey), let value = Int(string) ?? parseToInt64(string, to: { Int(exactly: $0) }) { return value as? T }
         }
         else if type is Int8.Type || wrappedType is Int8.Type {
-            if      let bool   = try? decodeIfPresent(Bool.self,   forKey: codingKey) { return Int8(bool ? 1 : 0) as? T }
-            else if let double = try? decodeIfPresent(Double.self, forKey: codingKey), let value = Int8(exactly: double.rounded(.towardZero)) { return value as? T }
-            else if let string = try? decodeIfPresent(String.self, forKey: codingKey), let value = Int8(string) ?? value(from: string, { Int8(exactly: $0) }) { return value as? T }
+            if      let bool    = try? decodeIfPresent(Bool.self,    forKey: codingKey) { return Int8(bool ? 1 : 0) as? T }
+            else if let decimal = try? decodeIfPresent(Decimal.self, forKey: codingKey), let int64 = roundToInt64(decimal), let value = Int8(exactly: int64) { return value as? T }
+            else if let string  = try? decodeIfPresent(String.self,  forKey: codingKey), let value = Int8(string) ?? parseToInt64(string, to: { Int8(exactly: $0) }) { return value as? T }
         }
         else if type is Int16.Type || wrappedType is Int16.Type {
-            if      let bool   = try? decodeIfPresent(Bool.self,   forKey: codingKey) { return Int16(bool ? 1 : 0) as? T }
-            else if let double = try? decodeIfPresent(Double.self, forKey: codingKey), let value = Int16(exactly: double.rounded(.towardZero)) { return value as? T }
-            else if let string = try? decodeIfPresent(String.self, forKey: codingKey), let value = Int16(string) ?? value(from: string, { Int16(exactly: $0) }) { return value as? T }
+            if      let bool    = try? decodeIfPresent(Bool.self,    forKey: codingKey) { return Int16(bool ? 1 : 0) as? T }
+            else if let decimal = try? decodeIfPresent(Decimal.self, forKey: codingKey), let int64 = roundToInt64(decimal), let value = Int8(exactly: int64) { return value as? T }
+            else if let string  = try? decodeIfPresent(String.self,  forKey: codingKey), let value = Int16(string) ?? parseToInt64(string, to: { Int16(exactly: $0) }) { return value as? T }
         }
         else if type is Int32.Type || wrappedType is Int32.Type {
-            if      let bool   = try? decodeIfPresent(Bool.self,   forKey: codingKey) { return Int32(bool ? 1 : 0) as? T }
-            else if let double = try? decodeIfPresent(Double.self, forKey: codingKey), let value = Int32(exactly: double.rounded(.towardZero)) { return value as? T }
-            else if let string = try? decodeIfPresent(String.self, forKey: codingKey), let value = Int32(string) ?? value(from: string, { Int32(exactly: $0) }) { return value as? T }
+            if      let bool    = try? decodeIfPresent(Bool.self,    forKey: codingKey) { return Int32(bool ? 1 : 0) as? T }
+            else if let decimal = try? decodeIfPresent(Decimal.self, forKey: codingKey), let int64 = roundToInt64(decimal), let value = Int32(exactly: int64) { return value as? T }
+            else if let string  = try? decodeIfPresent(String.self,  forKey: codingKey), let value = Int32(string) ?? parseToInt64(string, to: { Int32(exactly: $0) }) { return value as? T }
         }
         else if type is Int64.Type || wrappedType is Int64.Type {
-            if      let bool   = try? decodeIfPresent(Bool.self,   forKey: codingKey) { return Int64(bool ? 1 : 0) as? T }
-            else if let double = try? decodeIfPresent(Double.self, forKey: codingKey), let value = Int64(exactly: double.rounded(.towardZero)) { return value as? T }
-            else if let string = try? decodeIfPresent(String.self, forKey: codingKey), let value = Int64(string) ?? value(from: string, { Int64(exactly: $0) }) { return value as? T }
+            if      let bool    = try? decodeIfPresent(Bool.self,    forKey: codingKey) { return Int64(bool ? 1 : 0) as? T }
+            else if let decimal = try? decodeIfPresent(Decimal.self, forKey: codingKey), let value = roundToInt64(decimal) { return value as? T }
+            else if let string  = try? decodeIfPresent(String.self,  forKey: codingKey), let value = Int64(string) ?? parseToInt64(string, to: { Int64(exactly: $0) }) { return value as? T }
         }
         
         else if type is UInt.Type || wrappedType is UInt.Type {
-            if      let bool   = try? decodeIfPresent(Bool.self,   forKey: codingKey) { return UInt(bool ? 1 : 0) as? T }
-            else if let double = try? decodeIfPresent(Double.self, forKey: codingKey), let value = UInt(exactly: double.rounded(.towardZero)) { return value as? T }
-            else if let string = try? decodeIfPresent(String.self, forKey: codingKey), let value = UInt(string) ?? value(from: string, { UInt(exactly: $0) }) { return value as? T }
+            if      let bool    = try? decodeIfPresent(Bool.self,    forKey: codingKey) { return UInt(bool ? 1 : 0) as? T }
+            else if let decimal = try? decodeIfPresent(Decimal.self, forKey: codingKey), let uInt64 = roundToUInt64(decimal), let value = UInt(exactly: uInt64) { return value as? T }
+            else if let string  = try? decodeIfPresent(String.self,  forKey: codingKey), let value = UInt(string) ?? parseToUInt64(string, to: { UInt(exactly: $0) }) { return value as? T }
         }
         else if type is UInt8.Type || wrappedType is UInt8.Type {
-            if      let bool   = try? decodeIfPresent(Bool.self,   forKey: codingKey) { return UInt8(bool ? 1 : 0) as? T }
-            else if let double = try? decodeIfPresent(Double.self, forKey: codingKey), let value = UInt8(exactly: double.rounded(.towardZero)) { return value as? T }
-            else if let string = try? decodeIfPresent(String.self, forKey: codingKey), let value = UInt8(string) ?? value(from: string, { UInt8(exactly: $0) }) { return value as? T }
+            if      let bool    = try? decodeIfPresent(Bool.self,    forKey: codingKey) { return UInt8(bool ? 1 : 0) as? T }
+            else if let decimal = try? decodeIfPresent(Decimal.self, forKey: codingKey), let uInt64 = roundToUInt64(decimal), let value = UInt8(exactly: uInt64) { return value as? T }
+            else if let string  = try? decodeIfPresent(String.self,  forKey: codingKey), let value = UInt8(string) ?? parseToUInt64(string, to: { UInt8(exactly: $0) }) { return value as? T }
         }
         else if type is UInt16.Type || wrappedType is UInt16.Type {
-            if      let bool   = try? decodeIfPresent(Bool.self,   forKey: codingKey) { return UInt16(bool ? 1 : 0) as? T }
-            else if let double = try? decodeIfPresent(Double.self, forKey: codingKey), let value = UInt16(exactly: double.rounded(.towardZero)) { return value as? T }
-            else if let string = try? decodeIfPresent(String.self, forKey: codingKey), let value = UInt16(string) ?? value(from: string, { UInt16(exactly: $0) }) { return value as? T }
+            if      let bool    = try? decodeIfPresent(Bool.self,    forKey: codingKey) { return UInt16(bool ? 1 : 0) as? T }
+            else if let decimal = try? decodeIfPresent(Decimal.self, forKey: codingKey), let uInt64 = roundToUInt64(decimal), let value = UInt16(exactly: uInt64) { return value as? T }
+            else if let string  = try? decodeIfPresent(String.self,  forKey: codingKey), let value = UInt16(string) ?? parseToUInt64(string, to: { UInt16(exactly: $0) }) { return value as? T }
         }
         else if type is UInt32.Type || wrappedType is UInt32.Type {
-            if      let bool   = try? decodeIfPresent(Bool.self,   forKey: codingKey) { return UInt32(bool ? 1 : 0) as? T }
-            else if let double = try? decodeIfPresent(Double.self, forKey: codingKey), let value = UInt32(exactly: double.rounded(.towardZero)) { return value as? T }
-            else if let string = try? decodeIfPresent(String.self, forKey: codingKey), let value = UInt32(string) ?? value(from: string, { UInt32(exactly: $0) }) { return value as? T }
+            if      let bool    = try? decodeIfPresent(Bool.self,    forKey: codingKey) { return UInt32(bool ? 1 : 0) as? T }
+            else if let decimal = try? decodeIfPresent(Decimal.self, forKey: codingKey), let uInt64 = roundToUInt64(decimal), let value = UInt32(exactly: uInt64) { return value as? T }
+            else if let string  = try? decodeIfPresent(String.self,  forKey: codingKey), let value = UInt32(string) ?? parseToUInt64(string, to: { UInt32(exactly: $0) }) { return value as? T }
         }
         else if type is UInt64.Type || wrappedType is UInt64.Type {
-            if      let bool   = try? decodeIfPresent(Bool.self,   forKey: codingKey) { return UInt64(bool ? 1 : 0) as? T }
-            else if let double = try? decodeIfPresent(Double.self, forKey: codingKey), let value = UInt64(exactly: double.rounded(.towardZero)) { return value as? T }
-            else if let string = try? decodeIfPresent(String.self, forKey: codingKey), let value = UInt64(string) ?? value(from: string, { UInt64(exactly: $0) }) { return value as? T }
+            if      let bool    = try? decodeIfPresent(Bool.self,    forKey: codingKey) { return UInt64(bool ? 1 : 0) as? T }
+            else if let decimal = try? decodeIfPresent(Decimal.self, forKey: codingKey), let value = roundToUInt64(decimal) { return value as? T }
+            else if let string  = try? decodeIfPresent(String.self,  forKey: codingKey), let value = UInt64(string) ?? parseToUInt64(string, to: { UInt64(exactly: $0) }) { return value as? T }
         }
         
         else if type is Double.Type || wrappedType is Double.Type {
-            if      let string = try? decodeIfPresent(String.self, forKey: codingKey), let value = Double(string), value.isFinite { return value as? T }
+            if      let string  = try? decodeIfPresent(String.self,  forKey: codingKey), let value = Double(string), value.isFinite { return value as? T }
         }
         else if type is Float.Type || wrappedType is Float.Type {
-            if      let string = try? decodeIfPresent(String.self, forKey: codingKey), let value = Float(string), value.isFinite { return value as? T }
+            if      let string  = try? decodeIfPresent(String.self,  forKey: codingKey), let value = Float(string), value.isFinite { return value as? T }
         }
         else if type is Float16.Type || wrappedType is Float16.Type {
-            if      let string = try? decodeIfPresent(String.self, forKey: codingKey), let value = Float16(string), value.isFinite { return value as? T }
+            if      let string  = try? decodeIfPresent(String.self,  forKey: codingKey), let value = Float16(string), value.isFinite { return value as? T }
         }
         // public typealias Float32 = Float
         // public typealias Float64 = Double
         else if type is CGFloat.Type || wrappedType is CGFloat.Type {
-            if      let string = try? decodeIfPresent(String.self, forKey: codingKey), let value = Double(string), value.isFinite { return CGFloat(value) as? T }
+            if      let string  = try? decodeIfPresent(String.self,  forKey: codingKey), let value = Double(string), value.isFinite { return CGFloat(value) as? T }
         }
         
         else if #available(macOS 15.0, iOS 18.0, watchOS 11.0, tvOS 18.0, visionOS 2.0, *) {
             if type is Int128.Type || wrappedType is Int128.Type {
-                if      let bool   = try? decodeIfPresent(Bool.self,   forKey: codingKey) { return Int128(bool ? 1 : 0) as? T }
-                else if let double = try? decodeIfPresent(Double.self, forKey: codingKey), let value = Int128(exactly: double.rounded(.towardZero)) { return value as? T }
-                else if let string = try? decodeIfPresent(String.self, forKey: codingKey), let value = Int128(string) ?? value(from: string, { Int128(exactly: $0) }) { return value as? T }
+                if      let bool    = try? decodeIfPresent(Bool.self,    forKey: codingKey) { return Int128(bool ? 1 : 0) as? T }
+                else if let double  = try? decodeIfPresent(Double.self,  forKey: codingKey), let value = Int128(exactly: double.rounded(.towardZero)) { return value as? T }
+                else if let string  = try? decodeIfPresent(String.self,  forKey: codingKey), let prefix = parsing128(string), let value = Int128(prefix) { return value as? T }
             }
             else if type is UInt128.Type || wrappedType is UInt128.Type {
-                if      let bool   = try? decodeIfPresent(Bool.self,   forKey: codingKey) { return UInt128(bool ? 1 : 0) as? T }
-                else if let double = try? decodeIfPresent(Double.self, forKey: codingKey), let value = UInt128(exactly: double.rounded(.towardZero)) { return value as? T }
-                else if let string = try? decodeIfPresent(String.self, forKey: codingKey), let value = UInt128(string) ?? value(from: string, { UInt128(exactly: $0) }) { return value as? T }
+                if      let bool    = try? decodeIfPresent(Bool.self,    forKey: codingKey) { return UInt128(bool ? 1 : 0) as? T }
+                else if let double  = try? decodeIfPresent(Double.self,  forKey: codingKey), let value = UInt128(exactly: double.rounded(.towardZero)) { return value as? T }
+                else if let string  = try? decodeIfPresent(String.self,  forKey: codingKey), let prefix = parsing128(string), let value = UInt128(prefix) { return value as? T }
             }
         }
         
         if type is String.Type || wrappedType is String.Type {
-            if      let bool   = try? decodeIfPresent(Bool.self,   forKey: codingKey) { return String(describing: bool) as? T }
-            else if let int64  = try? decodeIfPresent(Int64.self,  forKey: codingKey) { return String(describing: int64) as? T }
-            else if let double = try? decodeIfPresent(Double.self, forKey: codingKey) { return String(describing: double) as? T }
+            if      let bool    = try? decodeIfPresent(Bool.self,    forKey: codingKey) { return String(describing: bool) as? T }
+            else if let int64   = try? decodeIfPresent(Int64.self,   forKey: codingKey) { return String(describing: int64) as? T }
+            else if let double  = try? decodeIfPresent(Double.self,  forKey: codingKey) { return String(describing: double) as? T }
             else if #available(macOS 15.0, iOS 18.0, watchOS 11.0, tvOS 18.0, visionOS 2.0, *) {
                 if      let  int128 = try? decodeIfPresent(Int128.self,  forKey: codingKey) { return String(describing:  int128) as? T }
                 else if let uInt128 = try? decodeIfPresent(UInt128.self, forKey: codingKey) { return String(describing: uInt128) as? T }
@@ -402,6 +367,53 @@ fileprivate extension KeyedDecodingContainer {
         
         return nil
     }
+}
+
+// MARK: - private funcs
+
+// `keyNotFound` only says that an attempt found nothing, while any other error says that no value was found or a value was wrong.
+// So an earlier `keyNotFound` gives way to a new error, and otherwise the first error stays.
+fileprivate func which(_ lastError: Error?, _ error: Error) -> Error {
+    guard let lastError else { return error }
+    if case DecodingError.keyNotFound = error {
+        return lastError
+    }
+    if case DecodingError.keyNotFound = lastError {
+        return error
+    }
+    return lastError
+}
+
+fileprivate func roundToInt64(_ decimal: Decimal) -> Int64? {
+    var decimal = decimal, rounded: Decimal = 0
+    NSDecimalRound(&rounded, &decimal, 0, decimal < 0 ? .up : .down)
+    let int64 = (rounded as NSDecimalNumber).int64Value
+    guard Decimal(int64) == rounded else { return nil }
+    return int64
+}
+fileprivate func roundToUInt64(_ decimal: Decimal) -> UInt64? {
+    var decimal = decimal, rounded: Decimal = 0
+    NSDecimalRound(&rounded, &decimal, 0, decimal < 0 ? .up : .down)
+    let uInt64 = (rounded as NSDecimalNumber).uint64Value
+    guard Decimal(uInt64) == rounded else { return nil }
+    return uInt64
+}
+
+// `String: "1.2"` -> `UInt64: nil`
+// `String: "1.2"` -> `Decimal: 1.2` -> `Decimal: 1` -> `UInt64: 1`
+// !!!: USE Decimal, because Double does NOT include Int64 or UInt64
+fileprivate func parseToInt64<I>(_ string: String, to make: (_ int64: Int64) -> I?) -> I? {
+    guard let decimal = Decimal(string: string), let int64: Int64 = roundToInt64(decimal) else { return nil }
+    return make(int64)
+}
+fileprivate func parseToUInt64<I>(_ string: String, to make: (_ uInt64: UInt64) -> I?) -> I? {
+    guard let decimal = Decimal(string: string), let uInt64: UInt64 = roundToUInt64(decimal) else { return nil }
+    return make(uInt64)
+}
+
+// !!!: BUT Decimal does NOT include Int128 or UInt128
+fileprivate func parsing128(_ string: String) -> any StringProtocol? {
+    return string.wholeMatch(of: /([+-]?[0-9]+)\.?[0-9]*/)?.1
 }
 
 /// Converts a decoded value of a different JSON type into `T`.

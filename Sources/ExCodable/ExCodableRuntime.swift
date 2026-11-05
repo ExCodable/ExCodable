@@ -31,7 +31,7 @@ public enum ExCodableRuntime {
             }
             return value
         }
-        return try decoder.decode(keys, as: type, optional: optional, strictType: `strictType`, converter: converter)
+        return try decoder.decode(keys, as: type, optional: optional, strictType: strictType, converter: converter)
     }
     
     public static func _decode<T: Decodable>(_ type: T.Type = T.self, from decoder: Decoder, keys: [String], optional: Bool, strictType: Bool, converter: (any ExCodableDecodingTypeConverter.Type)?, customDecode: ((Decoder) throws -> T?)? = nil) throws -> T? {
@@ -39,7 +39,7 @@ public enum ExCodableRuntime {
     }
     
     public static func _decode<T: Decodable & RawRepresentable>(_ type: T.Type = T.self, from decoder: Decoder, keys: [String], optional: Bool, strictType: Bool, converter: (any ExCodableDecodingTypeConverter.Type)?, customDecode: ((Decoder) throws -> T?)? = nil) throws -> T? where T.RawValue: Decodable {
-        var earlierError: Error?
+        var prevError: Error?
         do {
             if let value = try __decode(T.self, from: decoder, keys: keys, optional: optional, strictType: strictType, converter: converter, customDecode: customDecode) {
                 return value
@@ -47,7 +47,7 @@ public enum ExCodableRuntime {
         }
         catch {
             if customDecode != nil { throw error }
-            earlierError = error
+            prevError = error
         }
         
         if let rawValue = try? __decode(T.RawValue.self, from: decoder, keys: keys, optional: optional, strictType: strictType, converter: converter/* NO `customDecode:` here! */) {
@@ -61,7 +61,7 @@ public enum ExCodableRuntime {
             return nil
         }
         
-        if let earlierError { throw earlierError }
+        if let prevError { throw prevError }
         if !optional {
             let description = "Value not found for keys \(keys.map { "\"\($0)\"" }.joined(separator: ", "))."
             throw DecodingError.valueNotFound(T.self, .init(codingPath: decoder.codingPath, debugDescription: description))
@@ -90,7 +90,7 @@ public enum ExCodableRuntime {
             try customEncode(encoder, value)
         }
         else if deepWrapped != nil || !optional {
-            try encoder.encode(value, for: key, optional: optional, strictType: `strictType`)
+            try encoder.encode(value, for: key, optional: optional, strictType: strictType)
         }
         else {
             encoder.ensureKeyedContainer()

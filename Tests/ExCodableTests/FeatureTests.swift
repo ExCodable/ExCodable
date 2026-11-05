@@ -937,17 +937,17 @@ final class FeatureTests: XCTestCase {
     /// required property throws `valueNotFound`, and `default` replaces it. A wrong JSON type is a `typeMismatch`.
     func testInvalidEnumValue() throws {
         // Int enum: `9` is an Int that is not a case.
-        XCTAssertEqual(thrown(TestEnumRequired.self,         #"{"v":9}"#), "valueNotFound", "required")
-        XCTAssertEqual(thrown(TestEnumRequiredStrict.self,   #"{"v":9}"#), "valueNotFound", "required/strict")
+        XCTAssertEqual(thrown(TestEnumRequired.self,         #"{"v":9}"#), "dataCorrupted", "required")
+        XCTAssertEqual(thrown(TestEnumRequiredStrict.self,   #"{"v":9}"#), "dataCorrupted", "required/strict")
         XCTAssertNil(  thrown(TestEnumOptional.self,         #"{"v":9}"#),                  "optional")
-        XCTAssertNil(  thrown(TestEnumOptionalStrict.self,   #"{"v":9}"#),                  "optional/strict")
+        XCTAssertEqual(thrown(TestEnumOptionalStrict.self,   #"{"v":9}"#), "dataCorrupted", "optional/strict")
         XCTAssertNil(  thrown(TestEnumDefault.self,          #"{"v":9}"#),                  "default")
         
         // String enum: `"z"` is a String that is not a case.
-        XCTAssertEqual(thrown(TestStringEnumRequired.self,       #"{"v":"z"}"#), "valueNotFound", "required")
-        XCTAssertEqual(thrown(TestStringEnumRequiredStrict.self, #"{"v":"z"}"#), "valueNotFound", "required/strict")
+        XCTAssertEqual(thrown(TestStringEnumRequired.self,       #"{"v":"z"}"#), "dataCorrupted", "required")
+        XCTAssertEqual(thrown(TestStringEnumRequiredStrict.self, #"{"v":"z"}"#), "dataCorrupted", "required/strict")
         XCTAssertNil(  thrown(TestStringEnumOptional.self,       #"{"v":"z"}"#),                  "optional")
-        XCTAssertNil(  thrown(TestStringEnumOptionalStrict.self, #"{"v":"z"}"#),                  "optional/strict")
+        XCTAssertEqual(thrown(TestStringEnumOptionalStrict.self, #"{"v":"z"}"#), "dataCorrupted", "optional/strict")
         XCTAssertNil(  thrown(TestStringEnumDefault.self,        #"{"v":"z"}"#),                  "default")
         
         // A wrong JSON type is a `typeMismatch`, and `strictType` is what makes an optional property report it.
@@ -959,9 +959,9 @@ final class FeatureTests: XCTestCase {
         XCTAssertEqual(thrown(TestStringEnumOptionalStrict.self, #"{"v":[1]}"#), "typeMismatch", "optional/strict")
         
         // The builtin conversion turns `true` and `1` into the strings "true" and "1". They are strings, just not cases, so it is a value error.
-        XCTAssertEqual(thrown(TestStringEnumRequired.self,       #"{"v":true}"#), "valueNotFound", "required")
-        XCTAssertNil(  thrown(TestStringEnumOptionalStrict.self, #"{"v":true}"#),                  "optional/strict")
-        XCTAssertEqual(thrown(TestStringEnumRequired.self,       #"{"v":1}"#),    "valueNotFound", "required")
+        XCTAssertEqual(thrown(TestStringEnumRequired.self,       #"{"v":true}"#), "typeMismatch", "required")
+        XCTAssertEqual(thrown(TestStringEnumOptionalStrict.self, #"{"v":true}"#), "typeMismatch",  "optional/strict")
+        XCTAssertEqual(thrown(TestStringEnumRequired.self,       #"{"v":1}"#),    "typeMismatch",  "required")
         
         // A valid value still decodes, including the string form of an Int case.
         XCTAssertNil(thrown(TestEnumRequired.self,       #"{"v":1}"#))
@@ -980,11 +980,11 @@ final class FeatureTests: XCTestCase {
     /// The error of the path is the one that describes the data, so it must win over that `keyNotFound`.
     func testNestedKeyReportsTheValueError() throws {
         // The path exists, the value is wrong.
-        XCTAssertEqual(thrown(TestNestedEnumRequired.self,  #"{"a":{"b":9}}"#),   "valueNotFound", "invalid enum value")
+        XCTAssertEqual(thrown(TestNestedEnumRequired.self,  #"{"a":{"b":9}}"#),   "dataCorrupted", "invalid enum value")
         XCTAssertEqual(thrown(TestNestedEnumRequired.self,  #"{"a":{"b":"x"}}"#), "typeMismatch",  "wrong JSON type")
         XCTAssertEqual(thrown(TestNestedStringRequired.self, #"{"a":{"b":[1]}}"#), "typeMismatch",  "wrong JSON type")
         XCTAssertEqual(thrown(TestNestedEnumRequired.self,  #"{"a":{"b":null}}"#), "valueNotFound", "null")
-        XCTAssertNil(  thrown(TestNestedEnumOptionalStrict.self, #"{"a":{"b":9}}"#),                "optional/strict invalid enum value")
+        XCTAssertEqual(thrown(TestNestedEnumOptionalStrict.self, #"{"a":{"b":9}}"#), "dataCorrupted", "optional/strict invalid enum value")
         XCTAssertEqual(thrown(TestNestedEnumOptionalStrict.self, #"{"a":{"b":"x"}}"#), "typeMismatch", "optional/strict wrong JSON type")
         
         // The path is really missing, so `keyNotFound` is the right answer.
@@ -996,7 +996,7 @@ final class FeatureTests: XCTestCase {
         XCTAssertNil(thrown(TestNestedEnumRequired.self, #"{"a":{"b":1}}"#))
         
         // Alternative keys: the second key has the value but it is wrong, and the first key is simply absent.
-        XCTAssertEqual(thrown(TestNestedAlternativeKeys.self, #"{"a":{"b":9}}"#), "valueNotFound", "alternative keys")
+        XCTAssertEqual(thrown(TestNestedAlternativeKeys.self, #"{"a":{"b":9}}"#), "dataCorrupted", "alternative keys")
         XCTAssertNil(  thrown(TestNestedAlternativeKeys.self, #"{"a":{"b":1}}"#))
     }
     

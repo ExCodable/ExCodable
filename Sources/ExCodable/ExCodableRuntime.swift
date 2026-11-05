@@ -23,15 +23,17 @@ public enum ExCodableRuntime {
     public static func _keyString(_ key: any CodingKey) -> String { key.stringValue }
     
     private static func __decode<T: Decodable>(_ type: T.Type = T.self, from decoder: Decoder, keys: [String], optional: Bool, strictType: Bool, converter: (any ExCodableDecodingTypeConverter.Type)?, customDecode: ((Decoder) throws -> T?)? = nil) throws -> T? {
-        if let customDecode {
-            let value = try customDecode(decoder)
-            if !optional && value == nil {
-                let description = "Value not found in custom decode closure for keys \(keys.map { "\"\($0)\"" }.joined(separator: ", "))."
-                throw DecodingError.valueNotFound(T.self, .init(codingPath: decoder.codingPath, debugDescription: description))
-            }
+        guard let customDecode else {
+            return try decoder.decode(keys, as: type, optional: optional, strictType: strictType, converter: converter)
+        }
+        if let value = try customDecode(decoder) {
             return value
         }
-        return try decoder.decode(keys, as: type, optional: optional, strictType: strictType, converter: converter)
+        if !optional { // !!!: only throws for custom decode
+            let description = "Value not found in custom decode closure with keys \(keys.map { "\"\($0)\"" }.joined(separator: ", "))."
+            throw DecodingError.valueNotFound(T.self, .init(codingPath: decoder.codingPath, debugDescription: description))
+        }
+        return nil
     }
     
     public static func _decode<T: Decodable>(_ type: T.Type = T.self, from decoder: Decoder, keys: [String], optional: Bool, strictType: Bool, converter: (any ExCodableDecodingTypeConverter.Type)?, customDecode: ((Decoder) throws -> T?)? = nil) throws -> T? {
@@ -40,32 +42,22 @@ public enum ExCodableRuntime {
     
     public static func _decode<T: Decodable & RawRepresentable>(_ type: T.Type = T.self, from decoder: Decoder, keys: [String], optional: Bool, strictType: Bool, converter: (any ExCodableDecodingTypeConverter.Type)?, customDecode: ((Decoder) throws -> T?)? = nil) throws -> T? where T.RawValue: Decodable {
         var prevError: Error?
-        do {
-            if let value = try __decode(T.self, from: decoder, keys: keys, optional: optional, strictType: strictType, converter: converter, customDecode: customDecode) {
-                return value
-            }
-        }
-        catch {
-            if customDecode != nil { throw error }
-            prevError = error
-        }
         
-        if let rawValue = try? __decode(T.RawValue.self, from: decoder, keys: keys, optional: optional, strictType: strictType, converter: converter/* NO `customDecode:` here! */) {
-            if let value = T(rawValue: rawValue) {
+        do { if let value = try __decode(T.self, from: decoder, keys: keys, optional: optional, strictType: strictType, converter: converter, customDecode: customDecode) {
+            return value
+        }}
+        catch { prevError = prevError ?? error }
+        
+        do {
+            if customDecode == nil,
+               let rawValue = try __decode(T.RawValue.self, from: decoder, keys: keys, optional: optional, strictType: strictType, converter: converter/* NO `customDecode:` here! */),
+               let value = T(rawValue: rawValue) {
                 return value
             }
-            if !optional {
-                let description = "Value not found for keys \(keys.map { "\"\($0)\"" }.joined(separator: ", "))."
-                throw DecodingError.valueNotFound(T.self, .init(codingPath: decoder.codingPath, debugDescription: description))
-            }
-            return nil
         }
+        catch { prevError = prevError ?? error }
         
         if let prevError { throw prevError }
-        if !optional {
-            let description = "Value not found for keys \(keys.map { "\"\($0)\"" }.joined(separator: ", "))."
-            throw DecodingError.valueNotFound(T.self, .init(codingPath: decoder.codingPath, debugDescription: description))
-        }
         return nil
     }
     
@@ -76,16 +68,13 @@ public enum ExCodableRuntime {
     }
     
     public static func _encode<T: Encodable>(_ value: T, to encoder: Encoder, for key: String, optional: Bool, strictType: Bool, customEncode: ((Encoder, T) throws -> Void)? = nil) throws {
-        let deepWrapped = if let wrapped = value as? OptionalProtocol {
-            wrapped.wrapped
-        }
-        else {
-            value
-        }
-        if deepWrapped == nil && !optional {
+        let deepWrapped = if let wrapped = value as? OptionalProtocol { wrapped.wrapped } else { value }
+        
+        guard deepWrapped != nil || optional else {
             let desc = "Expected to encode a required \(T?.wrappedType) but found null value instead."
             throw EncodingError.invalidValue(value as Any, .init(codingPath: encoder.codingPath, debugDescription: desc))
         }
+        
         if let customEncode {
             try customEncode(encoder, value)
         }

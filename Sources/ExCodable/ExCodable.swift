@@ -141,12 +141,13 @@ public extension Decoder {
     }
     
     internal func decode<T: Decodable, K: CodingKey>(_ codingKeys: [K], as type: T.Type = T.self, optional: Bool = true, strictType: Bool = false, converter: (any ExCodableDecodingTypeConverter.Type)?) throws -> T? {
-        if let container = (!optional || strictType
-                            // throws `DecodingError.typeMismatch`
-                            ? try container(keyedBy: K.self)
-                            // NO throws
+        let `throws` = !optional || strictType
+        if let container = (`throws`
+                            ? try  container(keyedBy: K.self)
                             : try? container(keyedBy: K.self)) {
-            return try container.decodeForKeys(codingKeys, as: type, optional: optional, strictType: strictType, converter: converter)
+            return (`throws`
+                    ? try  container.decodeForKeys(codingKeys, as: type, optional: optional, strictType: strictType, converter: converter)
+                    : try? container.decodeForKeys(codingKeys, as: type, optional: optional, strictType: strictType, converter: converter))
         }
         return nil
     }
@@ -168,6 +169,7 @@ extension ExCodingKey: CodingKey {
 
 fileprivate extension KeyedDecodingContainer {
     
+    // call decodeForKey: `try` only and `throws` - NEVER swallow errors
     func decodeForKeys<T: Decodable>(_ codingKeys: [Self.Key], as type: T.Type = T.self, optional: Bool, strictType: Bool, converter: (any ExCodableDecodingTypeConverter.Type)?) throws -> T? {
         
         let codingKey = codingKeys.first!
@@ -196,24 +198,18 @@ fileprivate extension KeyedDecodingContainer {
         return nil
     }
     
+    // call decodeForKey: `try` only and `throws` - NEVER swallow errors
     func decodeForNestedKey<T: Decodable>(_ codingKey: Self.Key, as type: T.Type = T.self, optional: Bool, strictType: Bool, converter: (any ExCodableDecodingTypeConverter.Type)?) throws -> T? {
         // Self.Key is ExCodingKey.Type
         guard let exCodingKey = codingKey as? ExCodingKey, exCodingKey.intValue == nil else { return nil }
         let keys = exCodingKey.stringValue.split(separator: ".").map { ExCodingKey($0) }
-        guard keys.count > 1, let codingKey = keys.last, let container = nestedContainer(with: keys.dropLast()),
-           let value = try container.decodeForKey(codingKey as! Self.Key, as: type, optional: optional, strictType: strictType, converter: converter) else { return nil }
-        return value
-    }
-    
-    private func nestedContainer(with keys: [ExCodingKey]) -> Self? {
-        var container: Self? = self
-        for key in keys {
-            container = try? container?.nestedContainer(keyedBy: Self.Key.self, forKey: key as! Self.Key)
-            if container == nil { return nil }
+        guard keys.count > 1, let codingKey = keys.last, let container = nestedContainer(with: keys.dropLast()) else {
+            return nil
         }
-        return container
+        return try container.decodeForKey(codingKey as! Self.Key, as: type, optional: optional, strictType: strictType, converter: converter)
     }
     
+    // do decode: use `try` only if `!optional` || `strictType`, else use `try?`
     func decodeForKey<T: Decodable>(_ codingKey: Self.Key, as type: T.Type = T.self, optional: Bool, strictType: Bool, converter: (any ExCodableDecodingTypeConverter.Type)?) throws -> T? {
         var prevError: Error?
         do {
@@ -249,6 +245,7 @@ fileprivate extension KeyedDecodingContainer {
         return nil
     }
     
+    // type conversions: `try?` only and NO `throws` - result is optional
     func decodeForTypeConversion<T: Decodable>(_ codingKey: Self.Key, as type: T.Type = T.self, converter specificConverter: (any ExCodableDecodingTypeConverter.Type)?) -> T? {
         // for nested optionals, e.g. `var int: Int??? = nil`
         let wrappedType = T?.wrappedType
@@ -366,6 +363,16 @@ fileprivate extension KeyedDecodingContainer {
         }
         
         return nil
+    }
+    
+    // container: `try?` only and NO `throws` - will throws when validating
+    private func nestedContainer(with keys: [ExCodingKey]) -> Self? {
+        var container: Self? = self
+        for key in keys {
+            container = try? container?.nestedContainer(keyedBy: Self.Key.self, forKey: key as! Self.Key)
+            if container == nil { return nil }
+        }
+        return container
     }
 }
 

@@ -287,7 +287,7 @@ fileprivate extension KeyedDecodingContainer {
         }
         else if type is Int16.Type || wrappedType is Int16.Type {
             if      let bool    = try? decodeIfPresent(Bool.self,    forKey: codingKey) { return Int16(bool ? 1 : 0) as? T }
-            else if let decimal = try? decodeIfPresent(Decimal.self, forKey: codingKey), let int64 = roundToInt64(decimal), let value = Int8(exactly: int64) { return value as? T }
+            else if let decimal = try? decodeIfPresent(Decimal.self, forKey: codingKey), let int64 = roundToInt64(decimal), let value = Int16(exactly: int64) { return value as? T }
             else if let string  = try? decodeIfPresent(String.self,  forKey: codingKey), let value = Int16(string) ?? parseToInt64(string, to: { Int16(exactly: $0) }) { return value as? T }
         }
         else if type is Int32.Type || wrappedType is Int32.Type {

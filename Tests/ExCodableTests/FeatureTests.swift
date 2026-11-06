@@ -299,6 +299,19 @@ final class FeatureTests: XCTestCase {
         }
     }
     
+    func testNestedKeysNotFound() {
+        let json = Data(#"{"int":404,"nested":{"no-nested":{"string": "Not Found"}}}"#.utf8)
+        XCTAssertThrowsError(_ = try TestNestedKeys.decoded(from: json)) { error in
+            if case DecodingError.keyNotFound(let codingKey, let context) = error {
+                print("DecodingError.keyNotFound(\(codingKey), \(context))")
+            }
+            else {
+                print("NOT DecodingError.keyNotFound: \(error)")
+                XCTFail()
+            }
+        }
+    }
+    
     func testNestedSiblingKeys() throws {
         let data = try TestNestedSiblings(name: "Ada", role: "admin").encoded() as Data
         let json = try JSONSerialization.jsonObject(with: data) as! [String: Any]

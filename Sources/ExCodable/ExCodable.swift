@@ -172,6 +172,15 @@ fileprivate extension KeyedDecodingContainer {
     // call decodeForKey: `try` only and `throws` - NEVER swallow errors
     func decodeForKeys<T: Decodable>(_ codingKeys: [Self.Key], as type: T.Type = T.self, optional: Bool, strictType: Bool, converter: (any ExCodableDecodingTypeConverter.Type)?) throws -> T? {
         
+        // `keyNotFound` only says that an attempt found nothing, while any other error says that no value was found or a value was wrong.
+        // So an earlier `keyNotFound` gives way to a new error, and otherwise the first error stays.
+        func which(_ lastError: Error?, _ error: Error) -> Error {
+            guard let lastError else { return error }
+            guard case DecodingError.keyNotFound = lastError else { return lastError }
+            guard case DecodingError.keyNotFound = error else { return error }
+            return lastError // both keyNotFound
+        }
+        
         let codingKey = codingKeys.first!
         var prevError: Error?
         
@@ -233,7 +242,7 @@ fileprivate extension KeyedDecodingContainer {
                 return value
             }
         }
-        catch { prevError = which(prevError, error) }
+        catch { prevError = prevError ?? error }
         
         if contains(codingKey) {
             if let value = decodeForTypeConversion(codingKey, as: type, converter: converter) {
@@ -245,7 +254,7 @@ fileprivate extension KeyedDecodingContainer {
         return nil
     }
     
-    // type conversions: `try?` only and NO `throws` - result is optional
+    // type conversions: just `try?` and NO `throws` - value is optional
     func decodeForTypeConversion<T: Decodable>(_ codingKey: Self.Key, as type: T.Type = T.self, converter specificConverter: (any ExCodableDecodingTypeConverter.Type)?) -> T? {
         // for nested optionals, e.g. `var int: Int??? = nil`
         let wrappedType = T?.wrappedType
@@ -365,7 +374,7 @@ fileprivate extension KeyedDecodingContainer {
         return nil
     }
     
-    // container: `try?` only and NO `throws` - will throws when validating
+    // nested container: just `try?` and NO `throws` - key is optional
     private func nestedContainer(with keys: [ExCodingKey]) -> Self? {
         var container: Self? = self
         for key in keys {
@@ -377,19 +386,6 @@ fileprivate extension KeyedDecodingContainer {
 }
 
 // MARK: - private funcs
-
-// `keyNotFound` only says that an attempt found nothing, while any other error says that no value was found or a value was wrong.
-// So an earlier `keyNotFound` gives way to a new error, and otherwise the first error stays.
-fileprivate func which(_ lastError: Error?, _ error: Error) -> Error {
-    guard let lastError else { return error }
-    if case DecodingError.keyNotFound = error {
-        return lastError
-    }
-    if case DecodingError.keyNotFound = lastError {
-        return error
-    }
-    return lastError
-}
 
 fileprivate func roundToInt64(_ decimal: Decimal) -> Int64? {
     var decimal = decimal, rounded: Decimal = 0

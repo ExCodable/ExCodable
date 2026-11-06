@@ -1013,6 +1013,110 @@ final class FeatureTests: XCTestCase {
         XCTAssertNil(  thrown(TestNestedAlternativeKeys.self, #"{"a":{"b":1}}"#))
     }
     
+    /// A string reads as a number only when the whole string is a decimal number, with an optional sign and fraction.
+    /// A fraction is cut off toward zero, like a JSON number. Anything else is not a number: it does not turn into `0`,
+    /// and it does not lose its tail (`"12abc"` is not `12`, and `"1,000"` is not `1`).
+    func testNumberWrittenAsString() throws {
+        func ok(_ text: String, line: UInt = #line) -> String { #"{"v":"\#(text)"}"# }
+        
+        // What reads as a number, with its fraction cut off toward zero.
+        for (text, expected) in [("12", 12), ("12.9", 12), ("-12.9", -12), ("+12", 12), ("12.", 12), ("00012", 12), ("0", 0), ("-0.9", 0)] as [(String, Int)] {
+            XCTAssertEqual(try TestNumberIntRequired.decoded(from: Data(ok(text).utf8)).v, expected, "Int \"\(text)\"")
+            XCTAssertEqual(try TestNumberInt64Required.decoded(from: Data(ok(text).utf8)).v, Int64(expected), "Int64 \"\(text)\"")
+            XCTAssertEqual(try TestNumberInt16Required.decoded(from: Data(ok(text).utf8)).v, Int16(expected), "Int16 \"\(text)\"")
+        }
+        
+        // What is not a number: a required property reports a type error, an optional property has no value, and nothing becomes 0.
+        for text in ["12abc", "abc", "1,000", "0x10", "-", "+", ".5", "-.5", "1e3", "1.5e3", "1E2", " 12 ", "12 34", "12.9.1", "--5", "1_000", ""] {
+            XCTAssertEqual(thrown(TestNumberIntRequired.self,    ok(text)), "typeMismatch", "Int required \"\(text)\"")
+            XCTAssertEqual(thrown(TestNumberInt64Required.self,  ok(text)), "typeMismatch", "Int64 required \"\(text)\"")
+            XCTAssertEqual(thrown(TestNumberInt16Required.self,  ok(text)), "typeMismatch", "Int16 required \"\(text)\"")
+            XCTAssertEqual(thrown(TestNumberUInt8Required.self,  ok(text)), "typeMismatch", "UInt8 required \"\(text)\"")
+            XCTAssertNil(try TestNumberIntOptional.decoded(from: Data(ok(text).utf8)).v,    "Int optional \"\(text)\"")
+            XCTAssertNil(try TestNumberInt16Optional.decoded(from: Data(ok(text).utf8)).v,  "Int16 optional \"\(text)\"")
+            XCTAssertNil(try TestNumberUInt8Optional.decoded(from: Data(ok(text).utf8)).v,  "UInt8 optional \"\(text)\"")
+        }
+        
+        // A string is read at the width of the property.
+        XCTAssertEqual(try TestNumberIntRequired.decoded(from: Data(ok("9223372036854775807").utf8)).v, .max)
+        XCTAssertEqual(thrown(TestNumberIntRequired.self,   ok("9223372036854775808")), "typeMismatch")
+        XCTAssertEqual(thrown(TestNumberIntRequired.self,   ok("-9223372036854775809")), "typeMismatch")
+        XCTAssertEqual(try TestNumberUInt8Required.decoded(from: Data(ok("255").utf8)).v, 255)
+        XCTAssertEqual(thrown(TestNumberUInt8Required.self, ok("256")), "typeMismatch")
+        XCTAssertEqual(thrown(TestNumberUInt8Required.self, ok("-1")),  "typeMismatch")
+        
+        // Bool reads a number from a string by the same rule. The words and the empty string keep their meaning.
+        XCTAssertEqual(try TestStringNumberBool.decoded(from: Data(ok("12.9").utf8)).v, true)
+        XCTAssertEqual(try TestStringNumberBool.decoded(from: Data(ok("0.0").utf8)).v, false)
+        XCTAssertEqual(try TestStringNumberBool.decoded(from: Data(ok("yes").utf8)).v, true)
+        XCTAssertEqual(try TestStringNumberBool.decoded(from: Data(ok("").utf8)).v, false)
+        for text in ["12abc", "abc", "1,000", "0x10", "-", ".5", "1e3", " 12 "] {
+            XCTAssertEqual(thrown(TestStringNumberBool.self, ok(text)), "typeMismatch", "Bool \"\(text)\"")
+        }
+    }
+    
+    /// A JSON number with a fraction is cut off toward zero for every integer width, and the cut-off value must still fit.
+    func testFractionIsCutOffForEveryWidth() throws {
+        func number(_ text: String) -> Data { Data(#"{"v":\#(text)}"#.utf8) }
+        
+        // Int16 once read the number as an Int8 and failed on every fraction.
+        XCTAssertEqual(try TestNumberInt16Required.decoded(from: number("12.9")).v,       12)
+        XCTAssertEqual(try TestNumberInt16Required.decoded(from: number("200.9")).v,      200)
+        XCTAssertEqual(try TestNumberInt16Required.decoded(from: number("1000.5")).v,     1000)
+        XCTAssertEqual(try TestNumberInt16Optional.decoded(from: number("12.9")).v,       12)
+        XCTAssertEqual(try TestNumberInt16Required.decoded(from: number("32767.9")).v,    32767)
+        XCTAssertEqual(try TestNumberInt16Required.decoded(from: number("-32768.9")).v,   -32768)
+        XCTAssertEqual(thrown(TestNumberInt16Required.self, #"{"v":32768.0}"#),  "dataCorrupted")
+        XCTAssertEqual(thrown(TestNumberInt16Required.self, #"{"v":-32769.0}"#), "dataCorrupted")
+        
+        XCTAssertEqual(try TestNumberInt8Required.decoded(from: number("127.9")).v,        127)
+        XCTAssertEqual(try TestNumberInt8Required.decoded(from: number("-128.9")).v,       -128)
+        XCTAssertEqual(thrown(TestNumberInt8Required.self, #"{"v":128.0}"#),  "dataCorrupted")
+        XCTAssertEqual(thrown(TestNumberInt8Required.self, #"{"v":-129.0}"#), "dataCorrupted")
+        
+        XCTAssertEqual(try TestNumberInt32Required.decoded(from: number("2147483647.9")).v, 2147483647)
+        XCTAssertEqual(thrown(TestNumberInt32Required.self, #"{"v":2147483648.0}"#), "dataCorrupted")
+        
+        XCTAssertEqual(try TestNumberInt64Required.decoded(from: number("9223372036854775807.5")).v, .max)
+        XCTAssertEqual(try TestNumberInt64Required.decoded(from: number("-9223372036854775808.5")).v, .min)
+        XCTAssertEqual(thrown(TestNumberInt64Required.self, #"{"v":9223372036854775808.0}"#), "dataCorrupted")
+        
+        // An unsigned width takes a fraction that rounds to 0, and not a negative whole number.
+        XCTAssertEqual(try TestNumberUInt8Required.decoded(from: number("255.9")).v,       255)
+        XCTAssertEqual(try TestNumberUInt8Required.decoded(from: number("-0.9")).v,       0)
+        XCTAssertEqual(thrown(TestNumberUInt8Required.self, #"{"v":256.0}"#), "dataCorrupted")
+        XCTAssertEqual(thrown(TestNumberUInt8Required.self, #"{"v":-1.0}"#),  "dataCorrupted")
+        XCTAssertEqual(try TestNumberUInt16Required.decoded(from: number("65535.9")).v,    65535)
+        XCTAssertEqual(try TestNumberUInt32Required.decoded(from: number("4294967295.9")).v, 4294967295)
+        XCTAssertEqual(try TestNumberUInt64Required.decoded(from: number("18446744073709551615.5")).v, .max)
+        XCTAssertEqual(thrown(TestNumberUInt64Required.self, #"{"v":18446744073709551616}"#), "dataCorrupted")
+    }
+    
+    /// `Int128` and `UInt128` are not in `Decimal`'s range, so a string is read by its digits instead. The same rule applies.
+    @available(macOS 15.0, iOS 18.0, watchOS 11.0, tvOS 18.0, visionOS 2.0, *)
+    func testNumberWrittenAsStringFor128Bit() throws {
+        func text(_ value: String) -> Data { Data(#"{"v":"\#(value)"}"#.utf8) }
+        
+        XCTAssertEqual(try TestStringNumberInt128.decoded(from: text("170141183460469231731687303715884105727")).v, .max)
+        XCTAssertEqual(try TestStringNumberInt128.decoded(from: text("-170141183460469231731687303715884105728")).v, .min)
+        XCTAssertEqual(try TestStringNumberInt128.decoded(from: text("12.9")).v, 12)
+        XCTAssertEqual(try TestStringNumberUInt128.decoded(from: text("340282366920938463463374607431768211455")).v, .max)
+        
+        // One past the range is not a number of this width.
+        XCTAssertEqual(thrown(TestStringNumberInt128.self,  #"{"v":"170141183460469231731687303715884105728"}"#),  "typeMismatch")
+        XCTAssertEqual(thrown(TestStringNumberInt128.self,  #"{"v":"-170141183460469231731687303715884105729"}"#), "typeMismatch")
+        XCTAssertEqual(thrown(TestStringNumberUInt128.self, #"{"v":"340282366920938463463374607431768211456"}"#),  "typeMismatch")
+        XCTAssertEqual(thrown(TestStringNumberUInt128.self, #"{"v":"-1"}"#), "typeMismatch")
+        
+        for value in ["12abc", "abc", "1,000", "1e3", ".5", " 12 "] {
+            XCTAssertEqual(thrown(TestStringNumberInt128.self, #"{"v":"\#(value)"}"#), "typeMismatch", "Int128 \"\(value)\"")
+        }
+        
+        // A JSON number keeps every digit up to 2^127: it is not rounded through a Double on the way.
+        XCTAssertEqual(try TestStringNumberInt128.decoded(from: Data(#"{"v":9007199254740993}"#.utf8)).v, 9007199254740993)
+        XCTAssertEqual(try TestStringNumberInt128.decoded(from: Data(#"{"v":12.9}"#.utf8)).v, 12)
+    }
+    
     /// A JSON number, or a numeric string, that does not fit the property's type is a value error, not a type error:
     /// an optional property becomes `nil`, a required property throws `valueNotFound`, and `default` replaces it.
     /// `strictType` does not change that. JSONDecoder reports the overflow as a `dataCorrupted` that says the JSON is

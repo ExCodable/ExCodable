@@ -942,3 +942,12 @@ enum TestStringEnum: String, Codable {
 @ExCodable struct TestNumberDecimalOptional { @ExCodableKey var v: Decimal? }
 @ExCodable struct TestNumberDecimalOptionalStrict { @ExCodableKey(strictType: true) var v: Decimal? }
 @ExCodable struct TestNumberDecimalDefault { @ExCodableKey(default: Decimal(1)) var v: Decimal }
+
+// MARK: numbers written as strings
+
+@ExCodable struct TestStringNumberBool { @ExCodableKey var v: Bool }
+@available(macOS 15.0, iOS 18.0, watchOS 11.0, tvOS 18.0, visionOS 2.0, *)
+@ExCodable struct TestStringNumberInt128 { @ExCodableKey var v: Int128 }
+@available(macOS 15.0, iOS 18.0, watchOS 11.0, tvOS 18.0, visionOS 2.0, *)
+@ExCodable struct TestStringNumberUInt128 { @ExCodableKey var v: UInt128 }
+

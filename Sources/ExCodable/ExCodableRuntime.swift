@@ -11,8 +11,8 @@ import Foundation
 /// Calls used by code that `@ExCodable` generates. Do not call these directly: they may change without notice.
 ///
 /// The members are `public` only because the generated code is compiled in the user's module.
-/// The leading underscore and `@_documentation` mark them as internal.
-@_documentation(visibility: internal)
+/// The leading underscore and `@_documentation` mark them as private.
+@_documentation(visibility: private)
 public enum ExCodableRuntime {
     
     public static func _converter(of type: Any.Type) -> (any ExCodableDecodingTypeConverter.Type)? {

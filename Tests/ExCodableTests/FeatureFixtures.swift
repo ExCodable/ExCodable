@@ -217,6 +217,16 @@ struct TestNestedSiblings: Equatable {
 //     let name: String
 // }
 
+// !!!: NOT supported - report build error
+// @ExCodable
+// struct TestNonCodable {
+//     struct NonCodable {
+//         let name: String
+//     }
+//     @ExCodableKey
+//     let nonCodable: NonCodable
+// }
+
 @ExCodable
 struct TestDotPathPrefixClashUser: Equatable {
     @ExCodableKey

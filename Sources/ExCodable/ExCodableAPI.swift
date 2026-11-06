@@ -501,9 +501,9 @@ extension Optional: OptionalProtocol {
     
     public var wrapped: Any? {
         return switch self {
-            case .some(let optional as OptionalProtocol):
+            case let .some(optional as OptionalProtocol):
                 optional.wrapped
-            case .some(let wrapped):
+            case let .some(wrapped):
                 wrapped
             case .none:
                 nil

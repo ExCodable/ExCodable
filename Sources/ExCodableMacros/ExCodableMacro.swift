@@ -59,13 +59,6 @@ public struct ExCodableKeyMacro: PeerMacro {
     }
 }
 
-/// `@ExCodableExcept` only does something in `.allKeys` mode.
-///
-/// - `.allKeys`: the property is left out of coding.
-/// - `.exCodableKeys` (default): an unmarked property is already excluded, so the attribute changes
-///   nothing and stays silent — writing it or not is the same.
-/// - No `@ExCodable` at all: nothing is generated, so the attribute is reported like a stray
-///   `@ExCodableKey` would be.
 public struct ExCodableExceptMacro: PeerMacro {
     public static func expansion(
         of node: AttributeSyntax,
@@ -85,14 +78,9 @@ public struct ExCodableExceptMacro: PeerMacro {
     }
 }
 
-/// Whether `@ExCodable` was passed `.allKeys`.
-///
-/// The parameter type is `ExCodableOptions`, so the compiler already rejects anything else;
-/// this only has to read the case name. A case reached through a variable or a function call has
-/// no name to read, so it is reported instead of being silently treated as `.exCodableKeys`.
 private func isAllKeys(_ attribute: AttributeSyntax) throws -> Bool {
     guard let arguments = attribute.arguments,
-          case .argumentList(let list) = arguments,
+          case let .argumentList(list) = arguments,
           let expression = list.first?.expression else { return false }
     guard let member = expression.as(MemberAccessExprSyntax.self) else {
         throw ExCodableMacroError.message(
@@ -103,7 +91,7 @@ private func isAllKeys(_ attribute: AttributeSyntax) throws -> Bool {
     return member.declName.baseName.text == "allKeys"
 }
 
-/// The attribute name without its module qualifier, so `ExCodable.ExCodable` reads as `ExCodable`.
+// `ExCodable.ExCodable` -> `ExCodable`
 private func attributeName(_ attribute: AttributeSyntax) -> String {
     let name = attribute.attributeName.trimmedDescription
     return name.split(separator: ".").last.map(String.init) ?? name
@@ -115,17 +103,10 @@ private func hasAttribute(_ variable: VariableDeclSyntax, named target: String) 
     }
 }
 
-private func isExCodableAttribute(_ attribute: AttributeSyntax) -> Bool {
-    attributeName(attribute) == "ExCodable"
-}
-
-/// `@ExCodableKey` alone does nothing: the member and extension macros on the enclosing type are
-/// what produce `init(from:)` and `encode(to:)`. Returns `true` when no enclosing type (or none of
-/// its enclosing types, for nested declarations) carries `@ExCodable`.
 private func enclosingTypeIsNotExCodable(in context: some MacroExpansionContext) -> Bool {
     for item in context.lexicalContext.reversed() {
         guard let decl = item.asProtocol(DeclGroupSyntax.self) else { continue }
-        if decl.attributes.contains(where: { $0.as(AttributeSyntax.self).map(isExCodableAttribute) ?? false }) {
+        if decl.attributes.contains(where: { $0.as(AttributeSyntax.self).map({ attributeName($0) == "ExCodable" }) ?? false }) {
             return false
         }
     }
@@ -163,9 +144,6 @@ struct ExCodableLetWithDefault: DiagnosticMessage {
 private enum ExCodableMacroError: Error, CustomStringConvertible {
     case message(String)
     var description: String {
-        // if case .message(let message) = self {
-        //     return message
-        // }
         return switch self {
             case let .message(message): message
         }
@@ -180,7 +158,7 @@ private enum ExCodableExpansion {
         case `internal` = 2
         case `package` = 3
         case `public` = 4
-        /// Keyword prefix for a declaration at this level. `internal` needs none.
+        
         var prefix: String {
             return switch self {
                 case .private: "private "
@@ -190,8 +168,8 @@ private enum ExCodableExpansion {
                 case .public: "public "
             }
         }
-        /// Swift never synthesizes a `public` or `package` memberwise initializer, so those stay
-        /// unmarked rather than being widened or narrowed.
+        // Swift never synthesizes a `public` or `package` memberwise initializer, so those stay
+        // unmarked rather than being widened or narrowed.
         var memberwisePrefix: String {
             return switch self {
                 case .private, .fileprivate: prefix
@@ -204,15 +182,15 @@ private enum ExCodableExpansion {
     
     private struct Property {
         var access: Access
-        /// `false` for a `private` or `fileprivate` variable that already has a default.
-        /// Swift leaves those out of the memberwise initializer.
+        // `false` for a `private` or `fileprivate` variable that already has a default.
+        // Swift leaves those out of the memberwise initializer.
         var memberwise: Bool
         var name: String
         var type: String?
         var `default`: String?
         var codable: CodableSpec?
         var witness: String?
-        /// `.allKeys` codes an unmarked property exactly like an empty `@ExCodableKey`.
+        // `.allKeys` codes an unmarked property exactly like an empty `@ExCodableKey`.
         static let implicitSpec = CodableSpec(keys: [], default: nil, strictType: "false", encode: nil, decode: nil)
     }
     
@@ -278,8 +256,8 @@ private enum ExCodableExpansion {
         return [try ExtensionDeclSyntax(SyntaxNodeString(stringLiteral: source))]
     }
     
-    /// A `let` with an initial value is a constant. `.allKeys` leaves it out of coding, because decoding would have to assign
-    /// it a second time, and that is not allowed. Without a hint it looks as if the property were coded.
+    // A `let` with an initial value is a constant. `.allKeys` leaves it out of coding, because decoding would have to assign
+    // it a second time, and that is not allowed. Without a hint it looks as if the property were coded.
     private static func warnAboutSkippedLets(in declaration: some DeclGroupSyntax, context: some MacroExpansionContext) {
         for item in declaration.memberBlock.members {
             guard let variable = item.decl.as(VariableDeclSyntax.self),
@@ -357,10 +335,10 @@ private enum ExCodableExpansion {
         return properties
     }
     
-    /// `willSet` and `didSet` keep the property stored. A getter or setter does not.
+    // `willSet` and `didSet` keep the property stored. A getter or setter does not.
     private static func isStoredBinding(_ binding: PatternBindingSyntax) -> Bool {
         guard let accessorBlock = binding.accessorBlock else { return true }
-        guard case .accessors(let accessors) = accessorBlock.accessors, !accessors.isEmpty else { return false }
+        guard case let .accessors(accessors) = accessorBlock.accessors, !accessors.isEmpty else { return false }
         return accessors.allSatisfy { accessor in
             return switch accessor.accessorSpecifier.tokenKind {
                 case .keyword(.willSet), .keyword(.didSet): true
@@ -369,9 +347,9 @@ private enum ExCodableExpansion {
         }
     }
     
-    /// Only `@MainActor` is recognized: any other global actor is an arbitrary name that a macro can not tell
-    /// from an unrelated attribute. For those, declare the isolated conformance yourself, for example
-    /// `struct S: @MyActor Codable`.
+    // Only `@MainActor` is recognized: any other global actor is an arbitrary name that a macro can not tell
+    // from an unrelated attribute. For those, declare the isolated conformance yourself, for example
+    // `struct S: @MyActor Codable`.
     private static func isMainActor(_ declaration: some DeclGroupSyntax) -> Bool {
         declaration.attributes.contains { element in
             element.as(AttributeSyntax.self).map { attributeName($0) == "MainActor" } ?? false
@@ -389,8 +367,7 @@ private enum ExCodableExpansion {
             var keys: [String] = []
             var `default`: String?
             var strictType = "false"
-            var encode: String?
-            var decode: String?
+            var encode, decode: String?
             if let arguments = labeledArguments(of: attribute) {
                 for argument in arguments {
                     let expression = argument.expression
@@ -415,11 +392,6 @@ private enum ExCodableExpansion {
         return nil
     }
     
-    /// A default value exists to absorb a failed decode; `strictType` says "do not absorb this
-    /// failure", which would leave the default unreachable and the declaration self-contradictory.
-    ///
-    /// Checked once per type by `members`, never from `codableSpec`: `@ExCodable` expands twice
-    /// (member and extension macros), so validating during parsing would report everything twice.
     private static func checkContradictions(of declaration: some DeclGroupSyntax) throws {
         for item in declaration.memberBlock.members {
             guard let variable = item.decl.as(VariableDeclSyntax.self),
@@ -433,7 +405,7 @@ private enum ExCodableExpansion {
     
     private static func labeledArguments(of attribute: AttributeSyntax) -> LabeledExprListSyntax? {
         if let arguments = attribute.arguments,
-           case .argumentList(let list) = arguments { return list }
+           case let .argumentList(list) = arguments { return list }
         return nil
     }
     
@@ -527,8 +499,8 @@ private enum ExCodableExpansion {
         return []
     }
     
-    /// Type parameters that are not already constrained to `Codable`.
-    /// Value parameters (`let n: Int`) and parameter packs are left alone.
+    // Type parameters that are not already constrained to `Codable`.
+    // Value parameters (`let n: Int`) and parameter packs are left alone.
     private static func missingCodableParameters(of declaration: some DeclGroupSyntax) -> [String] {
         guard let parameters = genericParameterClause(of: declaration)?.parameters else { return [] }
         var codable: Set<String> = []
@@ -550,7 +522,7 @@ private enum ExCodableExpansion {
         }
         if let requirements = genericWhereClause(of: declaration)?.requirements {
             for requirement in requirements {
-                guard case .conformanceRequirement(let conformance) = requirement.requirement,
+                guard case let .conformanceRequirement(conformance) = requirement.requirement,
                       let name = conformance.leftType.as(IdentifierTypeSyntax.self)?.name.text else { continue }
                 record(name, conformanceNames(in: conformance.rightType))
             }
@@ -579,7 +551,7 @@ private enum ExCodableExpansion {
         return " where " + missing.map { "\($0): Codable" }.joined(separator: ", ")
     }
     
-    /// Getter access. `private(set)` and the other setter modifiers are ignored.
+    // Getter access. `private(set)` and the other setter modifiers are ignored.
     private static func accessLevel(of modifiers: DeclModifierListSyntax) -> Access {
         var level = Access.internal
         for modifier in modifiers {
@@ -596,7 +568,7 @@ private enum ExCodableExpansion {
         return level
     }
     
-    /// `private` if any parameter is private, `fileprivate` if any is fileprivate, otherwise no wider than `internal` or the type.
+    // `private` if any parameter is private, `fileprivate` if any is fileprivate, otherwise no wider than `internal` or the type.
     private static func memberwiseAccess(type: Access, parameters: [Access]) -> Access {
         var level = Access.internal
         for parameter in parameters {
@@ -611,10 +583,10 @@ private enum ExCodableExpansion {
         return type.rawValue < level.rawValue ? type : level
     }
     
-    /// Interpolating an empty string into a multi-line literal leaves a line with no indentation,
-    /// so an empty body must drop the line instead of rendering a blank one.
-    private static func block(_ content: String) -> String {
-        content.isEmpty ? "" : "\n\(content)"
+    // Interpolating an empty string into a multi-line literal leaves a line with no indentation,
+    // so an empty body must drop the line instead of rendering a blank one.
+    private static func append(lines: String) -> String {
+        lines.isEmpty ? "" : "\n\(lines)"
     }
     
     private static func defaultsEnum(for properties: [Property]) -> String? {
@@ -632,7 +604,7 @@ private enum ExCodableExpansion {
             protocol Default {
                 associatedtype Value
                 static var `default`: Value { get }
-            }\(block(fields))
+            }\(append(lines: fields))
         }
         """
     }
@@ -659,7 +631,7 @@ private enum ExCodableExpansion {
         }.joined(separator: "\n")
         let keyword = memberwiseAccess(type: typeAccess, parameters: included.map(\.access)).memberwisePrefix
         return """
-        \(keyword)init(\(parameters)) {\(block(assignments))
+        \(keyword)init(\(parameters)) {\(append(lines: assignments))
         }
         """
     }
@@ -687,7 +659,7 @@ private enum ExCodableExpansion {
         }
         else {
             """
-            \(signature) {\(block(body))
+            \(signature) {\(append(lines: body))
             }
             """
         }
@@ -720,10 +692,8 @@ private enum ExCodableExpansion {
         }
     }
     
-    /// A property is optional when its type is written with `?` or spelled `Optional<...>`.
-    ///
-    /// `!` counts as required: an implicitly unwrapped optional promises a value, and treating it as
-    /// optional would silently disable the very check the declaration asks for.
+    // `!` counts as required: an implicitly unwrapped optional promises a value, and treating it as
+    // optional would silently disable the very check the declaration asks for.
     private static func isOptional(_ property: Property) -> Bool {
         guard let type = property.type else { return false }
         return type.hasSuffix("?") || type.hasPrefix("Optional<")
@@ -764,7 +734,7 @@ private enum ExCodableExpansion {
         }
         else {
             """
-            \(access)\(override)func encode(to encoder: Encoder) throws\(constraint) {\(block(body))
+            \(access)\(override)func encode(to encoder: Encoder) throws\(constraint) {\(append(lines: body))
             }
             """
         }

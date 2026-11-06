@@ -302,7 +302,7 @@ final class FeatureTests: XCTestCase {
     func testNestedKeysNotFound() {
         let json = Data(#"{"int":404,"nested":{"no-nested":{"string": "Not Found"}}}"#.utf8)
         XCTAssertThrowsError(_ = try TestNestedKeys.decoded(from: json)) { error in
-            if case DecodingError.keyNotFound(let codingKey, let context) = error {
+            if case let DecodingError.keyNotFound(codingKey, context) = error {
                 print("DecodingError.keyNotFound(\(codingKey), \(context))")
             }
             else {
@@ -843,7 +843,7 @@ final class FeatureTests: XCTestCase {
         let typeMismatchData = Data(#"{"v":"abc"}"#.utf8)
         
         XCTAssertThrowsError(try TestMatrixRequiredPermissive.decoded(from: noKeyData)) { error in
-            if case DecodingError.keyNotFound(let codingKey, let context) = error {
+            if case let DecodingError.keyNotFound(codingKey, context) = error {
                 print("DecodingError.keyNotFound(\(codingKey), \(context))")
             }
             else {
@@ -853,7 +853,7 @@ final class FeatureTests: XCTestCase {
         }
         
         XCTAssertThrowsError(try TestMatrixRequiredStrict.decoded(from: noKeyData)) { error in
-            if case DecodingError.keyNotFound(let codingKey, let context) = error {
+            if case let DecodingError.keyNotFound(codingKey, context) = error {
                 print("DecodingError.keyNotFound(\(codingKey), \(context))")
             }
             else {
@@ -863,7 +863,7 @@ final class FeatureTests: XCTestCase {
         }
         
         XCTAssertThrowsError(try TestMatrixRequiredPermissive.decoded(from: typeMismatchData)) { error in
-            if case DecodingError.typeMismatch(let codingKey, let context) = error {
+            if case let DecodingError.typeMismatch(codingKey, context) = error {
                 print("DecodingError.typeMismatch(\(codingKey), \(context))")
             }
             else {

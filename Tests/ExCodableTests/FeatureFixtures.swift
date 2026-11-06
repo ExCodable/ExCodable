@@ -645,6 +645,7 @@ struct TestAllKeysWithExplicitKey: Equatable {
 
 @ExCodable(.allKeys)
 struct TestAllKeysWithFixedLet: Equatable {
+    @ExCodableExcept
     let kind = "user"
     var value: Int
 }

@@ -29,7 +29,7 @@ public struct ExCodableMacro: MemberMacro, ExtensionMacro {
         conformingTo protocols: [TypeSyntax],
         in context: some MacroExpansionContext
     ) throws -> [DeclSyntax] {
-        try ExCodableExpansion.members(of: declaration, attribute: node)
+        try ExCodableExpansion.members(of: declaration, attribute: node, in: context)
     }
     
     public static func expansion(
@@ -76,7 +76,7 @@ public struct ExCodableExceptMacro: PeerMacro {
             throw ExCodableMacroError.message("@ExCodableExcept can only be applied to a stored property")
         }
         if hasAttribute(variable, named: "ExCodableKey") {
-            throw ExCodableMacroError.message("@ExCodableExcept cannot be combined with @ExCodableKey")
+            throw ExCodableMacroError.message("@ExCodableExcept can not be combined with @ExCodableKey")
         }
         if enclosingTypeIsNotExCodable(in: context) {
             context.diagnose(Diagnostic(node: node, message: ExCodableExceptWithoutExCodable()))
@@ -96,7 +96,7 @@ private func isAllKeys(_ attribute: AttributeSyntax) throws -> Bool {
           let expression = list.first?.expression else { return false }
     guard let member = expression.as(MemberAccessExprSyntax.self) else {
         throw ExCodableMacroError.message(
-            "@ExCodable cannot evaluate \(expression.trimmedDescription) at compile time. "
+            "@ExCodable can not evaluate \(expression.trimmedDescription) at compile time. "
             + "Write .allKeys or .exCodableKeys directly."
         )
     }
@@ -147,6 +147,16 @@ struct ExCodableExceptWithoutExCodable: DiagnosticMessage {
         + "Add @ExCodable (with .allKeys to use @ExCodableExcept), or remove the attribute."
     }
     var diagnosticID: MessageID { MessageID(domain: "ExCodable", id: "exceptWithoutExCodable") }
+    var severity: DiagnosticSeverity { .warning }
+}
+
+struct ExCodableLetWithDefault: DiagnosticMessage {
+    var name: String
+    var message: String {
+        "@ExCodable(.allKeys) does not code '\(name)': a let with an initial value is a constant, and decoding can not assign it again. "
+        + "Mark it @ExCodableExcept to say that is intended, or declare it with var to code it."
+    }
+    var diagnosticID: MessageID { MessageID(domain: "ExCodable", id: "letWithDefaultSkipped") }
     var severity: DiagnosticSeverity { .warning }
 }
 
@@ -213,8 +223,13 @@ private enum ExCodableExpansion {
         var encode, decode: String?
     }
     
-    static func members(of declaration: some DeclGroupSyntax, attribute: AttributeSyntax) throws -> [DeclSyntax] {
+    static func members(of declaration: some DeclGroupSyntax, attribute: AttributeSyntax, in context: some MacroExpansionContext) throws -> [DeclSyntax] {
         try checkContradictions(of: declaration)
+        // Reported here, not from `properties`: `@ExCodable` expands twice, as a member macro and as an extension macro,
+        // and `properties` runs in both, which would report everything twice.
+        if try isAllKeys(attribute) {
+            warnAboutSkippedLets(in: declaration, context: context)
+        }
         let properties = try properties(of: declaration, attribute: attribute)
         var decls: [DeclSyntax] = []
         if let defaults = defaultsEnum(for: properties) {
@@ -263,6 +278,23 @@ private enum ExCodableExpansion {
         return [try ExtensionDeclSyntax(SyntaxNodeString(stringLiteral: source))]
     }
     
+    /// A `let` with an initial value is a constant. `.allKeys` leaves it out of coding, because decoding would have to assign
+    /// it a second time, and that is not allowed. Without a hint it looks as if the property were coded.
+    private static func warnAboutSkippedLets(in declaration: some DeclGroupSyntax, context: some MacroExpansionContext) {
+        for item in declaration.memberBlock.members {
+            guard let variable = item.decl.as(VariableDeclSyntax.self),
+                  variable.bindingSpecifier.tokenKind == .keyword(.let) else { continue }
+            let modifiers = variable.modifiers.map(\.name.text)
+            if modifiers.contains("static") || modifiers.contains("class") { continue }
+            // Already decided by the user: @ExCodableExcept is the answer this warning asks for, and @ExCodableKey is an error.
+            if hasAttribute(variable, named: "ExCodableExcept") || hasAttribute(variable, named: "ExCodableKey") { continue }
+            for binding in variable.bindings where binding.initializer != nil {
+                guard let name = binding.pattern.as(IdentifierPatternSyntax.self)?.identifier.text else { continue }
+                context.diagnose(Diagnostic(node: Syntax(binding.pattern), message: ExCodableLetWithDefault(name: name)))
+            }
+        }
+    }
+    
     private static func properties(of declaration: some DeclGroupSyntax, attribute: AttributeSyntax) throws -> [Property] {
         let memberBlock = declaration.memberBlock
         let allKeys = try isAllKeys(attribute)
@@ -302,7 +334,7 @@ private enum ExCodableExpansion {
                 let type = binding.typeAnnotation?.type.trimmedDescription
                 let `default` = binding.initializer?.value.trimmedDescription
                 if isLet, `default` != nil, specified != nil {
-                    throw ExCodableMacroError.message("@ExCodable cannot assign \(name) because the let already has a default value. Remove the default; the generated initializer sets the property.")
+                    throw ExCodableMacroError.message("@ExCodable can not assign \(name) because the let already has a default value, the generated initializer sets the property. Remove the default or use @ExCodableExcept.")
                 }
                 if isLet, `default` != nil {
                     continue
@@ -337,7 +369,7 @@ private enum ExCodableExpansion {
         }
     }
     
-    /// Only `@MainActor` is recognized: any other global actor is an arbitrary name that a macro cannot tell
+    /// Only `@MainActor` is recognized: any other global actor is an arbitrary name that a macro can not tell
     /// from an unrelated attribute. For those, declare the isolated conformance yourself, for example
     /// `struct S: @MyActor Codable`.
     private static func isMainActor(_ declaration: some DeclGroupSyntax) -> Bool {
@@ -394,7 +426,7 @@ private enum ExCodableExpansion {
                   let spec = try codableSpec(of: variable),
                   spec.strictType == "true" else { continue }
             if spec.`default` != nil || variable.bindings.contains(where: { $0.initializer != nil }) {
-                throw ExCodableMacroError.message("@ExCodableKey cannot use a default value together with strictType")
+                throw ExCodableMacroError.message("@ExCodableKey can not use a default value together with strictType")
             }
         }
     }
@@ -542,7 +574,7 @@ private enum ExCodableExpansion {
         guard !missing.isEmpty else { return "" }
         if declaresCodable(declaration) {
             let list = missing.joined(separator: ", ")
-            throw ExCodableMacroError.message("@ExCodable requires \(list) to conform to Codable. The type already declares Codable, Decodable, or Encodable, so the conformance cannot be conditional.")
+            throw ExCodableMacroError.message("@ExCodable requires \(list) to conform to Codable. The type already declares Codable, Decodable, or Encodable, so the conformance can not be conditional.")
         }
         return " where " + missing.map { "\($0): Codable" }.joined(separator: ", ")
     }

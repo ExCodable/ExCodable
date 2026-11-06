@@ -15,7 +15,7 @@ let package = Package(
         .library(name: "ExCodable", targets: ["ExCodable"])
     ],
     dependencies: [
-        .package(url: "https://github.com/swiftlang/swift-syntax.git", from: "604.0.0"),
+        .package(url: "https://github.com/swiftlang/swift-syntax.git", from: "604.0.0")
     ],
     targets: [
         .target(name: "ExCodable", dependencies: ["ExCodableMacros"]),
@@ -23,9 +23,9 @@ let package = Package(
             name: "ExCodableMacros",
             dependencies: [
                 .product(name: "SwiftSyntax", package: "swift-syntax"),
-                .product(name: "SwiftSyntaxBuilder", package: "swift-syntax"),
                 .product(name: "SwiftSyntaxMacros", package: "swift-syntax"),
-                .product(name: "SwiftCompilerPlugin", package: "swift-syntax"),
+                .product(name: "SwiftSyntaxBuilder", package: "swift-syntax"),
+                .product(name: "SwiftCompilerPlugin", package: "swift-syntax")
             ]
         ),
         .testTarget(
@@ -33,7 +33,8 @@ let package = Package(
             dependencies: [
                 "ExCodable",
                 "ExCodableMacros",
-                .product(name: "SwiftSyntaxMacrosTestSupport", package: "swift-syntax")
+                .product(name: "SwiftSyntaxMacrosTestSupport", package: "swift-syntax"),
+                .product(name: "SwiftParser", package: "swift-syntax")
             ]
         )
     ],

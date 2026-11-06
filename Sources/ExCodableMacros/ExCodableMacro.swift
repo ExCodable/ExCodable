@@ -49,11 +49,18 @@ public struct ExCodableKeyMacro: PeerMacro {
         providingPeersOf declaration: some DeclSyntaxProtocol,
         in context: some MacroExpansionContext
     ) throws -> [DeclSyntax] {
-        guard declaration.is(VariableDeclSyntax.self) else {
-            throw ExCodableMacroError.message("@ExCodableKey can only be applied to a stored property")
+        guard let variable = declaration.as(VariableDeclSyntax.self) else {
+            context.diagnose(Diagnostic(node: Syntax(node), message: ExCodableDiagnostic.keyOnNonVariable))
+            return []
+        }
+        if isStatic(variable) {
+            for name in names(of: variable) {
+                context.diagnose(Diagnostic(node: Syntax(node), message: ExCodableDiagnostic.keyOnStaticProperty(name)))
+            }
+            return []
         }
         if enclosingTypeIsNotExCodable(in: context) {
-            context.diagnose(Diagnostic(node: node, message: ExCodableKeyWithoutExCodable()))
+            context.diagnose(Diagnostic(node: Syntax(node), message: ExCodableDiagnostic.keyWithoutExCodable))
         }
         return []
     }
@@ -66,27 +73,28 @@ public struct ExCodableExceptMacro: PeerMacro {
         in context: some MacroExpansionContext
     ) throws -> [DeclSyntax] {
         guard let variable = declaration.as(VariableDeclSyntax.self) else {
-            throw ExCodableMacroError.message("@ExCodableExcept can only be applied to a stored property")
+            context.diagnose(Diagnostic(node: Syntax(node), message: ExCodableDiagnostic.exceptOnNonVariable))
+            return []
         }
         if hasAttribute(variable, named: "ExCodableKey") {
-            throw ExCodableMacroError.message("@ExCodableExcept can not be combined with @ExCodableKey")
+            context.diagnose(Diagnostic(node: Syntax(node), message: ExCodableDiagnostic.exceptWithKey))
+            return []
         }
         if enclosingTypeIsNotExCodable(in: context) {
-            context.diagnose(Diagnostic(node: node, message: ExCodableExceptWithoutExCodable()))
+            context.diagnose(Diagnostic(node: Syntax(node), message: ExCodableDiagnostic.exceptWithoutExCodable))
         }
         return []
     }
 }
 
-private func isAllKeys(_ attribute: AttributeSyntax) throws -> Bool {
+// `nil` when the argument is not a literal member such as `.allKeys`. Only the member role reports that, once.
+private func isAllKeys(_ attribute: AttributeSyntax, report context: (any MacroExpansionContext)? = nil) -> Bool? {
     guard let arguments = attribute.arguments,
           case let .argumentList(list) = arguments,
           let expression = list.first?.expression else { return false }
     guard let member = expression.as(MemberAccessExprSyntax.self) else {
-        throw ExCodableMacroError.message(
-            "@ExCodable can not evaluate \(expression.trimmedDescription) at compile time. "
-            + "Write .allKeys or .exCodableKeys directly."
-        )
+        context?.diagnose(Diagnostic(node: Syntax(expression), message: ExCodableDiagnostic.optionNotLiteral(expression.trimmedDescription)))
+        return nil
     }
     return member.declName.baseName.text == "allKeys"
 }
@@ -95,6 +103,15 @@ private func isAllKeys(_ attribute: AttributeSyntax) throws -> Bool {
 private func attributeName(_ attribute: AttributeSyntax) -> String {
     let name = attribute.attributeName.trimmedDescription
     return name.split(separator: ".").last.map(String.init) ?? name
+}
+
+private func isStatic(_ variable: VariableDeclSyntax) -> Bool {
+    let modifiers = variable.modifiers.map(\.name.text)
+    return modifiers.contains("static") || modifiers.contains("class")
+}
+
+private func names(of variable: VariableDeclSyntax) -> [String] {
+    variable.bindings.compactMap { $0.pattern.as(IdentifierPatternSyntax.self)?.identifier.text }
 }
 
 private func hasAttribute(_ variable: VariableDeclSyntax, named target: String) -> Bool {
@@ -113,40 +130,116 @@ private func enclosingTypeIsNotExCodable(in context: some MacroExpansionContext)
     return true
 }
 
-struct ExCodableKeyWithoutExCodable: DiagnosticMessage {
+// Every message the macros report. One case per problem, so a message, its severity and its id live in one place.
+enum ExCodableDiagnostic: DiagnosticMessage {
+    // errors
+    case keyOnNonStoredProperty
+    case keyOnPatternProperty
+    case exceptOnNonVariable
+    case keyOnNonVariable
+    case exceptWithKey
+    case duplicateKey
+    case allKeysNonStoredProperty(String)
+    case allKeysPatternProperty
+    case keyOnLetWithValue(String)
+    case missingTypeAndValue(String)
+    case defaultWithStrictType
+    case optionNotLiteral(String)
+    case notStructOrClass
+    case genericNotCodable(String)
+    // warnings
+    case keyWithoutExCodable
+    case exceptWithoutExCodable
+    case letWithValueSkipped(String)
+    case keyOnStaticProperty(String)
+    
+    // The text is `<who>: <what is wrong>. <what to do>`. Code in a message is quoted with single quotes, as the compiler does.
     var message: String {
-        "@ExCodableKey has no effect because the enclosing type is not marked @ExCodable. "
-        + "Add @ExCodable to the type, or remove @ExCodableKey if the property should stay out of coding."
-    }
-    var diagnosticID: MessageID { MessageID(domain: "ExCodable", id: "keyWithoutExCodable") }
-    var severity: DiagnosticSeverity { .warning }
-}
-
-struct ExCodableExceptWithoutExCodable: DiagnosticMessage {
-    var message: String {
-        "@ExCodableExcept has no effect because the enclosing type is not marked @ExCodable. "
-        + "Add @ExCodable (with .allKeys to use @ExCodableExcept), or remove the attribute."
-    }
-    var diagnosticID: MessageID { MessageID(domain: "ExCodable", id: "exceptWithoutExCodable") }
-    var severity: DiagnosticSeverity { .warning }
-}
-
-struct ExCodableLetWithDefault: DiagnosticMessage {
-    var name: String
-    var message: String {
-        "@ExCodable(.allKeys) does not code '\(name)': a let with an initial value is a constant, and decoding can not assign it again. "
-        + "Mark it @ExCodableExcept to say that is intended, or declare it with var to code it."
-    }
-    var diagnosticID: MessageID { MessageID(domain: "ExCodable", id: "letWithDefaultSkipped") }
-    var severity: DiagnosticSeverity { .warning }
-}
-
-private enum ExCodableMacroError: Error, CustomStringConvertible {
-    case message(String)
-    var description: String {
-        return switch self {
-            case let .message(message): message
+        switch self {
+            case .keyOnNonStoredProperty:
+                "@ExCodableKey: needs a stored property to decode into, and this one is computed."
+            case .keyOnPatternProperty:
+                "@ExCodableKey: needs a named property. Declare each one in its own 'var' or 'let'."
+            case .keyOnNonVariable:
+                "@ExCodableKey: can only be applied to a stored property."
+            case .exceptOnNonVariable:
+                "@ExCodableExcept: can only be applied to a stored property."
+            case .exceptWithKey:
+                "@ExCodableExcept: can not be combined with '@ExCodableKey'. Remove one of them."
+            case .duplicateKey:
+                "@ExCodableKey: this property has it twice. Remove one."
+            case let .allKeysNonStoredProperty(name):
+                "@ExCodable: '\(name)' is computed, so '.allKeys' can not code it. Add '@ExCodableExcept' to leave it out."
+            case .allKeysPatternProperty:
+                "@ExCodable: '.allKeys' needs a named property. Declare each one in its own 'var' or 'let', or add '@ExCodableExcept' to leave it out."
+            case let .keyOnLetWithValue(name):
+                "@ExCodableKey: '\(name)' is a 'let' with an initial value, so decoding can not assign it. Remove the value, or declare it with 'var'."
+            case let .missingTypeAndValue(name):
+                "@ExCodableKey: '\(name)' needs a type or an initial value, so that the macro knows what to decode."
+            case .defaultWithStrictType:
+                "@ExCodableKey: 'default' and 'strictType' contradict each other. The default replaces a failed decode, and 'strictType' reports it. Remove one."
+            case let .optionNotLiteral(text):
+                "@ExCodable: can not evaluate '\(text)' at compile time. Write '.allKeys' or '.exCodableKeys' directly."
+            case .notStructOrClass:
+                "@ExCodable: can only be applied to a struct or a class."
+            case let .genericNotCodable(list):
+                "@ExCodable: '\(list)' must conform to 'Codable'. The type already declares 'Codable', 'Decodable' or 'Encodable', so the macro can not add the condition for you."
+            case .keyWithoutExCodable:
+                "@ExCodableKey: the enclosing type is not marked '@ExCodable', so this does nothing. Add '@ExCodable' to the type, or remove '@ExCodableKey'."
+            case .exceptWithoutExCodable:
+                "@ExCodableExcept: it only applies to a type marked '@ExCodable(.allKeys)', so this does nothing. Add that to the type, or remove '@ExCodableExcept'."
+            case let .letWithValueSkipped(name):
+                "@ExCodable: '.allKeys' does not code '\(name)', because it is a 'let' with an initial value. Mark it '@ExCodableExcept' if that is intended, or declare it with 'var' to code it."
+            case let .keyOnStaticProperty(name):
+                "@ExCodableKey: '\(name)' is a static property. It belongs to the type, not to an instance, so this does nothing. Remove it."
         }
+    }
+    
+    var diagnosticID: MessageID {
+        let id = switch self {
+            case .keyOnNonStoredProperty: "keyOnNonStoredProperty"
+            case .keyOnPatternProperty: "keyOnPatternProperty"
+            case .exceptOnNonVariable: "exceptOnNonVariable"
+            case .keyOnNonVariable: "keyOnNonVariable"
+            case .exceptWithKey: "exceptWithKey"
+            case .duplicateKey: "duplicateKey"
+            case .allKeysNonStoredProperty: "allKeysNonStoredProperty"
+            case .allKeysPatternProperty: "allKeysPatternProperty"
+            case .keyOnLetWithValue: "keyOnLetWithValue"
+            case .missingTypeAndValue: "missingTypeAndValue"
+            case .defaultWithStrictType: "defaultWithStrictType"
+            case .optionNotLiteral: "optionNotLiteral"
+            case .notStructOrClass: "notStructOrClass"
+            case .genericNotCodable: "genericNotCodable"
+            case .keyWithoutExCodable: "keyWithoutExCodable"
+            case .exceptWithoutExCodable: "exceptWithoutExCodable"
+            case .letWithValueSkipped: "letWithValueSkipped"
+            case .keyOnStaticProperty: "keyOnStaticProperty"
+        }
+        return MessageID(domain: "ExCodable", id: id)
+    }
+    
+    var severity: DiagnosticSeverity {
+        switch self {
+            case .keyWithoutExCodable, .exceptWithoutExCodable, .letWithValueSkipped, .keyOnStaticProperty: .warning
+            default: .error
+        }
+    }
+}
+
+private struct Problems {
+    var context: (any MacroExpansionContext)?
+    private(set) var hasError = false
+    
+    init(context: (any MacroExpansionContext)?) {
+        self.context = context
+    }
+    
+    mutating func report(_ message: ExCodableDiagnostic, at node: some SyntaxProtocol) {
+        if message.severity == .error {
+            hasError = true
+        }
+        context?.diagnose(Diagnostic(node: Syntax(node), message: message))
     }
 }
 
@@ -201,14 +294,24 @@ private enum ExCodableExpansion {
         var encode, decode: String?
     }
     
+    // `@ExCodable` expands twice: as a member macro and as an extension macro. Everything is reported from here, once, and
+    // `extensions` only reads the result. A problem is reported on the declaration it belongs to, and all of them in one
+    // pass, so fixing one does not reveal the next.
     static func members(of declaration: some DeclGroupSyntax, attribute: AttributeSyntax, in context: some MacroExpansionContext) throws -> [DeclSyntax] {
-        try checkContradictions(of: declaration)
-        // Reported here, not from `properties`: `@ExCodable` expands twice, as a member macro and as an extension macro,
-        // and `properties` runs in both, which would report everything twice.
-        if try isAllKeys(attribute) {
+        guard declaration.is(StructDeclSyntax.self) || declaration.is(ClassDeclSyntax.self) else {
+            context.diagnose(Diagnostic(node: Syntax(attribute), message: ExCodableDiagnostic.notStructOrClass))
+            return []
+        }
+        var problems = Problems(context: context)
+        guard let allKeys = isAllKeys(attribute, report: context) else { return [] }
+        if allKeys {
             warnAboutSkippedLets(in: declaration, context: context)
         }
-        let properties = try properties(of: declaration, attribute: attribute)
+        _ = genericCodableWhere(of: declaration, at: attribute, into: &problems)
+        let properties = properties(of: declaration, allKeys: allKeys, into: &problems)
+        // With an error reported, nothing is generated: the compiler would only add errors about missing members.
+        guard !problems.hasError else { return [] }
+        
         var decls: [DeclSyntax] = []
         if let defaults = defaultsEnum(for: properties) {
             decls.append(DeclSyntax(stringLiteral: defaults))
@@ -219,7 +322,8 @@ private enum ExCodableExpansion {
         if declaration.is(ClassDeclSyntax.self) {
             let superclass = hasSuperclass(declaration)
             let access = accessLevel(of: declaration.modifiers).prefix
-            let genericWhere = try genericCodableWhere(of: declaration)
+            var ignored = Problems(context: nil)
+            let genericWhere = genericCodableWhere(of: declaration, at: attribute, into: &ignored)
             decls.append(DeclSyntax(stringLiteral: decodeInit(for: properties, kind: .class, hasSuperclass: superclass, access: access, genericWhere: genericWhere)))
             decls.append(DeclSyntax(stringLiteral: encodeFunction(for: properties, kind: .class, hasSuperclass: superclass, access: access, genericWhere: genericWhere)))
         }
@@ -233,9 +337,12 @@ private enum ExCodableExpansion {
         attribute: AttributeSyntax
     ) throws -> [ExtensionDeclSyntax] {
         guard declaration.is(StructDeclSyntax.self) || declaration.is(ClassDeclSyntax.self) else {
-            throw ExCodableMacroError.message("@ExCodable can only be applied to a struct or class")
+            // `@ExCodable` on an enum, an actor or a protocol: the member role has reported it.
+            return []
         }
-        let genericWhere = try genericCodableWhere(of: declaration)
+        var problems = Problems(context: nil)
+        guard let allKeys = isAllKeys(attribute) else { return [] }
+        let genericWhere = genericCodableWhere(of: declaration, at: attribute, into: &problems)
         // On a `@MainActor` type the generated members are main actor-isolated, so the conformance must be too.
         // Without it the compiler rejects the conformance as crossing into main actor-isolated code.
         let isolation = isMainActor(declaration) ? "@MainActor " : ""
@@ -244,7 +351,9 @@ private enum ExCodableExpansion {
             guard !protocols.isEmpty else { return [] }
             return [try ExtensionDeclSyntax(SyntaxNodeString(stringLiteral: "extension \(type.trimmedDescription): \(names.joined(separator: ", "))\(genericWhere) {}"))]
         }
-        let properties = try properties(of: declaration, attribute: attribute)
+        let properties = properties(of: declaration, allKeys: allKeys, into: &problems)
+        // The member role has reported the problem. Generating anything here would only add follow-on errors.
+        guard !problems.hasError else { return [] }
         let access = accessLevel(of: declaration.modifiers).prefix
         let conformance = names.isEmpty ? "" : ": " + names.joined(separator: ", ")
         let source = """
@@ -264,26 +373,27 @@ private enum ExCodableExpansion {
                   variable.bindingSpecifier.tokenKind == .keyword(.let) else { continue }
             let modifiers = variable.modifiers.map(\.name.text)
             if modifiers.contains("static") || modifiers.contains("class") { continue }
-            // Already decided by the user: @ExCodableExcept is the answer this warning asks for, and @ExCodableKey is an error.
+            // Already decided by the user: `@ExCodableExcept` is the answer this warning asks for, and `@ExCodableKey` is an error.
             if hasAttribute(variable, named: "ExCodableExcept") || hasAttribute(variable, named: "ExCodableKey") { continue }
             for binding in variable.bindings where binding.initializer != nil {
                 guard let name = binding.pattern.as(IdentifierPatternSyntax.self)?.identifier.text else { continue }
-                context.diagnose(Diagnostic(node: Syntax(binding.pattern), message: ExCodableLetWithDefault(name: name)))
+                context.diagnose(Diagnostic(node: Syntax(binding.pattern), message: ExCodableDiagnostic.letWithValueSkipped(name)))
             }
         }
     }
     
-    private static func properties(of declaration: some DeclGroupSyntax, attribute: AttributeSyntax) throws -> [Property] {
-        let memberBlock = declaration.memberBlock
-        let allKeys = try isAllKeys(attribute)
+    private static func properties(of declaration: some DeclGroupSyntax, allKeys: Bool, into problems: inout Problems) -> [Property] {
         var properties: [Property] = []
         var witnessCount = 0
-        for item in memberBlock.members {
+        for item in declaration.memberBlock.members {
             guard let variable = item.decl.as(VariableDeclSyntax.self) else { continue }
-            let modifiers = variable.modifiers.map(\.name.text)
-            if modifiers.contains("static") || modifiers.contains("class") { continue }
+            if isStatic(variable) { continue }
             let isLet = variable.bindingSpecifier.tokenKind == .keyword(.let)
-            let specified = try codableSpec(of: variable)
+            let keyAttributes = attributes(of: variable, named: "ExCodableKey")
+            for duplicate in keyAttributes.dropFirst() {
+                problems.report(.duplicateKey, at: duplicate)
+            }
+            let specified = codableSpec(of: variable)
             let excepted = hasAttribute(variable, named: "ExCodableExcept")
             // `.allKeys` codes every stored property; `@ExCodableExcept` opts one back out.
             // A `let` with an initializer stays a fixed field: re-assigning it in `init(from:)` is
@@ -293,38 +403,45 @@ private enum ExCodableExpansion {
             for binding in variable.bindings {
                 guard isStoredBinding(binding) else {
                     if specified != nil {
-                        throw ExCodableMacroError.message("@ExCodableKey requires a stored property")
+                        problems.report(.keyOnNonStoredProperty, at: binding.pattern)
                     }
-                    if implicit {
-                        throw ExCodableMacroError.message("@ExCodable(.allKeys) can only code stored properties. Add @ExCodableExcept to the computed property if that is intended.")
+                    else if implicit {
+                        problems.report(.allKeysNonStoredProperty(binding.pattern.trimmedDescription), at: binding.pattern)
                     }
                     continue
                 }
                 guard let name = binding.pattern.as(IdentifierPatternSyntax.self)?.identifier.text else {
                     if specified != nil {
-                        throw ExCodableMacroError.message("@ExCodableKey requires a named stored property")
+                        problems.report(.keyOnPatternProperty, at: binding.pattern)
                     }
-                    if implicit {
-                        throw ExCodableMacroError.message("@ExCodable(.allKeys) can only code named stored properties. Add @ExCodableExcept if that is intended.")
+                    else if implicit {
+                        problems.report(.allKeysPatternProperty, at: binding.pattern)
                     }
                     continue
                 }
                 let type = binding.typeAnnotation?.type.trimmedDescription
                 let `default` = binding.initializer?.value.trimmedDescription
                 if isLet, `default` != nil, specified != nil {
-                    throw ExCodableMacroError.message("@ExCodable can not assign \(name) because the let already has a default value, the generated initializer sets the property. Remove the default or use @ExCodableExcept.")
+                    problems.report(.keyOnLetWithValue(name), at: binding.pattern)
+                    continue
                 }
                 if isLet, `default` != nil {
                     continue
                 }
+                // A default exists to absorb a failed decode, and `strictType` asks for the failure to be reported.
+                if let specified, specified.strictType == "true", specified.`default` != nil || `default` != nil,
+                   let attribute = keyAttributes.first {
+                    problems.report(.defaultWithStrictType, at: attribute)
+                }
                 let access = accessLevel(of: variable.modifiers)
-                // A private or fileprivate variable with a default is already initialized.
+                // A `private` or `fileprivate` variable with a default is already initialized.
                 // Swift does not add it to the memberwise initializer, so the initializer stays usable from other files.
                 let memberwise = !(`default` != nil && access.rawValue <= Access.fileprivate.rawValue)
                 var witness: String?
                 if type == nil {
                     guard `default` != nil else {
-                        throw ExCodableMacroError.message("@ExCodable requires a type or a default value for \(name)")
+                        problems.report(.missingTypeAndValue(name), at: binding.pattern)
+                        continue
                     }
                     witness = "field\(witnessCount)"
                     witnessCount += 1
@@ -360,47 +477,38 @@ private enum ExCodableExpansion {
         declaration.memberBlock.members.contains { $0.decl.is(InitializerDeclSyntax.self) }
     }
     
-    private static func codableSpec(of variable: VariableDeclSyntax) throws -> CodableSpec? {
-        for attribute in variable.attributes {
-            guard let attribute = attribute.as(AttributeSyntax.self) else { continue }
-            guard attributeName(attribute) == "ExCodableKey" else { continue }
-            var keys: [String] = []
-            var `default`: String?
-            var strictType = "false"
-            var encode, decode: String?
-            if let arguments = labeledArguments(of: attribute) {
-                for argument in arguments {
-                    let expression = argument.expression
-                    switch argument.label?.text {
-                        case "default":
-                            `default` = expression.trimmedDescription
-                        case "strictType":
-                            strictType = boolLiteral(expression)
-                        case "encode":
-                            encode = expression.trimmedDescription
-                        case "decode":
-                            decode = expression.trimmedDescription
-                        case nil:
-                            keys.append(keyExpression(expression))
-                        default:
-                            throw ExCodableMacroError.message("Unknown @ExCodableKey argument \(argument.label?.text ?? "")")
-                    }
-                }
-            }
-            return CodableSpec(keys: keys, default: `default`, strictType: strictType, encode: encode, decode: decode)
+    private static func attributes(of variable: VariableDeclSyntax, named target: String) -> [AttributeSyntax] {
+        variable.attributes.compactMap { element in
+            guard let attribute = element.as(AttributeSyntax.self), attributeName(attribute) == target else { return nil }
+            return attribute
         }
-        return nil
     }
     
-    private static func checkContradictions(of declaration: some DeclGroupSyntax) throws {
-        for item in declaration.memberBlock.members {
-            guard let variable = item.decl.as(VariableDeclSyntax.self),
-                  let spec = try codableSpec(of: variable),
-                  spec.strictType == "true" else { continue }
-            if spec.`default` != nil || variable.bindings.contains(where: { $0.initializer != nil }) {
-                throw ExCodableMacroError.message("@ExCodableKey can not use a default value together with strictType")
+    // An argument that is not one of these is rejected by the compiler before the macro runs, with its own message.
+    private static func codableSpec(of variable: VariableDeclSyntax) -> CodableSpec? {
+        guard let attribute = attributes(of: variable, named: "ExCodableKey").first else { return nil }
+        var keys: [String] = []
+        var `default`: String?
+        var strictType = "false"
+        var encode, decode: String?
+        for argument in labeledArguments(of: attribute) ?? [] {
+            let expression = argument.expression
+            switch argument.label?.text {
+                case "default":
+                    `default` = expression.trimmedDescription
+                case "strictType":
+                    strictType = boolLiteral(expression)
+                case "encode":
+                    encode = expression.trimmedDescription
+                case "decode":
+                    decode = expression.trimmedDescription
+                case nil:
+                    keys.append(keyExpression(expression))
+                default:
+                    break
             }
         }
+        return CodableSpec(keys: keys, default: `default`, strictType: strictType, encode: encode, decode: decode)
     }
     
     private static func labeledArguments(of attribute: AttributeSyntax) -> LabeledExprListSyntax? {
@@ -541,12 +649,12 @@ private enum ExCodableExpansion {
         return false
     }
     
-    private static func genericCodableWhere(of declaration: some DeclGroupSyntax) throws -> String {
+    private static func genericCodableWhere(of declaration: some DeclGroupSyntax, at node: AttributeSyntax, into problems: inout Problems) -> String {
         let missing = missingCodableParameters(of: declaration)
         guard !missing.isEmpty else { return "" }
         if declaresCodable(declaration) {
-            let list = missing.joined(separator: ", ")
-            throw ExCodableMacroError.message("@ExCodable requires \(list) to conform to Codable. The type already declares Codable, Decodable, or Encodable, so the conformance can not be conditional.")
+            problems.report(.genericNotCodable(missing.joined(separator: ", ")), at: node)
+            return ""
         }
         return " where " + missing.map { "\($0): Codable" }.joined(separator: ", ")
     }

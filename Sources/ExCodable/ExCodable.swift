@@ -28,13 +28,13 @@ public enum ExCodableOptions {
     case exCodableKeys, allKeys
 }
 
-/// @ExCodable + @ExCodableKey
-/// @ExCodable(.allKeys) + @ExCodableExcept
+/// `@ExCodable` + `@ExCodableKey`
+/// `@ExCodable(.allKeys)` + `@ExCodableExcept`
 @attached(member, names: arbitrary)
 @attached(extension, conformances: Decodable, Encodable, names: named(init(from:)), named(encode(to:)))
 public macro ExCodable(_ options: ExCodableOptions = .exCodableKeys) = #externalMacro(module: "ExCodableMacros", type: "ExCodableMacro")
 
-/// @ExCodableKey to enable auto encode/decode by @ExCodable
+/// `@ExCodableKey` to enable auto encode/decode by `@ExCodable`
 @attached(peer, names: arbitrary)
 public macro ExCodableKey(
     _ keys: String...,
@@ -49,6 +49,6 @@ public macro ExCodableKey<Value>(
     decode: ((Decoder) throws -> Value?)? = nil
 ) = #externalMacro(module: "ExCodableMacros", type: "ExCodableKeyMacro")
 
-/// @ExCodableExcept to avoid auto encode/decode by @ExCodable(.allKeys)
+/// `@ExCodableExcept` to avoid auto encode/decode by `@ExCodable(.allKeys)`
 @attached(peer, names: arbitrary)
 public macro ExCodableExcept() = #externalMacro(module: "ExCodableMacros", type: "ExCodableExceptMacro")

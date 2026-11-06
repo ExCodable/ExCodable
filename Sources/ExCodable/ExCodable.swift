@@ -8,24 +8,6 @@
 
 import Foundation
 
-/// # ExCodable
-/// 
-/// <#swift#> <#codable#> <#json#> <#model#> <#type-inference#>
-/// <#macro#> <#key-mapping#> <#coding-key#> <#subscript#>
-/// <#alternative-keys#> <#nested-keys#> <#type-conversions#>
-/// <#default-value#> <#custom-encoding#> <#custom-decoding#>
-/// 
-/// - `ExCodable`: A macro generates `init(from:)` and `encode(to:)`.
-/// - `ExCodableKey`: A macro associates JSON keys to properties.
-/// - `Encodable` & `Decodable` extensions for encoding/decoding from internal/external.
-/// - `Encoder` & `Encoder` extensions for encoding/decoding properties one by one.
-/// - Supports alternative keys, nested keys, type conversions, nested optionals, default values, custom encoding, custom decoding, etc.
-/// 
-/// - seealso: [Usage](https://github.com/ExCodable/ExCodable#usage) from the `README.md`
-/// - seealso: `ExCodableTests.swift` from the `Tests`
-/// - seealso: [Decoding and overriding](https://www.swiftbysundell.com/articles/property-wrappers-in-swift/#decoding-and-overriding)
-/// and [Useful Codable extensions](https://www.swiftbysundell.com/tips/useful-codable-extensions/), by John Sundell.
-
 // MARK: - Encoder & Decoder
 
 public extension Encoder {
@@ -114,8 +96,8 @@ public extension Encoder {
         }
     }
     
-    /// Gives `JSONEncoder` an empty object when every encoded value is absent.
-    internal func ensureKeyedContainer() {
+    internal func encodeEmpty() {
+        // encode empty into `{}`
         _ = container(keyedBy: ExCodingKey.self)
     }
 }
@@ -169,12 +151,10 @@ extension ExCodingKey: CodingKey {
 
 fileprivate extension KeyedDecodingContainer {
     
-    // call decodeForKey: `try` only and `throws` - NEVER swallow errors
+    // call decodeForKey: `try` only and `throws` - NEVER SWALLOW ERRORS
     func decodeForKeys<T: Decodable>(_ codingKeys: [Self.Key], as type: T.Type = T.self, optional: Bool, strictType: Bool, converter: (any ExCodableDecodingTypeConverter.Type)?) throws -> T? {
         
-        // `keyNotFound` only says that an attempt found nothing, while any other error says that no value was found or a value was wrong.
-        // So an earlier `keyNotFound` gives way to a new error, and otherwise the first error stays.
-        func which(_ lastError: Error?, _ error: Error) -> Error {
+        func choose(_ lastError: Error?, _ error: Error) -> Error {
             guard let lastError else { return error }
             guard case DecodingError.keyNotFound = lastError else { return lastError }
             guard case DecodingError.keyNotFound = error else { return error }
@@ -187,12 +167,12 @@ fileprivate extension KeyedDecodingContainer {
         do { if let value = try decodeForKey(codingKey, as: type, optional: optional, strictType: strictType, converter: converter) {
             return value
         }}
-        catch { prevError = which(prevError, error) }
+        catch { prevError = choose(prevError, error) }
         
         do { if let value = try decodeForNestedKey(codingKey, as: type, optional: optional, strictType: strictType, converter: converter) {
             return value
         }}
-        catch { prevError = which(prevError, error) }
+        catch { prevError = choose(prevError, error) }
         
         do {
             let alternativeKeys = Array(codingKeys.dropFirst())
@@ -201,13 +181,13 @@ fileprivate extension KeyedDecodingContainer {
                 return value
             }
         }
-        catch { prevError = which(prevError, error) }
+        catch { prevError = choose(prevError, error) }
         
         if let prevError { throw prevError }
         return nil
     }
     
-    // call decodeForKey: `try` only and `throws` - NEVER swallow errors
+    // call decodeForKey: `try` only and `throws` - NEVER SWALLOW ERRORS
     func decodeForNestedKey<T: Decodable>(_ codingKey: Self.Key, as type: T.Type = T.self, optional: Bool, strictType: Bool, converter: (any ExCodableDecodingTypeConverter.Type)?) throws -> T? {
         // Self.Key is ExCodingKey.Type
         guard let exCodingKey = codingKey as? ExCodingKey, exCodingKey.intValue == nil else { return nil }
@@ -218,7 +198,7 @@ fileprivate extension KeyedDecodingContainer {
         return try container.decodeForKey(codingKey as! Self.Key, as: type, optional: optional, strictType: strictType, converter: converter)
     }
     
-    // do decode: use `try` only if `!optional` || `strictType`, else use `try?`
+    // do decode: use `try` only if `!optional` || `strictType`, else use `try?` - throws if necessary
     func decodeForKey<T: Decodable>(_ codingKey: Self.Key, as type: T.Type = T.self, optional: Bool, strictType: Bool, converter: (any ExCodableDecodingTypeConverter.Type)?) throws -> T? {
         var prevError: Error?
         do {
@@ -235,9 +215,7 @@ fileprivate extension KeyedDecodingContainer {
             }
             
             if let value = (strictType
-                            // throws `DecodingError.typeMismatch`
-                            ? try decodeIfPresent(type, forKey: codingKey)
-                            // NO throws
+                            ? try decodeIfPresent(type, forKey: codingKey) // throws `DecodingError.typeMismatch`
                             : try? decodeIfPresent(type, forKey: codingKey)) {
                 return value
             }
@@ -365,9 +343,7 @@ fileprivate extension KeyedDecodingContainer {
             }
         }
         
-        // converter for specific type, via `extension T: ExCodableDecodingTypeConverter`
-        if let specificConverter,
-           let value = specificConverter.decode(self, codingKey: codingKey, as: type) {
+        if let specificConverter, let value = specificConverter.decode(self, codingKey: codingKey, as: type) {
             return value
         }
         
@@ -405,7 +381,7 @@ fileprivate func roundToUInt64(_ decimal: Decimal) -> UInt64? {
     return uInt64
 }
 
-// `String: "1.2"` -> `UInt64: nil`
+// `String: "1.2"` -> `UInt64: nil` // unexpected
 // `String: "1.2"` -> `Decimal: 1.2` -> `Decimal: 1` -> `UInt64: 1`
 // !!!: USE Decimal, because Double does NOT include Int64 or UInt64
 fileprivate func parseDecimal<I>(from string: String, toInt64 make: (_ int64: Int64) -> I?) -> I? {
@@ -417,15 +393,12 @@ fileprivate func parseDecimal<I>(from string: String, toUInt64 make: (_ uInt64: 
     return make(uInt64)
 }
 
-// !!!: BUT Decimal does NOT include Int128 or UInt128
+// !!!: USE String, because Decimal does NOT include Int128 or UInt128
 fileprivate func integerPrefix(_ string: String) -> any StringProtocol? {
     return string.wholeMatch(of: /([+-]?[0-9]+)\.?[0-9]*/)?.1
 }
 
 /// Converts a decoded value of a different JSON type into `T`.
-///
-/// `SendableMetatype` lets a converter be kept in a global or passed across tasks without a Swift 6
-/// concurrency diagnostic. Unlike `Sendable`, it does not require the conforming type's instances to be `Sendable`.
 public protocol ExCodableDecodingTypeConverter: SendableMetatype {
     static func decode<T: Decodable, K: CodingKey>(_ container: KeyedDecodingContainer<K>, codingKey: K, as type: T.Type) -> T?
 }

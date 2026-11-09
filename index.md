@@ -10,12 +10,10 @@ ExCodable 2.0
 
 [![Swift 6.4](https://img.shields.io/badge/Swift-6.4-orange.svg)](https://swift.org/)
 [![Swift Package Manager](https://img.shields.io/badge/spm-compatible-brightgreen.svg?style=flat)](https://swift.org/package-manager/)
-[![Platforms](https://img.shields.io/cocoapods/p/ExCodable.svg)](#)
+[![Platforms](https://img.shields.io/badge/platforms-iOS%2015%20%7C%20macOS%2012%20%7C%20tvOS%2015%20%7C%20watchOS%209-lightgrey.svg)](#)
 <br />
 [![Build and Test](https://github.com/ExCodable/ExCodable/actions/workflows/build-and-test.yml/badge.svg)](https://github.com/ExCodable/ExCodable/actions/workflows/build-and-test.yml)
 [![GitHub Releases (latest SemVer)](https://img.shields.io/github/v/release/ExCodable/ExCodable.svg?sort=semver)](https://github.com/ExCodable/ExCodable/releases)
-[![Deploy to CocoaPods](https://github.com/ExCodable/ExCodable/actions/workflows/deploy_to_cocoapods.yml/badge.svg)](https://github.com/ExCodable/ExCodable/actions/workflows/deploy_to_cocoapods.yml)
-[![Cocoapods](https://img.shields.io/cocoapods/v/ExCodable.svg)](https://cocoapods.org/pods/ExCodable)
 <br />
 [![LICENSE](https://img.shields.io/github/license/ExCodable/ExCodable.svg)](https://github.com/ExCodable/ExCodable/blob/master/LICENSE)
 [![GitHub stars](https://badgen.net/github/stars/ExCodable/ExCodable)](https://github.com/ExCodable/ExCodable/stargazers/)
@@ -70,6 +68,87 @@ struct TestExCodable {
 - 非常轻量！
 
 ## 使用方法
+
+<!--
+
+### 0、`Codable` 对比 `ExCodable`：
+
+Swift 内置的 `Codable` 很方便，只需要：
+
+```swift
+struct TestAutoCodable: Codable {
+    let int: Int
+    let string: String?
+    // key 与属性名相同时，`int` 这一项可以省略
+    enum CodingKeys: String, CodingKey {
+        case int = "int", string = "s"
+    }
+}
+
+```
+
+但如果需要备选 key、嵌套 key 或类型转换，就得手写：
+
+```swift
+struct TestManualCodable {
+    let int: Int
+    let string: String?
+}
+
+extension TestManualCodable: Codable {
+    
+    enum Keys: CodingKey {
+        case int
+        case nested, string, s
+    }
+    
+    init(from decoder: Decoder) throws {
+        let container = try? decoder.container(keyedBy: Keys.self)
+        let int = try? container?.decodeIfPresent(Int.self, forKey: Keys.int)
+        let string: String? = {
+            if let nestedContainer = try? container?.nestedContainer(keyedBy: Keys.self, forKey: Keys.nested),
+               let nestedNestedContainer = try? nestedContainer.nestedContainer(keyedBy: Keys.self, forKey: Keys.nested),
+               let string = try? nestedNestedContainer.decodeIfPresent(String.self, forKey: Keys.string) {
+                return string
+            }
+            else if let string = (try? container?.decodeIfPresent(String.self, forKey: Keys.string))
+                        ?? (try? container?.decodeIfPresent(String.self, forKey: Keys.s)) {
+                return string
+            }
+            else {
+                return nil
+            }
+        }()
+        self.init(int: int ?? 0, string: string)
+    }
+    
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: Keys.self)
+        try? container.encodeIfPresent(int, forKey: Keys.int)
+        var nestedContainer = container.nestedContainer(keyedBy: Keys.self, forKey: Keys.nested)
+        var nestedNestedContainer = nestedContainer.nestedContainer(keyedBy: Keys.self, forKey: Keys.nested)
+        try? nestedNestedContainer.encodeIfPresent(string, forKey: Keys.string)
+    }
+}
+
+```
+
+🤯
+
+这时可以用 **`ExCodable`**：
+
+```swift
+@ExCodable
+struct TestExCodable {
+    @ExCodableKey
+    let int: Int
+    @ExCodableKey("nested.nested.string", "string", "s")
+    let string: String?
+}
+
+```
+
+-->
 
 ### 1、ExCodable
 
@@ -419,7 +498,7 @@ Swift Package Manager:
 .package(url: "https://github.com/ExCodable/ExCodable", from: "2.0.0")
 ```
 
-`@ExCodable` 和 `@ExCodableKey` 是宏。Swift Package Manager 会加载编译器插件。CocoaPods 不会，所以 CocoaPods 集成时这些宏不会展开。
+2.0 通过 Swift Package Manager 发布。`@ExCodable` 和 `@ExCodableKey` 是宏，由 Swift Package Manager 加载编译器插件。不支持 CocoaPods。
 
 ## 升级
 

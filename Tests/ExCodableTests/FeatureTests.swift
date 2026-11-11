@@ -1020,14 +1020,14 @@ final class FeatureTests: XCTestCase {
         func ok(_ text: String, line: UInt = #line) -> String { #"{"v":"\#(text)"}"# }
         
         // What reads as a number, with its fraction cut off toward zero.
-        for (text, expected) in [("12", 12), ("12.9", 12), ("-12.9", -12), ("+12", 12), ("12.", 12), ("00012", 12), ("0", 0), ("-0.9", 0)] as [(String, Int)] {
+        for (text, expected) in [("12", 12), ("12.9", 12), ("-12.9", -12), ("+12", 12), ("00012", 12), ("0", 0), ("-0.9", 0)] as [(String, Int)] {
             XCTAssertEqual(try TestNumberIntRequired.decoded(from: Data(ok(text).utf8)).v, expected, "Int \"\(text)\"")
             XCTAssertEqual(try TestNumberInt64Required.decoded(from: Data(ok(text).utf8)).v, Int64(expected), "Int64 \"\(text)\"")
             XCTAssertEqual(try TestNumberInt16Required.decoded(from: Data(ok(text).utf8)).v, Int16(expected), "Int16 \"\(text)\"")
         }
         
         // What is not a number: a required property reports a type error, an optional property has no value, and nothing becomes 0.
-        for text in ["12abc", "abc", "1,000", "0x10", "-", "+", ".5", "-.5", "1e3", "1.5e3", "1E2", " 12 ", "12 34", "12.9.1", "--5", "1_000", ""] {
+        for text in ["12.", "12abc", "abc", "1,000", "0x10", "-", "+", ".5", "-.5", "1e3", "1.5e3", "1E2", " 12 ", "12 34", "12.9.1", "--5", "1_000", ""] {
             XCTAssertEqual(thrown(TestNumberIntRequired.self,    ok(text)), "typeMismatch", "Int required \"\(text)\"")
             XCTAssertEqual(thrown(TestNumberInt64Required.self,  ok(text)), "typeMismatch", "Int64 required \"\(text)\"")
             XCTAssertEqual(thrown(TestNumberInt16Required.self,  ok(text)), "typeMismatch", "Int16 required \"\(text)\"")

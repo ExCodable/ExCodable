@@ -395,7 +395,28 @@ fileprivate func parseDecimal<I>(from string: String, toUInt64 make: (_ uInt64: 
 
 // !!!: USE String, because Decimal does NOT include Int128 or UInt128
 fileprivate func integerPrefix(_ string: String) -> any StringProtocol? {
-    return string.wholeMatch(of: /([+-]?[0-9]+)\.?[0-9]*/)?.1
+    if #available(iOS 16.0, tvOS 16.0, macOS 13.0, watchOS 9.0, *) {
+        return string.wholeMatch(of: /([+-]?[0-9]+)(\.[0-9]+)?/)?.1
+    }
+    
+    let (sign, string): (String, any StringProtocol) = if string.hasPrefix("+") || string.hasPrefix("-") {
+        (String(string[..<string.index(after: string.startIndex)   ]),
+         string[   string.index(after: string.startIndex)...])
+    }
+    else {
+        ("", string)
+    }
+    
+    let (prefix, suffix): (any StringProtocol, any StringProtocol?) = if let dotIndex = string.firstIndex(of: ".") {
+        (string[..<dotIndex], string[(string.index(after: dotIndex))...])
+    }
+    else {
+        (string, nil)
+    }
+    
+    guard !prefix.isEmpty && prefix.allSatisfy({ $0.isASCII && $0.isNumber }),
+          suffix.map({ !$0.isEmpty && $0.allSatisfy({ $0.isASCII && $0.isNumber }) }) ?? true else { return nil }
+    return sign + prefix
 }
 
 /// Converts a decoded value of a different JSON type into `T`.

@@ -61,12 +61,6 @@ public enum ExCodableRuntime {
         return nil
     }
     
-    public static func _decode<T: Decodable & RawRepresentable>(_ type: T?.Type = T?.self, from decoder: Decoder, keys: [String], optional: Bool, strictType: Bool, converter: (any ExCodableDecodingTypeConverter.Type)?, customDecode: ((Decoder) throws -> T??)? = nil) throws -> T?? where T.RawValue: Decodable {
-        return try _decode(T.self, from: decoder, keys: keys, optional: optional, strictType: strictType, converter: converter, customDecode: customDecode.map({ customDecode in
-            return { (decoder) throws -> T? in try customDecode(decoder) ?? nil }
-        }))
-    }
-    
     public static func _encode<T: Encodable>(_ value: T, to encoder: Encoder, for key: String, optional: Bool, strictType: Bool, customEncode: ((Encoder, T) throws -> Void)? = nil) throws {
         let deepWrapped = if let wrapped = value as? OptionalProtocol { wrapped.wrapped } else { value }
         

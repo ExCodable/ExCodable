@@ -420,4 +420,50 @@ final class ExCodableMacroTests: XCTestCase {
             macros: macros
         )
     }
+
+    
+    // MARK: layers of optionals
+    
+    /// The runtime decodes the type inside the optionals once. The generated code wraps the result in the rest of the layers,
+    /// so a raw value can be read at any depth, and the runtime needs no overload per depth.
+    func testOptionalLayersAreWrappedByTheGeneratedCode() {
+        func decodeLine(of type: String) -> String {
+            let context = BasicMacroExpansionContext(sourceFiles: [:])
+            for statement in Parser.parse(source: "@ExCodable\nstruct S {\n    @ExCodableKey var v: \(type)\n}").statements {
+                guard let declaration = statement.item.as(StructDeclSyntax.self),
+                      let attribute = declaration.attributes.first?.as(AttributeSyntax.self),
+                      let extensions = try? ExCodableMacro.expansion(of: attribute, attachedTo: declaration, providingExtensionsOf: TypeSyntax(stringLiteral: "S"),
+                                                                     conformingTo: [TypeSyntax(stringLiteral: "Decodable")], in: context) else { continue }
+                let source = extensions.map(\.description).joined(separator: "\n")
+                return source.split(separator: "\n").first { $0.contains("_decode(") }.map { String($0.drop { $0 == " " }) } ?? "<none>"
+            }
+            return "<no extension>"
+        }
+        let prefix = "self.`v` = try ExCodableRuntime._decode((E).self, from: decoder, keys: [\"v\"]"
+        // 0 layers, and a `!` that only promises a value: required, unwrapped with `!`
+        XCTAssertTrue(decodeLine(of: "E").hasPrefix(prefix + ", optional: false"))
+        XCTAssertTrue(decodeLine(of: "E").hasSuffix(")!"))
+        XCTAssertTrue(decodeLine(of: "E!").hasPrefix(prefix + ", optional: false"))
+        // 1 layer: the runtime's own result
+        XCTAssertTrue(decodeLine(of: "E?").hasPrefix(prefix + ", optional: true"))
+        XCTAssertTrue(decodeLine(of: "E?").hasSuffix("exCodableTypeConverter)"))
+        // every spelling of N layers asks for the same type and wraps it N - 1 times
+        for spelling in ["E??", "Optional<E?>", "Optional<Optional<E>>", "(E?)?"] {
+            XCTAssertTrue(decodeLine(of: spelling).hasPrefix(prefix), spelling)
+            XCTAssertTrue(decodeLine(of: spelling).hasSuffix("exCodableTypeConverter).map(Optional.some)"), spelling)
+        }
+        for spelling in ["E???", "Optional<E??>", "((E?)?)?"] {
+            XCTAssertTrue(decodeLine(of: spelling).hasSuffix("exCodableTypeConverter).map(Optional.some).map(Optional.some)"), spelling)
+        }
+        // an outermost `!` promises a value, whatever is under it: the property is required, so it is unwrapped like a plain type.
+        // This test owns the generated text: `optional: false` and the trailing `)!`. What the property does at runtime when the value
+        // is missing is checked in `FeatureTests.testEnumAtEveryOptionalDepth`, because `_decode` throws before the `!` is reached.
+        for spelling in ["E!", "E?!", "E??!", "E???!", "E????!", "Optional<E>!", "Optional<E?>!", "Optional<E??>!", "(E?)!"] {
+            XCTAssertTrue(decodeLine(of: spelling).hasPrefix(prefix + ", optional: false"), spelling)
+            XCTAssertTrue(decodeLine(of: spelling).hasSuffix(")!"), spelling)
+        }
+        // only the optionals around the type are peeled: an optional inside a collection belongs to the type
+        XCTAssertTrue(decodeLine(of: "[E?]?").hasPrefix("self.`v` = try ExCodableRuntime._decode(([E?]).self"))
+        XCTAssertTrue(decodeLine(of: "[E]??").hasPrefix("self.`v` = try ExCodableRuntime._decode(([E]).self"))
+    }
 }

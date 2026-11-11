@@ -1379,6 +1379,86 @@ final class FeatureTests: XCTestCase {
         XCTAssertEqual(thrown(TestNumberInt8Required.self,       #"{"v":null}"#), "valueNotFound", "Int8 required null")
     }
     
+    /// The layers of an optional, from the outside in: `.some(.some(.one))` is `["some", "some", "one"]`, `.some(nil)` is
+    /// `["some", "none"]` and `nil` is `["none"]`. `== nil` and `XCTAssertNil` can not tell `.some(nil)` from `nil` for this purpose, and the
+    /// difference is exactly what a wrong number of layers produces.
+    private func layers<T>(of value: T) -> [String] {
+        var result: [String] = []
+        var current: Any = value
+        // `value` is passed as `T`, not `Any?`, so the layers are not flattened on the way in
+        while let optional = current as? any OptionalProtocolForTests {
+            guard let next = optional.unwrappedForTests else { result.append("none"); return result }
+            result.append("some")
+            current = next
+        }
+        result.append("\(current)")
+        return result
+    }
+    
+    /// An optional of an optional reads the raw value of an enum the same way a single optional does: `"1"` is `.one`
+    /// at every depth. The generated code asks the runtime for the type inside the optionals and wraps the result.
+    func testEnumAtEveryOptionalDepth() throws {
+        func decoded<T: Decodable>(_ type: T.Type, _ json: String) throws -> T { try T.decoded(from: Data(json.utf8)) }
+        
+        // the value, as a number and as a string
+        for json in [#"{"v":1}"#, #"{"v":"1"}"#] {
+            XCTAssertEqual(try decoded(TestEnumLayers0.self, json).v, .one, json)
+            XCTAssertEqual(try decoded(TestEnumLayers1.self, json).v, .one, json)
+            XCTAssertEqual((try decoded(TestEnumLayers2.self, json).v) ?? nil, .one, json)
+            XCTAssertEqual(((try decoded(TestEnumLayers3.self, json).v) ?? nil) ?? nil, .one, json)
+            XCTAssertEqual((try decoded(TestEnumLayers2Spelled.self, json).v) ?? nil, .one, json)
+            XCTAssertEqual((try decoded(TestEnumLayers2Mixed.self, json).v) ?? nil, .one, json)
+            XCTAssertEqual((try decoded(TestEnumLayers2Unwrapped.self, json).v) ?? nil, .one, json)
+            // `Optional<...>!`: the `!` is outside the spelled-out optional, and it counts the same
+            XCTAssertEqual(try decoded(TestEnumLayers1SpelledUnwrapped.self, json).v, .one, json)
+            XCTAssertEqual((try decoded(TestEnumLayers2SpelledUnwrapped.self, json).v) ?? nil, .one, json)
+            // deeper: `E???!` is four layers, and the `!` is the one on the outside
+            XCTAssertEqual(layers(of: try decoded(TestEnumLayers3Unwrapped.self, json).v), ["some", "some", "some", "some", "one"], json)
+            XCTAssertEqual(layers(of: try decoded(TestEnumLayers4Unwrapped.self, json).v), ["some", "some", "some", "some", "some", "one"], json)
+        }
+        
+        // the outer layers are real: a value that is there is `.some`, not a flattened `nil`
+        XCTAssertEqual(layers(of: try decoded(TestEnumLayers1.self, #"{"v":"1"}"#).v), ["some", "one"])
+        XCTAssertEqual(layers(of: try decoded(TestEnumLayers2.self, #"{"v":"1"}"#).v), ["some", "some", "one"])
+        XCTAssertEqual(layers(of: try decoded(TestEnumLayers3.self, #"{"v":"1"}"#).v), ["some", "some", "some", "one"])
+        
+        // absent, `null`, a value that is not a case, and a wrong JSON type: all give `nil` for an optional
+        for json in ["{}", #"{"v":null}"#, #"{"v":9}"#, #"{"v":"x"}"#] {
+            // the outermost layer is `none`: no value is not a value that is itself `nil`
+            XCTAssertEqual(layers(of: try decoded(TestEnumLayers1.self, json).v), ["none"], json)
+            XCTAssertEqual(layers(of: try decoded(TestEnumLayers2.self, json).v), ["none"], json)
+            XCTAssertEqual(layers(of: try decoded(TestEnumLayers3.self, json).v), ["none"], json)
+        }
+        
+        // `strictType` and `default` work at depth, as they do for one layer
+        XCTAssertEqual(thrown(TestEnumLayers2Strict.self, #"{"v":"x"}"#), "typeMismatch")
+        XCTAssertEqual(thrown(TestEnumLayers2Strict.self, #"{"v":9}"#), "dataCorrupted")
+        XCTAssertNil(thrown(TestEnumLayers2Strict.self, #"{"v":null}"#))
+        XCTAssertEqual((try decoded(TestEnumLayers2Default.self, "{}").v) ?? nil, .one)
+        XCTAssertEqual((try decoded(TestEnumLayers2Default.self, #"{"v":9}"#).v) ?? nil, .one)
+        XCTAssertEqual((try decoded(TestEnumLayers2Default.self, #"{"v":0}"#).v) ?? nil, .zero)
+        
+        // a nested key, and an enum whose raw value is a string
+        XCTAssertEqual((try decoded(TestEnumLayers2Nested.self, #"{"a":{"b":"1"}}"#).v) ?? nil, .one)
+        XCTAssertEqual(layers(of: try decoded(TestEnumLayers2Nested.self, #"{"a":{"b":9}}"#).v), ["none"])
+        XCTAssertEqual((try decoded(TestStringEnumLayers2.self, #"{"v":"two"}"#).v) ?? nil, .two)
+        XCTAssertEqual(layers(of: try decoded(TestStringEnumLayers2.self, #"{"v":"z"}"#).v), ["none"])
+        
+        // an `!` on the outside promises a value, whatever is under it.
+        // This test owns the behaviour. It does not see the text the macro generates for it: with `optional: false`, `_decode` throws
+        // for a missing key or a `null` before the generated `!` is reached, so a different spelling there changes nothing at runtime.
+        // The text is checked in `ExCodableMacroTests.testOptionalLayersAreWrappedByTheGeneratedCode`.
+        XCTAssertEqual(thrown(TestEnumLayers2Unwrapped.self, "{}"), "keyNotFound")
+        XCTAssertEqual(thrown(TestEnumLayers2Unwrapped.self, #"{"v":null}"#), "valueNotFound")
+        for type in [TestEnumLayers2Unwrapped.self, TestEnumLayers1SpelledUnwrapped.self, TestEnumLayers2SpelledUnwrapped.self,
+                     TestEnumLayers3Unwrapped.self, TestEnumLayers4Unwrapped.self] as [any Decodable.Type] {
+            XCTAssertEqual(thrown(type, "{}"), "keyNotFound", "\(type)")
+            XCTAssertEqual(thrown(type, #"{"v":null}"#), "valueNotFound", "\(type)")
+            XCTAssertEqual(thrown(type, #"{"v":9}"#), "dataCorrupted", "\(type)")
+            XCTAssertEqual(thrown(type, #"{"v":"x"}"#), "typeMismatch", "\(type)")
+        }
+    }
+    
     func testRequiredAndStrictType() throws {
         
         let noIntData = Data(#"""
@@ -1671,5 +1751,18 @@ final class FeatureTests: XCTestCase {
         let milliseconds = elapsed / 1_000_000
         print("elapsed: \(milliseconds) ms")
         // TODO: compare to builtin and 0.x
+    }
+}
+
+private protocol OptionalProtocolForTests {
+    /// The wrapped value, or `nil` for `.none`. It is `Any?` on purpose: one layer at a time, never flattened.
+    var unwrappedForTests: Any? { get }
+}
+extension Optional: OptionalProtocolForTests {
+    var unwrappedForTests: Any? {
+        switch self {
+            case .some(let wrapped): return wrapped
+            case .none: return nil
+        }
     }
 }

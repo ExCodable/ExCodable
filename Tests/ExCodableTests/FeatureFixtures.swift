@@ -973,3 +973,21 @@ enum TestStringEnum: String, Codable {
 @available(macOS 15.0, iOS 18.0, watchOS 11.0, tvOS 18.0, visionOS 2.0, *)
 @ExCodable struct TestStringNumberUInt128 { @ExCodableKey var v: UInt128 }
 
+// MARK: layers of optionals around a type with a raw value
+
+@ExCodable struct TestEnumLayers0 { @ExCodableKey var v: TestEnum }
+@ExCodable struct TestEnumLayers1 { @ExCodableKey var v: TestEnum? }
+@ExCodable struct TestEnumLayers2 { @ExCodableKey var v: TestEnum?? }
+@ExCodable struct TestEnumLayers3 { @ExCodableKey var v: TestEnum??? }
+@ExCodable struct TestEnumLayers2Spelled { @ExCodableKey var v: Optional<Optional<TestEnum>> }
+@ExCodable struct TestEnumLayers2Mixed { @ExCodableKey var v: Optional<TestEnum?> }
+@ExCodable struct TestEnumLayers2Unwrapped { @ExCodableKey var v: TestEnum?! }
+@ExCodable struct TestEnumLayers1SpelledUnwrapped { @ExCodableKey var v: Optional<TestEnum>! }
+@ExCodable struct TestEnumLayers2SpelledUnwrapped { @ExCodableKey var v: Optional<TestEnum?>! }
+@ExCodable struct TestEnumLayers3Unwrapped { @ExCodableKey var v: TestEnum???! }
+@ExCodable struct TestEnumLayers4Unwrapped { @ExCodableKey var v: TestEnum????! }
+@ExCodable struct TestEnumLayers2Strict { @ExCodableKey(strictType: true) var v: TestEnum?? }
+@ExCodable struct TestEnumLayers2Default { @ExCodableKey(default: TestEnum.one) var v: TestEnum?? }
+@ExCodable struct TestEnumLayers2Nested { @ExCodableKey("a.b") var v: TestEnum?? }
+@ExCodable struct TestStringEnumLayers2 { @ExCodableKey var v: TestStringEnum?? }
+

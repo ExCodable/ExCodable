@@ -6,6 +6,7 @@
 //  Copyright (c) 2026 Míng <i+ExCodable@iwill.im>. Released under the MIT license.
 //
 
+import SwiftParser
 import SwiftSyntax
 import SwiftSyntaxMacros
 import SwiftSyntaxBuilder
@@ -773,11 +774,15 @@ private enum ExCodableExpansion {
         }
     }
     
+    // The runtime decodes the type inside the optionals, once, and returns it as one optional. A property with more layers gets that
+    // value wrapped the rest of the way here. That keeps the runtime free of any rule about how deep the optionals go: `ZI?`, `ZI??`
+    // and `Optional<ZI?>` all take the same path, so each of them reads a raw value the same way.
     private static func decodeStatement(for property: Property) -> String {
         let spec = property.codable!
         let keys = spec.keys.isEmpty ? [StringLiteralExprSyntax(content: bareIdentifier(property.name)).description] : spec.keys
         let keyList = keys.joined(separator: ", ")
         let `default` = spec.`default` ?? property.`default`
+        let layers = shape(of: property)?.layers ?? 0
         let optional = isOptional(property) || `default` != nil
         let name = escaped(property.name)
         var call = "ExCodableRuntime._decode("
@@ -793,27 +798,75 @@ private enum ExCodableExpansion {
             "    self.\(name) = try \(call) ?? \(`default`)"
         }
         else if isOptional(property) {
-            "    self.\(name) = try \(call) ?? nil // !!!: flattens `T??` back to `T`"
+            if spec.decode != nil {
+                "    self.\(name) = try \(call) ?? nil // !!!: flattens `T??` back to `T`"
+            }
+            else {
+                "    self.\(name) = try \(call)\(String(repeating: ".map(Optional.some)", count: max(layers - 1, 0)))"
+            }
         }
         else {
             "    self.\(name) = try \(call)!"
         }
     }
     
-    // `!` counts as required: an implicitly unwrapped optional promises a value, and treating it as
-    // optional would silently disable the very check the declaration asks for.
-    private static func isOptional(_ property: Property) -> Bool {
-        guard let type = property.type else { return false }
-        return type.hasSuffix("?") || type.hasPrefix("Optional<")
+    private struct OptionalShape {
+        /// The type inside the optionals.
+        var inner: String
+        /// How many optionals are around it.
+        var layers: Int
+        /// The outermost layer is `!`. That promises a value, so the property is required, like a non-optional one.
+        var implicitlyUnwrapped: Bool
     }
     
-    private static func metatype(of property: Property) -> String? {
-        if let type = property.type {
-            if type.hasSuffix("!") {
-                let inner = String(type.dropLast())
-                return "Optional<\(inner)>.self"
+    /// `?`, `!` and `Optional<...>` each add one layer, and parentheses add none: `(ZI?)?` is two layers around `ZI`.
+    private static func peelOptionals(_ type: String) -> OptionalShape {
+        var node = Parser.parse(source: "let x: \(type)").statements.first?.item.as(VariableDeclSyntax.self)?.bindings.first?.typeAnnotation?.type
+        var layers = 0
+        var implicitlyUnwrapped = false
+        while let current = node {
+            if let optional = current.as(OptionalTypeSyntax.self) {
+                node = optional.wrappedType
             }
-            return "(\(type)).self"
+            else if let unwrapped = current.as(ImplicitlyUnwrappedOptionalTypeSyntax.self) {
+                implicitlyUnwrapped = implicitlyUnwrapped || layers == 0
+                node = unwrapped.wrappedType
+            }
+            else if let identifier = current.as(IdentifierTypeSyntax.self), identifier.name.text == "Optional",
+                    let argument = identifier.genericArgumentClause?.arguments.first?.argument.as(TypeSyntax.self) {
+                node = argument
+            }
+            else if let member = current.as(MemberTypeSyntax.self), member.name.text == "Optional", member.baseType.trimmedDescription == "Swift",
+                    let argument = member.genericArgumentClause?.arguments.first?.argument.as(TypeSyntax.self) {
+                node = argument
+            }
+            else if let tuple = current.as(TupleTypeSyntax.self), tuple.elements.count == 1, tuple.elements.first?.firstName == nil,
+                    let element = tuple.elements.first?.type {
+                node = element
+                continue
+            }
+            else {
+                return OptionalShape(inner: current.trimmedDescription, layers: layers, implicitlyUnwrapped: implicitlyUnwrapped)
+            }
+            layers += 1
+        }
+        return OptionalShape(inner: type, layers: 0, implicitlyUnwrapped: false)
+    }
+    
+    private static func shape(of property: Property) -> OptionalShape? {
+        property.type.map(peelOptionals)
+    }
+    
+    /// May the value be absent? `?` and `Optional<...>` say yes. `!` and a plain type say no.
+    private static func isOptional(_ property: Property) -> Bool {
+        guard let shape = shape(of: property) else { return false }
+        return shape.layers > 0 && !shape.implicitlyUnwrapped
+    }
+    
+    /// The type to decode: the one inside the optionals. A property without a type annotation takes it from its initial value.
+    private static func metatype(of property: Property) -> String? {
+        if let shape = shape(of: property) {
+            return "(\(shape.inner)).self"
         }
         if let witness = property.witness {
             return "Self.__ExCodableMemberDefaults.\(witness).Value.self"

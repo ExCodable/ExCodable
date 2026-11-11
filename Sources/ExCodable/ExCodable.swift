@@ -21,8 +21,10 @@
 /// 
 /// - seealso: [Usage](https://github.com/ExCodable/ExCodable#usage) from the `README.md`
 /// - seealso: `ExCodableTests.swift` from the `Tests`
-/// - seealso: [Decoding and overriding](https://www.swiftbysundell.com/articles/property-wrappers-in-swift/#decoding-and-overriding)
-/// and [Useful Codable extensions](https://www.swiftbysundell.com/tips/useful-codable-extensions/), by John Sundell.
+/// - seealso:
+///     - [Decoding and overriding](https://www.swiftbysundell.com/articles/property-wrappers-in-swift/#decoding-and-overriding)
+///     - [MetaCodable](https://github.com/SwiftyLab/MetaCodable)
+///     - [Useful Codable extensions](https://www.swiftbysundell.com/tips/useful-codable-extensions/) by John Sundell
 
 public enum ExCodableOptions {
     case exCodableKeys, allKeys

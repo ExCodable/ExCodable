@@ -311,13 +311,20 @@ fileprivate extension KeyedDecodingContainer {
         else if type is Float.Type || wrappedType is Float.Type {
             if      let string  = try? decodeIfPresent(String.self,  forKey: codingKey), let value = Float(string), value.isFinite { return value as? T }
         }
-        else if type is Float16.Type || wrappedType is Float16.Type {
-            if      let string  = try? decodeIfPresent(String.self,  forKey: codingKey), let value = Float16(string), value.isFinite { return value as? T }
-        }
         // public typealias Float32 = Float
         // public typealias Float64 = Double
         else if type is CGFloat.Type || wrappedType is CGFloat.Type {
             if      let string  = try? decodeIfPresent(String.self,  forKey: codingKey), let value = Double(string), value.isFinite { return CGFloat(value) as? T }
+        }
+        
+        else if type is String.Type || wrappedType is String.Type {
+            if      let bool    = try? decodeIfPresent(Bool.self,    forKey: codingKey) { return String(describing: bool) as? T }
+            else if let int64   = try? decodeIfPresent(Int64.self,   forKey: codingKey) { return String(describing: int64) as? T }
+            else if let decimal = try? decodeIfPresent(Decimal.self, forKey: codingKey) { return String(describing: decimal) as? T }
+            else if #available(macOS 15.0, iOS 18.0, watchOS 11.0, tvOS 18.0, visionOS 2.0, *) {
+                if      let  int128 = try? decodeIfPresent(Int128.self,  forKey: codingKey) { return String(describing:  int128) as? T }
+                else if let uInt128 = try? decodeIfPresent(UInt128.self, forKey: codingKey) { return String(describing: uInt128) as? T }
+            }
         }
         
         else if #available(macOS 15.0, iOS 18.0, watchOS 11.0, tvOS 18.0, visionOS 2.0, *) {
@@ -333,15 +340,12 @@ fileprivate extension KeyedDecodingContainer {
             }
         }
         
-        if type is String.Type || wrappedType is String.Type {
-            if      let bool    = try? decodeIfPresent(Bool.self,    forKey: codingKey) { return String(describing: bool) as? T }
-            else if let int64   = try? decodeIfPresent(Int64.self,   forKey: codingKey) { return String(describing: int64) as? T }
-            else if let decimal = try? decodeIfPresent(Decimal.self, forKey: codingKey) { return String(describing: decimal) as? T }
-            else if #available(macOS 15.0, iOS 18.0, watchOS 11.0, tvOS 18.0, visionOS 2.0, *) {
-                if      let  int128 = try? decodeIfPresent(Int128.self,  forKey: codingKey) { return String(describing:  int128) as? T }
-                else if let uInt128 = try? decodeIfPresent(UInt128.self, forKey: codingKey) { return String(describing: uInt128) as? T }
-            }
+#if !((os(macOS) || targetEnvironment(macCatalyst)) && arch(x86_64))
+        // `#if` can not sit between the `else if` branches
+        if type is Float16.Type || wrappedType is Float16.Type {
+            if      let string  = try? decodeIfPresent(String.self,  forKey: codingKey), let value = Float16(string), value.isFinite { return value as? T }
         }
+#endif
         
         if let specificConverter, let value = specificConverter.decode(self, codingKey: codingKey, as: type) {
             return value
@@ -419,7 +423,7 @@ fileprivate func integerPrefix(_ string: String) -> any StringProtocol? {
     return sign + prefix
 }
 
-/// Converts a decoded value of a different JSON type into `T`.
+// Converts a decoded value of a different JSON type into `T`.
 public protocol ExCodableDecodingTypeConverter: SendableMetatype {
     static func decode<T: Decodable, K: CodingKey>(_ container: KeyedDecodingContainer<K>, codingKey: K, as type: T.Type) -> T?
 }

@@ -122,6 +122,16 @@ struct TestFixedLet: Equatable {
     let id: Int
 }
 
+// MARK: Float16
+
+/// `Float16` does not exist on Intel macOS and Intel Mac Catalyst. There the fixtures use `Float`, so the models keep the same fields.
+/// Anything that depends on the range or the precision of a half-precision number is guarded with the same condition as the alias.
+#if !((os(macOS) || targetEnvironment(macCatalyst)) && arch(x86_64))
+typealias TestFloat16 = Float16
+#else
+typealias TestFloat16 = Float
+#endif
+
 // MARK: struct with optional types
 
 @ExCodable
@@ -153,7 +163,7 @@ struct TestStructWithOptionals: Equatable {
     @ExCodableKey("float")
     let float: Float?
     @ExCodableKey("float16")
-    let float16: Float16?
+    let float16: TestFloat16?
     @ExCodableKey("float32")
     let float32: Float32?
     @ExCodableKey("float64")
@@ -556,7 +566,7 @@ struct TestInitialDefaultValue: Equatable {
     @ExCodableKey("double")
     var double: Double = 2.5
     @ExCodableKey("float16")
-    var float16: Float16 = 2.5
+    var float16: TestFloat16 = 2.5
     @ExCodableKey("bool")
     var bool: Bool = true
     @ExCodableKey("string")
@@ -944,10 +954,12 @@ enum TestStringEnum: String, Codable {
 @ExCodable struct TestNumberDoubleOptional { @ExCodableKey var v: Double? }
 @ExCodable struct TestNumberDoubleOptionalStrict { @ExCodableKey(strictType: true) var v: Double? }
 @ExCodable struct TestNumberDoubleDefault { @ExCodableKey(default: Double(1)) var v: Double }
+#if !((os(macOS) || targetEnvironment(macCatalyst)) && arch(x86_64))
 @ExCodable struct TestNumberFloat16Required { @ExCodableKey var v: Float16 }
 @ExCodable struct TestNumberFloat16Optional { @ExCodableKey var v: Float16? }
 @ExCodable struct TestNumberFloat16OptionalStrict { @ExCodableKey(strictType: true) var v: Float16? }
 @ExCodable struct TestNumberFloat16Default { @ExCodableKey(default: Float16(1)) var v: Float16 }
+#endif
 @ExCodable struct TestNumberDecimalRequired { @ExCodableKey var v: Decimal }
 @ExCodable struct TestNumberDecimalOptional { @ExCodableKey var v: Decimal? }
 @ExCodable struct TestNumberDecimalOptionalStrict { @ExCodableKey(strictType: true) var v: Decimal? }

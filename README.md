@@ -246,6 +246,8 @@ ExCodable builtin type conversions:
     - `Double`, `Float`
     - `String`
 
+`Float16` is converted too, except on Intel macOS and Intel Mac Catalyst: Swift does not provide `Float16` there, so a property can not have that type and the conversion is left out.
+
 Custom type conversions for specific properties:
 
 If a closure does not mention its value type, write the return type explicitly, for example `decode: { decoder -> Bool? in ... }`.

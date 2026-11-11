@@ -539,7 +539,7 @@ final class FeatureTests: XCTestCase {
             "double":   "1.123456789",
             "int16":    "16",
             "uInt":     "1",
-            "float16":  "1.1601562",
+            "float16":  "\#(TestFloat16(1.16))",
             "uInt32":   "32",
             "int32":    "32",
             "string":   "string",
@@ -563,7 +563,7 @@ final class FeatureTests: XCTestCase {
                                                          uInt64:    64,
                                                          double:    1.123456789,
                                                          float:     1.1,
-                                                         float16:   1.16, // Float16: 1.1601562 ~= 1.16
+                                                         float16:   TestFloat16(1.16), // as text: "1.1601562" for a Float16, "1.16" for a Float
                                                          float32:   1.32,
                                                          float64:   1.64,
                                                          string:    "string"))
@@ -658,6 +658,14 @@ final class FeatureTests: XCTestCase {
         XCTAssertEqual(copy.string, decoded.string)
     }
     
+    private var tooLargeForTestFloat16: String {
+        #if !((os(macOS) || targetEnvironment(macCatalyst)) && arch(x86_64))
+        return "70000"
+        #else
+        return "1e40"
+        #endif
+    }
+    
     /// A property initializer doubles as the default value when decode failed for every supported type.
     func testInitialDefaultValueForAllTypes() throws {
         let expected = TestInitialDefaultValue(
@@ -679,8 +687,10 @@ final class FeatureTests: XCTestCase {
             """#,
             // `url` is left out on purpose: `URL` accepts nearly any string, so a "bad" URL
             // does not fail and therefore keeps the decoded value instead of the initial one.
+            // `float16` is a number that its type can not hold. 70000 is too large for a `Float16`, and 1e40 for a `Float`, which
+            // takes the place of `Float16` on Intel macOS.
             #"""
-            {"int8":999,"uint":-1,"double":"1e400","float16":70000,"bool":"maybe","string":[],
+            {"int8":999,"uint":-1,"double":"1e400","float16":\#(tooLargeForTestFloat16),"bool":"maybe","string":[],
              "uuid":"not-a-uuid","array":"not-an-array","dictionary":1,
              "enum":99,"nested":{"x":"bad"},"optional":"bad"}
             """#
@@ -1326,7 +1336,8 @@ final class FeatureTests: XCTestCase {
         XCTAssertEqual(thrown(TestNumberDoubleOptional.self,       #"{"v":"1e400"}"#), nil, "Double optional \"1e400\"")
         XCTAssertEqual(thrown(TestNumberDoubleOptionalStrict.self, #"{"v":"1e400"}"#), "typeMismatch", "Double optional/strict \"1e400\"")
         XCTAssertEqual(thrown(TestNumberDoubleDefault.self,        #"{"v":"1e400"}"#), nil, "Double default \"1e400\"")
-        // Float16
+#if !((os(macOS) || targetEnvironment(macCatalyst)) && arch(x86_64))
+        // Float16, which Intel macOS and Intel Mac Catalyst do not have
         XCTAssertNil(thrown(TestNumberFloat16Required.self, #"{"v":1.5}"#), "Float16 required, 1.5")
         XCTAssertNil(thrown(TestNumberFloat16Required.self, #"{"v":65504}"#), "Float16 required, 65504")
         XCTAssertEqual(thrown(TestNumberFloat16Required.self,       #"{"v":100000}"#), "dataCorrupted", "Float16 required 100000")
@@ -1341,6 +1352,7 @@ final class FeatureTests: XCTestCase {
         XCTAssertEqual(thrown(TestNumberFloat16Optional.self,       #"{"v":"100000"}"#), nil, "Float16 optional \"100000\"")
         XCTAssertEqual(thrown(TestNumberFloat16OptionalStrict.self, #"{"v":"100000"}"#), "typeMismatch", "Float16 optional/strict \"100000\"")
         XCTAssertEqual(thrown(TestNumberFloat16Default.self,        #"{"v":"100000"}"#), nil, "Float16 default \"100000\"")
+#endif
         // Decimal
         XCTAssertNil(thrown(TestNumberDecimalRequired.self, #"{"v":1.5}"#), "Decimal required, 1.5")
         XCTAssertNil(thrown(TestNumberDecimalRequired.self, #"{"v":123456789.123}"#), "Decimal required, 123456789.123")
